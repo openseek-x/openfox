@@ -1,0 +1,65 @@
+{
+  "name": "@openfox/desktop",
+  "private": true,
+  "type": "commonjs",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "build:web": "pnpm --filter @openfox/web build",
+    "build:cli": "cd ../.. && go build -trimpath -o apps/desktop/resources/bin/openfox ./cmd/openfox",
+    "test": "node --test security.test.cjs cli.test.cjs accounts.test.cjs proxy.test.cjs work-directory.test.cjs",
+    "test:work-directory:electron": "node --test work-directory.electron.test.cjs",
+    "dist:mac": "node build-defaults.cjs && pnpm build:cli && electron-builder --mac --arm64"
+  },
+  "devDependencies": {
+    "electron": "45.0.0",
+    "electron-builder": "26.18.0"
+  },
+  "version": "0.1.0",
+  "description": "OpenFox desktop",
+  "build": {
+    "appId": "io.openfox.desktop",
+    "productName": "OpenFox",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "package.json",
+      "main.cjs",
+      "preload.cjs",
+      "security.cjs",
+      "work-directory.cjs",
+      "accounts.cjs",
+      "proxy.cjs",
+      "cli.cjs",
+      "renderer/**"
+    ],
+    "extraResources": [
+      {
+        "from": "resources",
+        "to": ".",
+        "filter": [
+          "bin/openfox",
+          "desktop-defaults.json"
+        ]
+      }
+    ],
+    "npmRebuild": false,
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.developer-tools",
+      "identity": null,
+      "hardenedRuntime": false
+    },
+    "dmg": {
+      "artifactName": "OpenFox-${version}-${arch}.dmg"
+    }
+  }
+}

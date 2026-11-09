@@ -1,0 +1,40 @@
+@import "tailwindcss";
+@import "@openfox/ui/tokens.css";
+@source "../../ui/src";
+@source "./";
+
+:root[data-density="compact"] {
+  --density-list-row: 36px;
+  --density-table-row: 32px;
+  --density-group-row: 32px;
+  --density-nav-row: 28px;
+  --density-subnav-row: 28px;
+  --density-chat-padding: 4px;
+  --density-card-padding: 8px;
+  --density-card-gap: 4px;
+  --density-gantt-row: 32px;
+  --density-triage-row: 56px;
+}
+
+/* Mark the result on arrival without shifting the surrounding timeline. */
+.message-search-hit {
+  border-radius: 8px;
+  animation: message-search-arrival 2s ease-out;
+}
+@keyframes message-search-arrival {
+  0%,
+  50% {
+    box-shadow: 0 0 0 2px var(--color-surface-selected);
+    background-color: var(--color-surface-selected);
+  }
+  100% {
+    box-shadow: none;
+    background-color: transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .message-search-hit {
+    animation: none;
+    outline: 1px solid var(--color-line-default);
+  }
+}

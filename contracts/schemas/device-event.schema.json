@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openfox.invalid/contracts/device-event.schema.json",
+  "title": "OpenFox 设备上报的 Run 事件（POST /v1/device/organizations/{org}/runs/{run}/events 的 events[] 元素）",
+  "description": "中心按 (organization, run, generation, sequence) 幂等。type = step 时 safe_payload.data 必须符合 StepEventData（schema v1），中心校验 schema、step.id、step.kind、step.state，不合法整批 400。其他 type 只校验信封与大小。权威定义见 contracts/openapi.yaml 的 RunEventInput / Step。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "generation", "sequence", "type", "safe_payload"],
+  "properties": {
+    "id": {"type": "string", "format": "uuid"},
+    "generation": {"type": "integer", "minimum": 1},
+    "sequence": {"type": "integer", "minimum": 1, "maximum": 1000000000},
+    "type": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "description": "设备上报：started / output / tool / warning / failed / completed / cancelled / unknown / step。中心生成（设备不得使用）：run.result、run.reconciled。",
+      "examples": ["started", "output", "tool", "warning", "failed", "completed", "cancelled", "step"]
+    },
+    "safe_payload": {
+      "type": "object",
+      "description": "序列化后 ≤ 64 KiB；已脱敏，不得包含凭据、私钥、Cookie 或未脱敏的环境变量值。",
+      "properties": {
+        "text": {"type": "string", "maxLength": 8192},
+        "data": {"type": "object"}
+      }
+    },
+    "occurred_at": {"type": "string", "format": "date-time"}
+  },
+  "if": {"properties": {"type": {"const": "step"}}},
+  "then": {
+    "properties": {
+      "safe_payload": {
+        "required": ["data"],
+        "properties": {"data": {"$ref": "#/$defs/StepEventData"}}
+      }
+    }
+  },
+  "$defs": {
+    "StepEventData": {
+      "type": "object",
+      "required": ["schema", "step"],
+      "properties": {
+        "schema": {"const": 1},
+        "step": {"$ref": "#/$defs/Step"}
+      }
+    },
+    "StepState": {"enum": ["running", "done", "failed", "interrupted", "denied"]},
+    "Step": {
+      "type": "object",
+      "description": "同一步骤多次上报使用同一 id；后到的覆盖先到的同名字段，append / output_append 追加到 text / output。终态事件携带完整字段。",
+      "required": ["id", "kind", "state"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1, "maxLength": 64},
+        "kind": {"enum": ["prep_env", "thinking", "agent_text", "exec", "patch", "write_file", "read", "search", "web_search", "web_fetch", "todo", "step_group", "turn_end"]},
+        "state": {"$ref": "#/$defs/StepState"},
+        "group_id": {"type": "string", "maxLength": 64},
+        "started_at": {"type": "string", "format": "date-time"},
+        "ended_at": {"type": "string", "format": "date-time"},
+        "duration_ms": {"type": "integer", "minimum": 0},
+        "substeps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["kind", "state"],
+            "properties": {
+              "kind": {"enum": ["workdir", "repo", "runtime", "session"]},
+              "state": {"$ref": "#/$defs/StepState"},
+              "label": {"type": "string"}
+            }
+          }
+        },
+        "progress": {"type": "number", "minimum": 0, "maximum": 1},
+        "text": {"type": "string"},
+        "append": {"type": "string"},
+        "command": {"type": "string"},
+        "cwd": {"type": "string", "description": "工作目录内的路径为相对路径（工作目录本身为 .）"},
+        "output_append": {"type": "string", "maxLength": 8192},
+        "output": {"type": "string", "description": "终态完整输出，超过 32 KiB 时保留尾部并置 truncated"},
+        "truncated": {"type": "boolean"},
+        "exit_code": {"type": "integer"},
+        "terminated_before_output": {"type": "boolean"},
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path", "kind", "additions", "deletions", "diff"],
+            "properties": {
+              "path": {"type": "string"},
+              "kind": {"enum": ["add", "delete", "update"]},
+              "move_path": {"type": "string"},
+              "additions": {"type": "integer", "minimum": 0},
+              "deletions": {"type": "integer", "minimum": 0},
+              "diff": {"type": "string", "description": "单文件 ≤ 24 KiB，整个步骤合计 ≤ 40 KiB"},
+              "truncated": {"type": "boolean"}
+            }
+          }
+        },
+        "path": {"type": "string"},
+        "content": {"type": "string"},
+        "applied": {"type": "boolean"},
+        "diff_available": {"type": "boolean"},
+        "line_start": {"type": "integer", "minimum": 1},
+        "line_end": {"type": "integer", "minimum": 1},
+        "query": {"type": "string"},
+        "scope": {"type": "string"},
+        "results": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "type": "object",
+            "properties": {
+              "file": {"type": "string"},
+              "matches": {"type": "integer", "minimum": 0},
+              "title": {"type": "string"},
+              "url": {"type": "string"}
+            }
+          }
+        },
+        "total_files": {"type": "integer", "minimum": 0},
+        "url": {"type": "string"},
+        "items": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "required": ["text", "status"],
+            "properties": {
+              "text": {"type": "string"},
+              "status": {"enum": ["pending", "in_progress", "completed"]}
+            }
+          }
+        },
+        "explanation": {"type": "string"},
+        "title": {"type": "string"},
+        "final_state": {"enum": ["done", "failed", "cancelled"]}
+      }
+    }
+  }
+}

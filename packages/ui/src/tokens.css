@@ -1,0 +1,205 @@
+/*
+ * OpenFox 设计 token。
+ * 定义颜色、间距、圆角、文字和阴影变量。
+ *
+ * 使用方式：应用入口的 CSS 里先 `@import "tailwindcss";` 再 `@import "@openfox/ui/tokens.css";`，
+ * 下面的 @theme 会生成 bg-surface-card、text-fg-muted、border-line-default、rounded-lg、
+ * text-body、shadow-popover 等工具类。
+ */
+
+@theme {
+  /* 字体：中文字体包体积过大，不随包分发，按系统字体回退 */
+  --font-sans:
+    "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+    system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono:
+    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* 背景 */
+  --color-surface-app: #efeff4;
+  --color-surface-canvas: #fcfcfd;
+  --color-surface-card: #ffffff;
+  --color-surface-muted: #f4f4f5;
+  --color-surface-hover: #f6f6f8;
+  --color-surface-active: #f0f0f3;
+  --color-surface-selected: #09090b14;
+  --color-surface-sidebar: #ececee;
+  --color-surface-sidebar-active: #e1e1e3;
+  --color-scrim: #09090b;
+
+  /* 文字 */
+  --color-fg-default: #09090b;
+  --color-fg-secondary: #3f3f46;
+  --color-fg-muted: #71717b;
+  --color-fg-subtle: #a1a1aa;
+  --color-fg-inverse: #fafafa;
+
+  /* 描边 */
+  --color-line-default: #e4e4e7;
+  --color-line-strong: #d4d4d8;
+  --color-line-focus: #8e92f2;
+  --color-line-floating: #09090b14;
+  --color-line-soft: #e4e4e7b2;
+  --color-line-subtle: #e4e4e77d;
+
+  /* 操作与强调 */
+  --color-primary: #18181b;
+  --color-primary-disabled: #a1a1aa;
+  --color-accent: #139948;
+  --color-accent-soft: #e7f5ec;
+
+  /* 状态 */
+  --color-success: #20c45f;
+  --color-success-soft: #20c45f1a;
+  --color-success-tint: #20c45f0d;
+  --color-success-border: #20c45f33;
+  --color-warning: #b98a00;
+  --color-warning-soft: #fdf6e1;
+  --color-danger: #e40014;
+  --color-danger-soft: #fdecec;
+  --color-danger-border: #e4001433;
+  --color-info: #2171cc;
+  --color-info-soft: #eaf2fb;
+  --color-pill-success-border: #1399484d;
+  --color-pill-warning-border: #b98a004d;
+  --color-pill-muted-border: #71717b4d;
+
+  /* 圆角 */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-2xl: 18px;
+  --radius-full: 999px;
+
+  /* 文字样式：字号和行高 */
+  --text-display: 28px;
+  --text-display--line-height: 36px;
+  --text-heading: 22px;
+  --text-heading--line-height: 30px;
+  --text-subheading: 18px;
+  --text-subheading--line-height: 26px;
+  --text-title: 16px;
+  --text-title--line-height: 24px;
+  --text-body: 14px;
+  --text-body--line-height: 20px;
+  --text-body-sm: 13px;
+  --text-body-sm--line-height: 18px;
+  --text-caption: 12px;
+  --text-caption--line-height: 18px;
+  --text-code: 12px;
+  --text-code--line-height: 20px;
+
+  /* 阴影 */
+  --shadow-card: 0 1px 2px 0 #09090b0f;
+  --shadow-popover: 0 8px 24px -4px #09090b1a, 0 2px 6px 0 #09090b0f;
+  --shadow-dialog: 0 24px 48px -12px #09090b2e;
+  --shadow-focus: 0 0 0 3px #8e92f259;
+
+  /* 动效 */
+  --ease-drawer: cubic-bezier(0.78, 0.14, 0.15, 0.86);
+}
+
+@layer base {
+  html,
+  body {
+    font-family: var(--font-sans);
+    color: var(--color-fg-default);
+    background: var(--color-surface-app);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-focus);
+  }
+}
+
+@layer components {
+  /* 默认铺满表单；页面的 w-* 工具类可覆盖，不与 w-full 竞争顺序。 */
+  .of-control {
+    width: 100%;
+  }
+}
+
+/*
+ * 深色主题（zinc 色阶）。应用入口在 <html> 上设置 data-theme="dark"（跟随系统时按系统取值）。
+ * 覆盖全部 --color-*，状态色保留浅色版本的色相并提亮，保证深底上可读；阴影加深。
+ * 修改浅色变量时同步检查这里。
+ */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-surface-app: #18181b;
+  --color-surface-canvas: #09090b;
+  --color-surface-card: #27272a;
+  --color-surface-muted: #3f3f46;
+  --color-surface-hover: #33333a;
+  --color-surface-active: #3f3f46;
+  --color-surface-selected: #fafafa14;
+  --color-surface-sidebar: #1f1f23;
+  --color-surface-sidebar-active: #34343b;
+  --color-scrim: #09090b;
+
+  --color-fg-default: #fafafa;
+  --color-fg-secondary: #d4d4d8;
+  --color-fg-muted: #a1a1aa;
+  --color-fg-subtle: #71717a;
+  --color-fg-inverse: #09090b;
+
+  --color-line-default: #3f3f46;
+  --color-line-strong: #52525b;
+  --color-line-focus: #8e92f2;
+  --color-line-floating: #fafafa1a;
+  --color-line-soft: #3f3f46b2;
+  --color-line-subtle: #3f3f467d;
+
+  --color-primary: #fafafa;
+  --color-primary-disabled: #52525b;
+  --color-accent: #34c26b;
+  --color-accent-soft: #14321f;
+
+  --color-success: #20c45f;
+  --color-success-soft: #20c45f26;
+  --color-success-tint: #20c45f14;
+  --color-success-border: #20c45f4d;
+  --color-warning: #e0b43a;
+  --color-warning-soft: #3a2f10;
+  --color-danger: #f87171;
+  --color-danger-soft: #3b1717;
+  --color-danger-border: #f8717166;
+  --color-info: #60a5fa;
+  --color-info-soft: #172a45;
+  --color-pill-success-border: #20c45f66;
+  --color-pill-warning-border: #e0b43a66;
+  --color-pill-muted-border: #a1a1aa4d;
+
+  --shadow-card: 0 1px 2px 0 #00000066;
+  --shadow-popover: 0 8px 24px -4px #00000080, 0 2px 6px 0 #00000066;
+  --shadow-dialog: 0 24px 48px -12px #00000080;
+  --shadow-focus: 0 0 0 3px #8e92f259;
+}
+
+:root[data-palette="magic-blue"] {
+  --color-surface-app: oklch(0.12 0.005 285.823);
+  --color-surface-canvas: #222542;
+  --color-surface-card: #222542;
+  --color-surface-sidebar: #222542;
+  --color-surface-active: #404665;
+  --color-surface-sidebar-active: #404665;
+  --color-surface-hover: #404665;
+  --color-surface-muted: #404665;
+  --color-line-default: #404665;
+}
+
+:root[data-palette="classic-dark"] {
+  --color-surface-app: oklch(0.12 0.005 285.823);
+  --color-surface-canvas: #161616;
+  --color-surface-card: #161616;
+  --color-surface-sidebar: #161616;
+  --color-surface-active: #303030;
+  --color-surface-sidebar-active: #303030;
+  --color-surface-hover: #303030;
+  --color-surface-muted: #303030;
+  --color-line-default: #303030;
+}

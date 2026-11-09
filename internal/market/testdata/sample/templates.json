@@ -1,0 +1,68 @@
+[
+ {
+  "templateId": "skillhub.tpl-writer",
+  "version": "1.0.0",
+  "name": {
+   "zh-Hans": "写作助手",
+   "en": "Writer"
+  },
+  "jobTitle": {
+   "zh-Hans": "写手",
+   "en": "Writer"
+  },
+  "tagline": {
+   "en": "Writes things"
+  },
+  "description": {
+   "en": "Writes all the things"
+  },
+  "categoryIds": [
+   "writing"
+  ],
+  "keywords": [
+   "writing",
+   "docs"
+  ],
+  "avatar": {
+   "type": "image",
+   "url": "https://example.test/a.png"
+  },
+  "order": 1,
+  "publishedAt": "2026-04-22T13:54:57Z",
+  "skillCount": 4,
+  "origin": "skillhub"
+ },
+ {
+  "templateId": "skillhub.tpl-second",
+  "version": "1.0.0",
+  "name": {
+   "zh-Hans": "写作助手",
+   "en": "Writer"
+  },
+  "jobTitle": {
+   "zh-Hans": "写手",
+   "en": "Writer"
+  },
+  "tagline": {
+   "en": "Writes things"
+  },
+  "description": {
+   "en": "Writes all the things"
+  },
+  "categoryIds": [
+   "productivity"
+  ],
+  "keywords": [
+   "writing",
+   "docs"
+  ],
+  "avatar": {
+   "type": "image",
+   "url": "https://example.test/a.png"
+  },
+  "order": 2,
+  "publishedAt": "2026-04-22T13:54:57Z",
+  "skillCount": 0,
+  "origin": "skillhub"
+ }
+]

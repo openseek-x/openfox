@@ -1,0 +1,48 @@
+.DS_Store
+.env*
+!.env.example
+work/
+.playwright-mcp/
+/test-results/
+
+# Python bytecode and cache directories
+__pycache__/
+*.py[cod]
+
+# 本地开发运行数据：数据库 URL 文件、服务日志、制品存储
+/var/
+
+# Claude Code 本地个人设置
+.claude/
+
+# 本地密钥，禁止提交
+key/
+*.pem
+*.key
+*.p8
+*.pk8
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.kdbx
+
+# 桌面端自带 CLI 的编译产物（pnpm --filter @openfox/desktop build:cli）
+/apps/desktop/resources/
+# 桌面端安装包输出（pnpm --filter @openfox/desktop dist:mac）
+/apps/desktop/dist/
+
+# Go 构建产物与覆盖率报告
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.*
+!coverage.go
+*.coverprofile
+profile.cov
+go.work
+go.work.sum

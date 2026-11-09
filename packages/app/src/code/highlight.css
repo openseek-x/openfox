@@ -1,0 +1,122 @@
+/* 代码高亮配色（highlight.js 的 hljs-* 类名）。浅色参照 GitHub Light，深色参照 GitHub Dark；
+   跟随 <html data-theme="dark">。只定义颜色与字重，不改字号和布局。 */
+
+:root {
+  --code-keyword: #cf222e;
+  --code-title: #8250df;
+  --code-type: #953800;
+  --code-literal: #0550ae;
+  --code-string: #0a3069;
+  --code-regexp: #116329;
+  --code-comment: #6e7781;
+  --code-tag: #116329;
+  --code-attr: #0550ae;
+  --code-meta: #953800;
+  --code-section: #0550ae;
+  --code-addition-fg: #116329;
+  --code-addition-bg: #dafbe1;
+  --code-deletion-fg: #82071e;
+  --code-deletion-bg: #ffebe9;
+}
+
+:root[data-theme="dark"] {
+  --code-keyword: #ff7b72;
+  --code-title: #d2a8ff;
+  --code-type: #ffa657;
+  --code-literal: #79c0ff;
+  --code-string: #a5d6ff;
+  --code-regexp: #7ee787;
+  --code-comment: #8b949e;
+  --code-tag: #7ee787;
+  --code-attr: #79c0ff;
+  --code-meta: #ffa657;
+  --code-section: #1f6feb;
+  --code-addition-fg: #aff5b4;
+  --code-addition-bg: #033a16;
+  --code-deletion-fg: #ffdcd7;
+  --code-deletion-bg: #67060c;
+}
+
+.hljs-keyword,
+.hljs-meta .hljs-keyword,
+.hljs-template-tag,
+.hljs-template-variable,
+.hljs-type,
+.hljs-variable.language_ {
+  color: var(--code-keyword);
+}
+
+.hljs-title,
+.hljs-title.class_,
+.hljs-title.class_.inherited__,
+.hljs-title.function_ {
+  color: var(--code-title);
+}
+
+.hljs-attr,
+.hljs-attribute,
+.hljs-literal,
+.hljs-meta,
+.hljs-number,
+.hljs-operator,
+.hljs-variable,
+.hljs-selector-attr,
+.hljs-selector-class,
+.hljs-selector-id {
+  color: var(--code-literal);
+}
+
+.hljs-regexp,
+.hljs-string,
+.hljs-meta .hljs-string {
+  color: var(--code-string);
+}
+
+.hljs-built_in,
+.hljs-symbol {
+  color: var(--code-type);
+}
+
+.hljs-comment,
+.hljs-code,
+.hljs-formula {
+  color: var(--code-comment);
+}
+
+.hljs-name,
+.hljs-quote,
+.hljs-selector-tag,
+.hljs-selector-pseudo {
+  color: var(--code-tag);
+}
+
+.hljs-subst {
+  color: inherit;
+}
+
+.hljs-section {
+  color: var(--code-section);
+  font-weight: 600;
+}
+
+.hljs-bullet {
+  color: var(--code-meta);
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: 600;
+}
+
+.hljs-addition {
+  color: var(--code-addition-fg);
+  background-color: var(--code-addition-bg);
+}
+
+.hljs-deletion {
+  color: var(--code-deletion-fg);
+  background-color: var(--code-deletion-bg);
+}

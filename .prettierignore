@@ -1,0 +1,7 @@
+node_modules
+pnpm-lock.yaml
+apps/web/dist
+tests/frontend/test-results
+tests/frontend/playwright-report
+packages/api/src/schema.gen.ts
+packages/ui/src/icons/data.ts

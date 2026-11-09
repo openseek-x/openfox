@@ -1,0 +1,8 @@
+{
+ "path": "scripts/run.py",
+ "size": 12,
+ "mime": "text/plain",
+ "previewable": true,
+ "sha256": "caf026f25d7140209f98072605307a438914b9ce6f3c14b23d15d9667241de52",
+ "content": "print('hi')\n"
+}

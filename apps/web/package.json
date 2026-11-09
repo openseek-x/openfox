@@ -1,0 +1,23 @@
+{
+  "name": "@openfox/web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "rsbuild dev",
+    "build": "tsc -p tsconfig.json --noEmit && rsbuild build",
+    "preview": "rsbuild preview",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-router-dom": "7.18.4",
+    "@openfox/app": "workspace:*"
+  },
+  "devDependencies": {
+    "@rsbuild/core": "2.2.14",
+    "@rsbuild/plugin-react": "2.1.1",
+    "@tailwindcss/postcss": "4.3.3",
+    "tailwindcss": "4.3.3"
+  }
+}

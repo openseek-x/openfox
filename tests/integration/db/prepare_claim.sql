@@ -1,0 +1,17 @@
+\set ON_ERROR_STOP on
+BEGIN;
+SET LOCAL ROLE openfox_context;
+SELECT openfox_private.set_tenant_context(
+    '00000000-0000-0000-0000-0000000000a1',
+    '00000000-0000-0000-0000-000000000001', 1, 'device_request'
+);
+SELECT openfox_private.reserve_capacity(
+    '00000000-0000-0000-0000-0000000000a1',
+    '00000000-0000-0000-0000-0000000000d4',
+    '00000000-0000-0000-0000-0000000000e4', 1,
+    '00000000-0000-0000-0000-000000000022',
+    '00000000-0000-0000-0000-0000000000a4',
+    '00000000-0000-0000-0000-0000000000f4',
+    clock_timestamp() + interval '1 minute'
+);
+COMMIT;

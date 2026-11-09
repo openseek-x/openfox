@@ -1,0 +1,52 @@
+{
+ "meta": {
+  "schemaVersion": 1,
+  "skillId": "skillhub.bad.digest",
+  "version": "1.0.0",
+  "digest": "d-skillhub.bad.digest",
+  "name": {
+   "en": "Digest"
+  },
+  "description": {
+   "en": "x"
+  },
+  "listed": true,
+  "featured": false,
+  "icon": "https://example.test/icons/digest.png",
+  "categoryIds": [
+   "writing"
+  ],
+  "tags": [
+   {
+    "zh-Hans": "示例"
+   },
+   {
+    "en": "Sample"
+   }
+  ],
+  "stats": {
+   "downloads": 1,
+   "installs": 1,
+   "stars": 7
+  },
+  "publisher": {
+   "name": "Sample Org",
+   "verified": true
+  },
+  "source": {
+   "origin": "skillhub"
+  }
+ },
+ "tree": {
+  "nodes": [
+   {
+    "type": "file",
+    "path": "SKILL.md",
+    "size": 55,
+    "mime": "text/plain",
+    "previewable": true,
+    "sha256": "9bb3912c72fd1c616b2aa8346771655b49eaf2f3e2badaf67be8eb994d4e6717"
+   }
+  ]
+ }
+}

@@ -1,0 +1,38 @@
+{
+  "name": "openfox-workbench",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.15.1",
+  "engines": {
+    "node": ">=22.22.2 <23",
+    "pnpm": "11.15.1"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @openfox/web dev",
+    "build": "pnpm --filter @openfox/web build",
+    "desktop": "pnpm --filter @openfox/web build && pnpm --filter @openfox/desktop start",
+    "desktop:build": "pnpm --filter @openfox/web build",
+    "test": "vitest run && pnpm --filter @openfox/desktop test",
+    "test:e2e": "playwright test",
+    "typecheck": "pnpm -r typecheck && tsc -p tests/frontend/tsconfig.json",
+    "format": "prettier --write apps packages tests/frontend *.json *.yaml *.ts",
+    "lint": "prettier --check apps packages tests/frontend *.json *.yaml *.ts && pnpm typecheck",
+    "check": "pnpm lint && pnpm test && pnpm build",
+    "gen:api": "openapi-typescript contracts/openapi.yaml -o packages/api/src/schema.gen.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.8",
+    "@types/node": "26.6.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "jsdom": "30.1.3",
+    "openapi-typescript": "7.13.0",
+    "prettier": "3.9.10",
+    "typescript": "5.9.3",
+    "vitest": "5.0.5"
+  }
+}

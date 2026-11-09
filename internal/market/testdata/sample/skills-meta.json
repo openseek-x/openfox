@@ -1,0 +1,239 @@
+{
+ "skillhub.alpha.pdf-tools": {
+  "skillId": "skillhub.alpha.pdf-tools",
+  "version": "1.0.0",
+  "digest": "d-skillhub.alpha.pdf-tools",
+  "name": {
+   "zh-Hans": "PDF 工具",
+   "en": "PDF Tools"
+  },
+  "description": {
+   "zh-Hans": "处理 PDF 文件",
+   "en": "Work with PDF files"
+  },
+  "listed": true,
+  "featured": true,
+  "icon": "https://example.test/icons/pdf-tools.png",
+  "categoryIds": [
+   "productivity"
+  ],
+  "tags": [
+   {
+    "zh-Hans": "示例"
+   },
+   {
+    "en": "Sample"
+   }
+  ],
+  "stats": {
+   "downloads": 500,
+   "installs": 1,
+   "stars": 7
+  },
+  "publisher": {
+   "name": "Sample Org",
+   "verified": true
+  },
+  "source": {
+   "origin": "skillhub"
+  },
+  "fileCount": 0,
+  "origin": "skillhub"
+ },
+ "skillhub.beta.notes": {
+  "skillId": "skillhub.beta.notes",
+  "version": "2.0.0",
+  "digest": "d-skillhub.beta.notes",
+  "name": {
+   "en": "Notes"
+  },
+  "description": {
+   "en": "Take notes quickly"
+  },
+  "listed": true,
+  "featured": false,
+  "icon": "https://example.test/icons/notes.png",
+  "categoryIds": [
+   "productivity",
+   "writing"
+  ],
+  "tags": [
+   {
+    "zh-Hans": "示例"
+   },
+   {
+    "en": "Sample"
+   }
+  ],
+  "stats": {
+   "downloads": 300,
+   "installs": 1,
+   "stars": 7
+  },
+  "publisher": {
+   "name": "Sample Org",
+   "verified": true
+  },
+  "source": {
+   "origin": "skillhub"
+  },
+  "fileCount": 0,
+  "origin": "skillhub"
+ },
+ "skillhub.gamma.csvtool": {
+  "skillId": "skillhub.gamma.csvtool",
+  "version": "1.0.0",
+  "digest": "d-skillhub.gamma.csvtool",
+  "name": {
+   "en": "CSV Tool"
+  },
+  "description": {
+   "en": "Handle 100% of CSV_files"
+  },
+  "listed": true,
+  "featured": false,
+  "icon": "https://example.test/icons/csvtool.png",
+  "categoryIds": [
+   "writing"
+  ],
+  "tags": [
+   {
+    "zh-Hans": "示例"
+   },
+   {
+    "en": "Sample"
+   }
+  ],
+  "stats": {
+   "downloads": 100,
+   "installs": 1,
+   "stars": 7
+  },
+  "publisher": {
+   "name": "Sample Org",
+   "verified": true
+  },
+  "source": {
+   "origin": "skillhub"
+  },
+  "fileCount": 0,
+  "origin": "skillhub"
+ },
+ "skillhub.bad.missing": {
+  "skillId": "skillhub.bad.missing",
+  "version": "1.0.0",
+  "digest": "d-skillhub.bad.missing",
+  "name": {
+   "en": "Missing"
+  },
+  "description": {
+   "en": "x"
+  },
+  "listed": true,
+  "featured": false,
+  "icon": "https://example.test/icons/missing.png",
+  "categoryIds": [
+   "writing"
+  ],
+  "tags": [
+   {
+    "zh-Hans": "示例"
+   },
+   {
+    "en": "Sample"
+   }
+  ],
+  "stats": {
+   "downloads": 1,
+   "installs": 1,
+   "stars": 7
+  },
+  "publisher": {
+   "name": "Sample Org",
+   "verified": true
+  },
+  "source": {
+   "origin": "skillhub"
+  },
+  "fileCount": 0,
+  "origin": "skillhub"
+ },
+ "skillhub.bad.digest": {
+  "skillId": "skillhub.bad.digest",
+  "version": "1.0.0",
+  "digest": "d-skillhub.bad.digest",
+  "name": {
+   "en": "Digest"
+  },
+  "description": {
+   "en": "x"
+  },
+  "listed": true,
+  "featured": false,
+  "icon": "https://example.test/icons/digest.png",
+  "categoryIds": [
+   "writing"
+  ],
+  "tags": [
+   {
+    "zh-Hans": "示例"
+   },
+   {
+    "en": "Sample"
+   }
+  ],
+  "stats": {
+   "downloads": 1,
+   "installs": 1,
+   "stars": 7
+  },
+  "publisher": {
+   "name": "Sample Org",
+   "verified": true
+  },
+  "source": {
+   "origin": "skillhub"
+  },
+  "fileCount": 0,
+  "origin": "skillhub"
+ },
+ "skillhub.bad.nomd": {
+  "skillId": "skillhub.bad.nomd",
+  "version": "1.0.0",
+  "digest": "d-skillhub.bad.nomd",
+  "name": {
+   "en": "No entry"
+  },
+  "description": {
+   "en": "x"
+  },
+  "listed": true,
+  "featured": false,
+  "icon": "https://example.test/icons/nomd.png",
+  "categoryIds": [
+   "writing"
+  ],
+  "tags": [
+   {
+    "zh-Hans": "示例"
+   },
+   {
+    "en": "Sample"
+   }
+  ],
+  "stats": {
+   "downloads": 1,
+   "installs": 1,
+   "stars": 7
+  },
+  "publisher": {
+   "name": "Sample Org",
+   "verified": true
+  },
+  "source": {
+   "origin": "skillhub"
+  },
+  "fileCount": 0,
+  "origin": "skillhub"
+ }
+}

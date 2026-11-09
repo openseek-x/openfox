@@ -1,0 +1,157 @@
+/* 文档正文的排版（TipTap 的 ProseMirror 节点）。颜色取自设计令牌，与应用其余部分一致。 */
+
+.doc-body {
+  color: var(--color-fg-default);
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+/* 全局 :focus-visible 会给可编辑区加阴影描边；正文只保留光标，不要外框 */
+.doc-body,
+.doc-body:focus,
+.doc-body:focus-visible,
+.doc-body.ProseMirror-focused {
+  outline: none;
+  box-shadow: none;
+}
+
+.doc-body > * + * {
+  margin-top: 0.5em;
+}
+
+.doc-body p.is-editor-empty:first-child::before {
+  color: var(--color-fg-muted);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.doc-body h1 {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.35;
+  margin-top: 1em;
+}
+
+.doc-body h2 {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.4;
+  margin-top: 0.9em;
+}
+
+.doc-body h3 {
+  font-size: 17px;
+  font-weight: 600;
+  margin-top: 0.8em;
+}
+
+.doc-body h4,
+.doc-body h5,
+.doc-body h6 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-top: 0.8em;
+}
+
+.doc-body ul:not([data-type="taskList"]) {
+  list-style: disc;
+  padding-left: 1.5em;
+}
+
+.doc-body ol {
+  list-style: decimal;
+  padding-left: 1.5em;
+}
+
+.doc-body ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0.25em;
+}
+
+.doc-body ul[data-type="taskList"] li {
+  display: flex;
+  gap: 0.5em;
+  align-items: flex-start;
+}
+
+.doc-body ul[data-type="taskList"] li > label {
+  margin-top: 0.4em;
+}
+
+.doc-body blockquote {
+  border-left: 3px solid var(--color-line-default);
+  color: var(--color-fg-secondary);
+  padding-left: 1em;
+}
+
+.doc-body code {
+  background: var(--color-surface-muted);
+  border-radius: 4px;
+  font-size: 0.9em;
+  padding: 0.1em 0.3em;
+}
+
+.doc-body pre {
+  background: var(--color-surface-muted);
+  border-radius: 8px;
+  overflow-x: auto;
+  padding: 12px 14px;
+}
+
+.doc-body pre code {
+  background: none;
+  padding: 0;
+}
+
+.doc-body hr {
+  border: 0;
+  border-top: 1px solid var(--color-line-default);
+  margin: 1.25em 0;
+}
+
+.doc-body a {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.doc-body img {
+  border-radius: 8px;
+  display: block;
+  max-width: 100%;
+}
+
+.doc-body table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.doc-body th,
+.doc-body td {
+  border: 1px solid var(--color-line-default);
+  min-width: 80px;
+  padding: 6px 8px;
+  position: relative;
+  vertical-align: top;
+}
+
+.doc-body th {
+  background: var(--color-surface-muted);
+  font-weight: 600;
+  text-align: left;
+}
+
+.doc-body .selectedCell::after {
+  background: var(--color-accent);
+  bottom: 0;
+  content: "";
+  left: 0;
+  opacity: 0.12;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+  top: 0;
+}

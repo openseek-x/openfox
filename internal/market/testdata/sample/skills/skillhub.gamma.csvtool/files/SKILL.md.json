@@ -1,0 +1,8 @@
+{
+ "path": "SKILL.md",
+ "size": 75,
+ "mime": "text/plain",
+ "previewable": true,
+ "sha256": "34e4c1f7c70b9513b1f689e7411d7ee0bdfc03f6d54341a64229556a11a1c8ca",
+ "content": "---\nname: csvtool\ndescription: Handle 100% of CSV_files\n---\n\nInstructions.\n"
+}

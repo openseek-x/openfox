@@ -1,0 +1,106 @@
+/* 离线页：沿用网页端的浅色基调（surface-canvas / fg-default），不依赖网页端样式文件 */
+:root {
+  color-scheme: light dark;
+  --bg: #f6f7f9;
+  --card: #ffffff;
+  --fg: #1f2329;
+  --muted: #646a73;
+  --line: #e4e6ea;
+  --primary: #1f2329;
+  --primary-fg: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17181a;
+    --card: #1f2023;
+    --fg: #ebedf0;
+    --muted: #9ba0a8;
+    --line: #2e3035;
+    --primary: #ebedf0;
+    --primary-fg: #17181a;
+  }
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--fg);
+  font:
+    14px/1.6 -apple-system,
+    BlinkMacSystemFont,
+    "PingFang SC",
+    "Segoe UI",
+    sans-serif;
+}
+.drag {
+  height: 40px;
+  flex-shrink: 0;
+  -webkit-app-region: drag;
+}
+main {
+  margin: auto;
+  width: 480px;
+  padding: 32px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--card);
+}
+h1 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+}
+p {
+  margin: 0 0 12px;
+  color: var(--muted);
+}
+.url {
+  color: var(--fg);
+  word-break: break-all;
+}
+.hint {
+  margin: 16px 0 20px;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--bg);
+}
+.hint p {
+  margin-bottom: 6px;
+}
+code,
+pre {
+  display: block;
+  margin: 0;
+  font:
+    12px/1.6 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  color: var(--fg);
+  white-space: pre-wrap;
+  word-break: break-all;
+  user-select: text;
+}
+pre {
+  margin-top: 6px;
+}
+button {
+  height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--primary);
+  color: var(--primary-fg);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
