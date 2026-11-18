@@ -1,0 +1,21 @@
+{
+  "kind": "pptx",
+  "units": [
+    {
+      "id": "s1.n28",
+      "section": "Slide 1",
+      "label": "Text 1",
+      "text": "Original text",
+      "type": "text",
+      "editable": true
+    },
+    {
+      "id": "s2.n28",
+      "section": "Slide 2",
+      "label": "Text 1",
+      "text": "Keep slide two",
+      "type": "text",
+      "editable": true
+    }
+  ]
+}

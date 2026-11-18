@@ -1,0 +1,349 @@
+{
+  "kind": "xlsx",
+  "units": [
+    {
+      "id": "s1.n20",
+      "section": "项目进展",
+      "label": "A1",
+      "text": "中文工作表 · 项目进展",
+      "type": "text",
+      "editable": true,
+      "cell_source": {
+        "part": "xl/worksheets/sheet1.xml",
+        "sheet": 0,
+        "row": 0,
+        "column": 0
+      }
+    },
+    {
+      "id": "s1.n24",
+      "section": "项目进展",
+      "label": "A2",
+      "text": "阶段",
+      "type": "text",
+      "editable": true,
+      "cell_source": {
+        "part": "xl/worksheets/sheet1.xml",
+        "sheet": 0,
+        "row": 1,
+        "column": 0
+      }
+    },
+    {
+      "id": "s1.n27",
+      "section": "项目进展",
+      "label": "B2",
+      "text": "计划",
+      "type": "text",
+      "editable": true,
+      "cell_source": {
+        "part": "xl/worksheets/sheet1.xml",
+        "sheet": 0,
+        "row": 1,
+        "column": 1
+      }
+    },
+    {
+      "id": "s1.n30",
+      "section": "项目进展",
+      "label": "C2",
+      "text": "完成",
+      "type": "text",
+      "editable": true,
+      "cell_source": {
+        "part": "xl/worksheets/sheet1.xml",
+        "sheet": 0,
+        "row": 1,
+        "column": 2
+      }
+    },
+    {
+      "id": "s1.n33",
+      "section": "项目进展",
+      "label": "D2",
+      "text": "完成率",
+      "type": "text",
+      "editable": true,
+      "cell_source": {
+        "part": "xl/worksheets/sheet1.xml",
+        "sheet": 0,
+        "row": 1,
+        "column": 3
+      }
+    },
+    {
+      "id": "s1.n37",
+      "section": "项目进展",
+      "label": "A3",
+      "text": "第一阶段",
+      "type": "text",
+      "editable": true,
+      "cell_source": {
+        "part": "xl/worksheets/sheet1.xml",
+        "sheet": 0,
+        "row": 2,
+        "column": 0
+      }
+    },
+    {
+      "id": "s1.n40",
+      "section": "项目进展",
+      "label": "B3",
+      "text": "10",
+      "type": "number",
+      "editable": true,
+      "cell_source": {
+        "part": "xl/worksheets/sheet1.xml",
+        "sheet": 0,
+        "row": 2,
+        "column": 1
+      }
+    },
+    {
+      "id": "s1.n42",
+      "section": "项目进展",
+      "label": "C3",
+      "text": "8",
+      "type": "number",
+      "editable": true,
+      "cell_source": {
+        "part": "xl/worksheets/sheet1.xml",
+        "sheet": 0,
+        "row": 2,
+        "column": 2
+      }
+    },
+    {
+      "id": "s1.n44",
+      "section": "项目进展",
+      "label": "D3",
+      "text": "=C3/B3",
+      "type": "formula",
+      "editable": false,
+      "cell_source": {
+        "part": "xl/worksheets/sheet1.xml",
+        "sheet": 0,
+        "row": 2,
+        "column": 3
+      }
+    },
+    {
+      "id": "s1.n48",
+      "section": "项目进展",
+      "label": "A4",
+      "text": "第二阶段",
+      "type": "text",
+      "editable": true,
+      "cell_source": {
+        "part": "xl/worksheets/sheet1.xml",
+        "sheet": 0,
+        "row": 3,
+        "column": 0
+      }
+    },
+    {
+      "id": "s1.n51",
+      "section": "项目进展",
+      "label": "B4",
+      "text": "20",
+      "type": "number",
+      "editable": true,
+      "cell_source": {
+        "part": "xl/worksheets/sheet1.xml",
+        "sheet": 0,
+        "row": 3,
+        "column": 1
+      }
+    },
+    {
+      "id": "s1.n53",
+      "section": "项目进展",
+      "label": "C4",
+      "text": "12",
+      "type": "number",
+      "editable": true,
+      "cell_source": {
+        "part": "xl/worksheets/sheet1.xml",
+        "sheet": 0,
+        "row": 3,
+        "column": 2
+      }
+    },
+    {
+      "id": "s1.n55",
+      "section": "项目进展",
+      "label": "D4",
+      "text": "=C4/B4",
+      "type": "formula",
+      "editable": false,
+      "cell_source": {
+        "part": "xl/worksheets/sheet1.xml",
+        "sheet": 0,
+        "row": 3,
+        "column": 3
+      }
+    },
+    {
+      "id": "s1.n59",
+      "section": "项目进展",
+      "label": "A5",
+      "text": "第三阶段",
+      "type": "text",
+      "editable": true,
+      "cell_source": {
+        "part": "xl/worksheets/sheet1.xml",
+        "sheet": 0,
+        "row": 4,
+        "column": 0
+      }
+    },
+    {
+      "id": "s1.n62",
+      "section": "项目进展",
+      "label": "B5",
+      "text": "30",
+      "type": "number",
+      "editable": true,
+      "cell_source": {
+        "part": "xl/worksheets/sheet1.xml",
+        "sheet": 0,
+        "row": 4,
+        "column": 1
+      }
+    },
+    {
+      "id": "s1.n64",
+      "section": "项目进展",
+      "label": "C5",
+      "text": "24",
+      "type": "number",
+      "editable": true,
+      "cell_source": {
+        "part": "xl/worksheets/sheet1.xml",
+        "sheet": 0,
+        "row": 4,
+        "column": 2
+      }
+    },
+    {
+      "id": "s1.n66",
+      "section": "项目进展",
+      "label": "D5",
+      "text": "=C5/B5",
+      "type": "formula",
+      "editable": false,
+      "cell_source": {
+        "part": "xl/worksheets/sheet1.xml",
+        "sheet": 0,
+        "row": 4,
+        "column": 3
+      }
+    },
+    {
+      "id": "s1.n70",
+      "section": "项目进展",
+      "label": "A7",
+      "text": "重复文本",
+      "type": "text",
+      "editable": true,
+      "cell_source": {
+        "part": "xl/worksheets/sheet1.xml",
+        "sheet": 0,
+        "row": 6,
+        "column": 0
+      }
+    },
+    {
+      "id": "s1.n73",
+      "section": "项目进展",
+      "label": "B7",
+      "text": "重复文本",
+      "type": "text",
+      "editable": true,
+      "cell_source": {
+        "part": "xl/worksheets/sheet1.xml",
+        "sheet": 0,
+        "row": 6,
+        "column": 1
+      }
+    },
+    {
+      "id": "s1.n77",
+      "section": "项目进展",
+      "label": "A8",
+      "text": "隐藏行",
+      "type": "text",
+      "editable": true,
+      "cell_source": {
+        "part": "xl/worksheets/sheet1.xml",
+        "sheet": 0,
+        "row": 7,
+        "column": 0
+      }
+    },
+    {
+      "id": "s2.n12",
+      "section": "第二张表",
+      "label": "A1",
+      "text": "重复文本",
+      "type": "text",
+      "editable": true,
+      "cell_source": {
+        "part": "xl/worksheets/sheet2.xml",
+        "sheet": 1,
+        "row": 0,
+        "column": 0
+      }
+    }
+  ],
+  "spreadsheet": {
+    "sha256": "091a283d7043275b50919187b02dd98cea9f889b35fa29b1e8e3f505a88ad17c",
+    "sheets": [
+      {
+        "part": "xl/worksheets/sheet1.xml",
+        "name": "项目进展",
+        "index": 0,
+        "hidden": false,
+        "frozen_rows": 2,
+        "frozen_columns": 1,
+        "drawings": [
+          {
+            "kind": "chart",
+            "name": "Chart 1",
+            "from": {
+              "row": 2,
+              "column": 5,
+              "x": 0,
+              "y": 0
+            },
+            "width": 642.5196850393701,
+            "height": 340.15748031496065
+          },
+          {
+            "kind": "image",
+            "name": "Image 2",
+            "from": {
+              "row": 0,
+              "column": 5,
+              "x": 0,
+              "y": 0
+            },
+            "width": 240,
+            "height": 80,
+            "data": "iVBORw0KGgoAAAANSUhEUgAAAPAAAABQCAIAAACoK28rAAACfklEQVR4nO3dMU4jQRCF4TEih8z5OHHoxAfxTbgB4gbchKs4rMQ+A9wACSTkZMxMd1dP1dP/RauVd9zBr7ctFryb7fE0ACoe1j4A0BJBQwpBQwpBQwpBQwpBQwpBQwpBQwpBQwpBQwpBQ8rjnBc9v6f5fo/Pl48htuvb1/0XjK9Pgxw77PbnS5Sg4R3x1Isl43ZF0IFSnvrj2bO2w67bSBN00JT1su6DoEOnLJC1/czz36+9R5qvcuSoudvzsyPofLUlatpu5nnqd9riypEysqTXjw5Y6MSTGXyqbWKMXUeaoHNXFbzp/ggaUgg6/UBGOMPSe4XfrYOgFUqKc5LVEbRIQ6HOYzMG2GmkCRpSCDr9HEY7lc2eXo+RJmhIIeisQxjzbLZwdJuPNEFDCkEnm0CBE7oiaDRTdn9oe+sgaEghaLRRM7QNR5qgBa+n1yTn9EDQaKB+YluNNEFDCkFjCDKuTZ5D0JBC0JBC0KjS9p9F6p9G0JBC0Cjn8Q3Nlc8kaEghaBTy+8ntmicT9AJZPnprTHJODwSNEt6fuVj8fIKGFIJGuHmueReCVruejuFP6IqgIYWgpSZw9D9bn/tG8XsRNKQQtM5Ij1rzXPaOBA0pBC0y0pLzXPC+BK3QdJyTrI6g05fU5wy20jwvfXeChhSCzj3SEf6KCIWgE1fV7X1t1fvGojPwXyO3bKvbZ3AxzFNY6Hydda7ZAszz/JMQdLLa2Ob7uHKkuX6skrKFmedfdtjtz5c7LyDoBFmzyvMRdOis103Zgs3znJEm6B5uu/w3bva4xmZ7PFU9AIiEr3JACkFDCkFDCkFDCkFDCkFDCkFDCkFDCkFDCkFjUPINTgi7qRe4u1MAAAAASUVORK5CYII="
+          }
+        ]
+      },
+      {
+        "part": "xl/worksheets/sheet2.xml",
+        "name": "第二张表",
+        "index": 1,
+        "hidden": false,
+        "frozen_rows": 0,
+        "frozen_columns": 0,
+        "drawings": []
+      }
+    ]
+  },
+  "sha256": "a570c85b543fe290ff579390aaca35ca0c88a5c1c947b81eaa44fc6ff2f73f5b"
+}

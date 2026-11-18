@@ -1,0 +1,1090 @@
+{
+  "paths": {
+    "list": {
+      "parameters": [
+        {
+          "name": "organizationID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "conversationID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "listWorkspaceProposals",
+        "description": "Session authentication; writes require CSRF and current conversation/document write access. Candidate and baseline are immutable. A decision operation_id is bound to actor, version and action; retry the same request after an unknown result. Accept atomically checks head, SHA and permissions, appends a revision and records the receipt. 409 never overwrites newer content. Private no-store.",
+        "responses": {
+          "400": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/schemas/WorkspaceProposalPage"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "proposal": {
+      "parameters": [
+        {
+          "name": "organizationID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "conversationID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "proposalID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "getWorkspaceProposal",
+        "description": "Session authentication; writes require CSRF and current conversation/document write access. Candidate and baseline are immutable. A decision operation_id is bound to actor, version and action; retry the same request after an unknown result. Accept atomically checks head, SHA and permissions, appends a revision and records the receipt. 409 never overwrites newer content. Private no-store.",
+        "responses": {
+          "400": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/schemas/WorkspaceProposal"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "decision": {
+      "parameters": [
+        {
+          "name": "organizationID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "conversationID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "proposalID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "post": {
+        "operationId": "decideWorkspaceProposal",
+        "description": "Session authentication; writes require CSRF and current conversation/document write access. Candidate and baseline are immutable. A decision operation_id is bound to actor, version and action; retry the same request after an unknown result. Accept atomically checks head, SHA and permissions, appends a revision and records the receipt. 409 never overwrites newer content. Private no-store.",
+        "responses": {
+          "400": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/schemas/WorkspaceProposal"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/schemas/WorkspaceProposalDecision"
+              }
+            }
+          }
+        }
+      }
+    },
+    "restore": {
+      "parameters": [
+        {
+          "name": "organizationID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "conversationID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "proposalID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "put": {
+        "operationId": "restoreWorkspaceArtifact",
+        "description": "Session authentication; writes require CSRF and current conversation/document write access. Candidate and baseline are immutable. A decision operation_id is bound to actor, version and action; retry the same request after an unknown result. Accept atomically checks head, SHA and permissions, appends a revision and records the receipt. 409 never overwrites newer content. Private no-store.",
+        "responses": {
+          "400": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/schemas/WorkspaceProposal"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/schemas/WorkspaceProposalRestore"
+              }
+            }
+          }
+        }
+      }
+    },
+    "content": {
+      "parameters": [
+        {
+          "name": "organizationID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "conversationID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "proposalID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "getWorkspaceProposalContent",
+        "description": "Session authentication; writes require CSRF and current conversation/document write access. Candidate and baseline are immutable. A decision operation_id is bound to actor, version and action; retry the same request after an unknown result. Accept atomically checks head, SHA and permissions, appends a revision and records the receipt. 409 never overwrites newer content. Private no-store.",
+        "responses": {
+          "400": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "side",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "base",
+                "candidate"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "office": {
+      "parameters": [
+        {
+          "name": "organizationID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "conversationID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "proposalID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "getWorkspaceProposalOffice",
+        "description": "Session authentication; writes require CSRF and current conversation/document write access. Candidate and baseline are immutable. A decision operation_id is bound to actor, version and action; retry the same request after an unknown result. Accept atomically checks head, SHA and permissions, appends a revision and records the receipt. 409 never overwrites newer content. Private no-store.",
+        "responses": {
+          "400": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./artifact-reviews.yaml#/schemas/OfficeView"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "side",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "base",
+                "candidate"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "office-preview": {
+      "parameters": [
+        {
+          "name": "organizationID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "conversationID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "proposalID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "getWorkspaceProposalOfficePreview",
+        "description": "Session authentication; writes require CSRF and current conversation/document write access. Candidate and baseline are immutable. A decision operation_id is bound to actor, version and action; retry the same request after an unknown result. Accept atomically checks head, SHA and permissions, appends a revision and records the receipt. 409 never overwrites newer content. Private no-store.",
+        "responses": {
+          "400": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Authorization, input, baseline conflict or unavailable content.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "side",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "base",
+                "candidate"
+              ]
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pdf",
+                "xlsx"
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "schemas": {
+    "WorkspaceProposal": {
+      "type": "object",
+      "required": [
+        "id",
+        "conversation_id",
+        "run_id",
+        "source",
+        "base",
+        "size_bytes",
+        "sha256",
+        "summary",
+        "status",
+        "version",
+        "created_by",
+        "created_at"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "conversation_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "run_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "context_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "sha256",
+            "comments"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "artifact_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "space_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "node_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "node_version": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "comments": {
+              "type": "array",
+              "minItems": 0,
+              "maxItems": 20,
+              "items": {
+                "$ref": "./artifact-reviews.yaml#/schemas/FileComment"
+              }
+            }
+          }
+        },
+        "base": {
+          "$ref": "./artifact-reviews.yaml#/schemas/ArtifactReviewFile"
+        },
+        "size_bytes": {
+          "type": "integer"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "PENDING",
+            "ACCEPTED",
+            "REJECTED"
+          ]
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "created_by": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "decision_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "decided_by": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "result_artifact_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "result_node_version": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "WorkspaceProposalPage": {
+      "type": "object",
+      "required": [
+        "proposals",
+        "next_cursor"
+      ],
+      "properties": {
+        "proposals": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "$ref": "#/schemas/WorkspaceProposal"
+          }
+        },
+        "next_cursor": {
+          "type": "string"
+        }
+      }
+    },
+    "WorkspaceProposalDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operation_id",
+        "version",
+        "action"
+      ],
+      "properties": {
+        "operation_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "accept",
+            "reject"
+          ]
+        }
+      }
+    },
+    "WorkspaceProposalRestore": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_artifact_id",
+        "base_artifact_id"
+      ],
+      "properties": {
+        "source_artifact_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "base_artifact_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    }
+  }
+}

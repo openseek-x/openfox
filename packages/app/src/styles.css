@@ -1,0 +1,102 @@
+@import "tailwindcss";
+@import "@openfox/ui/tokens.css";
+@source "../../ui/src";
+@source "./";
+
+:root[data-density="compact"] {
+  --density-list-row: 36px;
+  --density-table-row: 32px;
+  --density-group-row: 32px;
+  --density-nav-row: 28px;
+  --density-subnav-row: 28px;
+  --density-chat-padding: 4px;
+  --density-card-padding: 8px;
+  --density-card-gap: 4px;
+  --density-gantt-row: 32px;
+  --density-triage-row: 56px;
+}
+
+/* Mark the result on arrival without shifting the surrounding timeline. */
+.message-search-hit {
+  border-radius: 8px;
+  animation: message-search-arrival 2s ease-out;
+}
+@keyframes message-search-arrival {
+  0%,
+  50% {
+    box-shadow: 0 0 0 2px var(--color-surface-selected);
+    background-color: var(--color-surface-selected);
+  }
+  100% {
+    box-shadow: none;
+    background-color: transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .message-search-hit {
+    animation: none;
+    outline: 1px solid var(--color-line-default);
+  }
+}
+
+/* 运行中状态行：脉冲圆点与文字微光；系统开启「减少动态效果」时静止显示。 */
+.run-status-pulse {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--color-accent);
+}
+.run-status-pulse::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 999px;
+  border: 2px solid var(--color-accent);
+  opacity: 0;
+  animation: run-status-ring 1.6s ease-out infinite;
+}
+@keyframes run-status-ring {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+.run-status-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-fg-muted) 0%,
+    var(--color-fg-muted) 35%,
+    var(--color-fg-default) 50%,
+    var(--color-fg-muted) 65%,
+    var(--color-fg-muted) 100%
+  );
+  background-size: 240% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: run-status-shine 2.2s linear infinite;
+}
+@keyframes run-status-shine {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: 0 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .run-status-pulse::after {
+    animation: none;
+  }
+  .run-status-shimmer {
+    animation: none;
+    background: none;
+    color: var(--color-fg-secondary);
+  }
+}

@@ -1,0 +1,62 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: openfox
+      POSTGRES_USER: openfox_migrate
+      POSTGRES_PASSWORD: change-me-for-local-use-only
+    volumes:
+      - openfox-postgres:/var/lib/postgresql/data
+
+  office-preview:
+    image: gotenberg/gotenberg:8.32.0@sha256:a40c5a46b79d812ce2f5e139278163142a054050bfd1e5f162da36d3d11c7138
+    environment:
+      XDG_CACHE_HOME: /tmp/gotenberg-cache
+    command:
+      - gotenberg
+      - --chromium-disable-routes=true
+      - --pdfengines-disable-routes=true
+      - --libreoffice-deny-list=.*
+      - --libreoffice-max-queue-size=2
+      - --api-timeout=60s
+      - --api-body-limit=12MB
+    networks: [office-preview]
+    read_only: true
+    tmpfs:
+      - /tmp:size=512m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 1g
+    pids_limit: 256
+
+  openfox:
+    image: openfox:dev
+    depends_on:
+      - postgres
+      - office-preview
+    environment:
+      OPENFOX_ENV: development
+      OPENFOX_SERVER_LISTEN: 0.0.0.0:8080
+      OPENFOX_SERVER_PUBLIC_URL: http://127.0.0.1:8080
+      OPENFOX_DATABASE_URL_FILE: /run/secrets/openfox_database_url
+      OPENFOX_STORAGE_ROOT: /var/lib/openfox
+      OPENFOX_OFFICE_PREVIEW_URL: http://office-preview:3000
+    volumes:
+      - openfox-artifacts:/var/lib/openfox
+    ports:
+      - "127.0.0.1:8080:8080"
+    networks: [default, office-preview]
+    secrets:
+      - openfox_database_url
+
+secrets:
+  openfox_database_url:
+    file: ./secrets/database.url
+
+volumes:
+  openfox-postgres:
+  openfox-artifacts:
+
+networks:
+  office-preview:
+    internal: true

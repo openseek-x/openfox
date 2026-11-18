@@ -1,0 +1,57 @@
+export const zohoZh = {
+  activity: "{actor} 导入了这个任务；来源报告人：{name}（US · {id}）",
+  activityMember: "映射成员：{name}",
+  activityExternal: "映射为来源外部账号",
+  activityUnmapped: "未映射本地成员",
+
+  title: "Zoho BugTracker（US）",
+  organizationTitle: "组织门户连接",
+  connect: "连接 Zoho 门户",
+  portal: "Zoho 门户",
+  choosePortal: "请选择你管理的门户",
+  reauthorize: "重新授权",
+  notConfigured: "服务尚未配置 US Zoho 组织与身份 OAuth 应用，请联系管理员。",
+  lifecycle:
+    "此集成使用 US 旧版 BugTracker REST。官方共享文档已提示弃用，BugTracker 的独立停用日期与后续迁移方式尚未确认；接口失效后将停止新读取，已导入副本保留。",
+  scope:
+    "一次性导入公开字段：标题、状态、severity、来源报告人、创建时间及来源 ID。不导入正文、远端负责人、评论或附件，不持续同步，也不向 Zoho 写入。",
+  shared: "组织管理员授权一个本人管理的门户，供本组织管理员只读导入活动项目。",
+  shareConsent: "我确认将所选门户的只读授权提供给本组织管理员使用。",
+  completeTitle: "确认 Zoho 门户授权",
+  identityTitle: "Zoho 本人身份",
+  identityDescription:
+    "使用独立 OAuth 核验同门户的本人 login_id、启用用户及本人邮箱。仅保存身份事实，不保存个人 Token；只建议后续导入的来源报告人归属，不自动指派负责人。",
+  confirmIdentity: "确认这是我的身份",
+  confirmPortal: "确认连接门户",
+  manageIdentity: "管理本人绑定",
+  identityDisconnect:
+    "解绑后停止后续自动归属建议，保留人工映射、已导入任务和历史。",
+  disconnect:
+    "本地断开后停止新读取与后续身份归属，保留已导入任务；不会自动撤销 Zoho 远端授权。",
+  openConfirmation: "打开本人确认页",
+  needsAttention: "需要重新核验",
+  failed: "Zoho 授权或读取失败，请重新检查权限后重试。",
+  expired: "授权会话已过期，请重新发起。",
+  changed: "连接或配置已变化，请刷新并重新授权。",
+  mismatch: "所选门户、本人身份或邮箱不匹配。",
+  permission: "请确认当前账号是门户管理员或该门户的启用成员，并拥有所需权限。",
+  rateLimited: "Zoho 请求受限或正在核验，请遵循重试等待时间后再试。",
+  grantInUse: "该授权已用于另一个连接，请创建独立授权。",
+  limit: "来源目录或项目列表超过核验范围，请缩小范围后重试。",
+  refresh: "刷新状态",
+  noPortals: "没有可连接的管理员门户。",
+  import: "导入 Bug",
+  moreProjects: "加载更多项目",
+  projectCount: "已列出 {count} 个活动项目",
+  projectLimit:
+    "项目列表达到本页读取上限或游标重复；请按项目 ID 选择，后端会重新核验。",
+  enterID: "使用项目 ID",
+  projectID: "项目 ID（保留完整数字）",
+  mappingHelp:
+    "每个来源类型、状态和 severity 都需明确映射。只提供当前组织可用的优先级，不自动升级优先级方案。",
+  type: "类型「{name}」映射",
+  defaultType: "空间默认类型",
+  priorityValue: "Severity「{name}」映射",
+  usersHelp: "此来源只提供报告人，用于来源报告人归属映射；没有远端负责人字段。",
+  noSecrets: "个人授权凭据不会保存。",
+} as const;

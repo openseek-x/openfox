@@ -1,0 +1,21 @@
+.doc-body .doc-find-match {
+  background-color: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  border-radius: 2px;
+}
+.doc-body .doc-find-active {
+  background-color: color-mix(in srgb, var(--color-accent) 38%, transparent);
+  outline: 1px solid var(--color-accent);
+}
+[data-doc-page-width] .doc-body {
+  overflow-wrap: anywhere;
+}
+[data-doc-page-width] .doc-body pre,
+[data-doc-page-width] .doc-body .tableWrapper {
+  max-width: 100%;
+  overflow-x: auto;
+}
+[data-doc-page-width] .doc-body table {
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+}

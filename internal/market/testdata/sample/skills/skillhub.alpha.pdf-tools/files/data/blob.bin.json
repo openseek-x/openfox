@@ -1,0 +1,8 @@
+{
+ "path": "data/blob.bin",
+ "size": 8,
+ "mime": "text/plain",
+ "previewable": true,
+ "sha256": "f8c1ccc7df7243da4740c5b7875f88b70e3f935d99c7b37a5f7239d152d994e6",
+ "content": "\u0000\u0001binary"
+}

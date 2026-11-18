@@ -1,0 +1,84 @@
+{
+ "meta": {
+  "schemaVersion": 1,
+  "skillId": "skillhub.alpha.pdf-tools",
+  "version": "1.0.0",
+  "digest": "d-skillhub.alpha.pdf-tools",
+  "name": {
+   "zh-Hans": "PDF 工具",
+   "en": "PDF Tools"
+  },
+  "description": {
+   "zh-Hans": "处理 PDF 文件",
+   "en": "Work with PDF files"
+  },
+  "listed": true,
+  "featured": true,
+  "icon": "https://example.test/icons/pdf-tools.png",
+  "categoryIds": [
+   "productivity"
+  ],
+  "tags": [
+   {
+    "zh-Hans": "示例"
+   },
+   {
+    "en": "Sample"
+   }
+  ],
+  "stats": {
+   "downloads": 500,
+   "installs": 1,
+   "stars": 7
+  },
+  "publisher": {
+   "name": "Sample Org",
+   "verified": true
+  },
+  "source": {
+   "origin": "skillhub"
+  }
+ },
+ "tree": {
+  "nodes": [
+   {
+    "type": "file",
+    "path": "SKILL.md",
+    "size": 72,
+    "mime": "text/plain",
+    "previewable": true,
+    "sha256": "2b2d9f2f1bf34e962ee90995d848b29f47f8d669090bd2c452c91b6b5ffbf399"
+   },
+   {
+    "type": "dir",
+    "path": "data",
+    "previewable": false,
+    "children": [
+     {
+      "type": "file",
+      "path": "data/blob.bin",
+      "size": 8,
+      "mime": "text/plain",
+      "previewable": true,
+      "sha256": "f8c1ccc7df7243da4740c5b7875f88b70e3f935d99c7b37a5f7239d152d994e6"
+     }
+    ]
+   },
+   {
+    "type": "dir",
+    "path": "scripts",
+    "previewable": false,
+    "children": [
+     {
+      "type": "file",
+      "path": "scripts/run.py",
+      "size": 12,
+      "mime": "text/plain",
+      "previewable": true,
+      "sha256": "caf026f25d7140209f98072605307a438914b9ce6f3c14b23d15d9667241de52"
+     }
+    ]
+   }
+  ]
+ }
+}

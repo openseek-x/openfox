@@ -1,0 +1,15 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "OptionalSelectedRepositoryPRBacklinks",
+      "Effect": "Allow",
+      "Action": [
+        "codecommit:PostCommentForPullRequest"
+      ],
+      "Resource": [
+        "arn:aws:codecommit:REGION:ACCOUNT_ID:EXACT_CASE_SENSITIVE_REPOSITORY_NAME"
+      ]
+    }
+  ]
+}

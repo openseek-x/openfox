@@ -1,0 +1,266 @@
+{
+  "deployed_preserved": 122,
+  "new_migrations": 37,
+  "total": 159,
+  "mapping": [
+    {
+      "source": "000114_space_creator.sql",
+      "release": "000123_space_creator.sql",
+      "source_sha256": "6cee46beefb978cd571a7c8116de7d9ca125ada32f6d1366f4c380bc8f41b1c2",
+      "release_sha256": "6cee46beefb978cd571a7c8116de7d9ca125ada32f6d1366f4c380bc8f41b1c2",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000115_message_reply_snapshot.sql",
+      "release": "000124_message_reply_snapshot.sql",
+      "source_sha256": "371449e5f30c1d7baa0fe05df0ef2806efededc116372b01c69d3338e226b045",
+      "release_sha256": "371449e5f30c1d7baa0fe05df0ef2806efededc116372b01c69d3338e226b045",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000116_notification_event_overrides.sql",
+      "release": "000125_notification_event_overrides.sql",
+      "source_sha256": "c97e64689bdef86f9b9e9ddfb1eaaaf1e9fc834d8811eaaf357cfee8667d8911",
+      "release_sha256": "c97e64689bdef86f9b9e9ddfb1eaaaf1e9fc834d8811eaaf357cfee8667d8911",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000117_independent_im_notification_channels.sql",
+      "release": "000126_independent_im_notification_channels.sql",
+      "source_sha256": "d300d009238a62205c74a48b083e5236882fa7f58103387f61a97786a6ec513c",
+      "release_sha256": "d300d009238a62205c74a48b083e5236882fa7f58103387f61a97786a6ec513c",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000118_task_type_order.sql",
+      "release": "000127_task_type_order.sql",
+      "source_sha256": "0b601d997f3adfa225f64d8f43e3bd20fd9e223bb094f927c7dd7134c893a698",
+      "release_sha256": "0b601d997f3adfa225f64d8f43e3bd20fd9e223bb094f927c7dd7134c893a698",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000119_task_type_commit.sql",
+      "release": "000128_task_type_commit.sql",
+      "source_sha256": "b97d0b3f8dea77c9e856efbbf423d2a310ff5a3c18959ccfe1ca2e52c764f055",
+      "release_sha256": "b97d0b3f8dea77c9e856efbbf423d2a310ff5a3c18959ccfe1ca2e52c764f055",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000120_share_snapshots.sql",
+      "release": "000129_share_snapshots.sql",
+      "source_sha256": "c2ac11f0d069b813c5fd6b7861fc175f46ed024fc4f75f593b28f395d3637813",
+      "release_sha256": "b1dc8f873886012d5ffc04f1ec239cc6ad86eaa1f472d93e68b78b4078f498a9",
+      "adjustment": "delta over deployed share table; COMMENT retained; empty-table precondition; recoverable-token columns"
+    },
+    {
+      "source": "000121_task_completed_at.sql",
+      "release": "000130_task_completed_at.sql",
+      "source_sha256": "c8d30bcecf776d1c3e0fe71de9fe308af98c63afbdf5efdbb668765dc97ea3e1",
+      "release_sha256": "c8d30bcecf776d1c3e0fe71de9fe308af98c63afbdf5efdbb668765dc97ea3e1",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000122_task_references.sql",
+      "release": "000131_task_references.sql",
+      "source_sha256": "cd7ea264df68518f7aada200b52ba0b3882dc799b98ac9085875a6f9d3d3cb77",
+      "release_sha256": "cd7ea264df68518f7aada200b52ba0b3882dc799b98ac9085875a6f9d3d3cb77",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000123_space_default_view.sql",
+      "release": "000132_space_default_view.sql",
+      "source_sha256": "d4be18b294ad34af5c6a4d09063d085c22b60cfc2c8c18b42f7575bf9083309e",
+      "release_sha256": "d4be18b294ad34af5c6a4d09063d085c22b60cfc2c8c18b42f7575bf9083309e",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000124_doc_references.sql",
+      "release": "000133_doc_references.sql",
+      "source_sha256": "7790f97119ac86a0f6af57578c73288b9e02e07b568e4c72d0b67eaaa4149fd8",
+      "release_sha256": "7790f97119ac86a0f6af57578c73288b9e02e07b568e4c72d0b67eaaa4149fd8",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000125_agent_working_hours.sql",
+      "release": "000134_agent_working_hours.sql",
+      "source_sha256": "99d55e8a18377b2830e2046b82e5fdf5802ecfd266054d0b5a58729b25e8a30b",
+      "release_sha256": "47910164fdbca6a4504833ad607fb5632ae3f1d4921fb6e835e64623e03c8325",
+      "adjustment": "reuse deployed comment_id and unique mention index; retain crew_id and legacy mention constraint"
+    },
+    {
+      "source": "000126_conversation_forks.sql",
+      "release": "000135_conversation_forks.sql",
+      "source_sha256": "d8faaff08792f01db4e3df4cc24f3b347c8484f69ffa838e5990457faff2ca8f",
+      "release_sha256": "d8faaff08792f01db4e3df4cc24f3b347c8484f69ffa838e5990457faff2ca8f",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000127_cnb_git_work.sql",
+      "release": "000136_cnb_git_work.sql",
+      "source_sha256": "b22c7ab414a8d52777daddaf43e36bc26f2ae2518c7247358a41075b3c97fac0",
+      "release_sha256": "b22c7ab414a8d52777daddaf43e36bc26f2ae2518c7247358a41075b3c97fac0",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000128_device_runtime_defaults.sql",
+      "release": "000137_device_runtime_defaults.sql",
+      "source_sha256": "aa21add7b19b86c4e87abca7decb9454509d39bdb4262979a1cc920b32529655",
+      "release_sha256": "aa21add7b19b86c4e87abca7decb9454509d39bdb4262979a1cc920b32529655",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000129_wecom_group_authorizations.sql",
+      "release": "000138_wecom_group_authorizations.sql",
+      "source_sha256": "e8054e410236bb6b889f35b3c2ddb969dafdb9ad052ba3f9c74deb6dbc311754",
+      "release_sha256": "e8054e410236bb6b889f35b3c2ddb969dafdb9ad052ba3f9c74deb6dbc311754",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000130_codeup_mr_work.sql",
+      "release": "000139_codeup_mr_work.sql",
+      "source_sha256": "18d6cfee5bed604c36e3c58d36342c9d2587a7cb0de336de934dff87cdd9e876",
+      "release_sha256": "18d6cfee5bed604c36e3c58d36342c9d2587a7cb0de336de934dff87cdd9e876",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000132_codebuddy_runtime.sql",
+      "release": "000140_codebuddy_runtime.sql",
+      "source_sha256": "a0dbbeb64ed091d040c18abff92e5ae8f27ce6ef457a098888b6fc865d1681e6",
+      "release_sha256": "a0dbbeb64ed091d040c18abff92e5ae8f27ce6ef457a098888b6fc865d1681e6",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000133_tapd_personal_identity.sql",
+      "release": "000141_tapd_personal_identity.sql",
+      "source_sha256": "65499e4cf6e5d7ab3700196994db84aa64bb1ba24617b9d81bd85a1f6247e23e",
+      "release_sha256": "65499e4cf6e5d7ab3700196994db84aa64bb1ba24617b9d81bd85a1f6247e23e",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000134_teambition_personal_identity.sql",
+      "release": "000142_teambition_personal_identity.sql",
+      "source_sha256": "6886e033fcc60fe8c4f630e1cfcd92289fb39b290a8739f6f7edbd37d8f3c918",
+      "release_sha256": "6886e033fcc60fe8c4f630e1cfcd92289fb39b290a8739f6f7edbd37d8f3c918",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000135_yunxiao_workitems.sql",
+      "release": "000143_yunxiao_workitems.sql",
+      "source_sha256": "9e4e4ade5bc3f3e7720ef83114f8789629e7c224adf2d180078fca975f936db4",
+      "release_sha256": "9e4e4ade5bc3f3e7720ef83114f8789629e7c224adf2d180078fca975f936db4",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000136_asana_imports.sql",
+      "release": "000144_asana_imports.sql",
+      "source_sha256": "d631be2281f73534f919b6cfd741dffafbf59ab18e0cf49f75a8bb68ad25c2cb",
+      "release_sha256": "d631be2281f73534f919b6cfd741dffafbf59ab18e0cf49f75a8bb68ad25c2cb",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000137_azure_devops.sql",
+      "release": "000145_azure_devops.sql",
+      "source_sha256": "7750f4e67b83d9f049ff5ada3089de0a8825372e3e457f4157e05945d5d25582",
+      "release_sha256": "7750f4e67b83d9f049ff5ada3089de0a8825372e3e457f4157e05945d5d25582",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000138_hermes_runtime.sql",
+      "release": "000146_hermes_runtime.sql",
+      "source_sha256": "37eb7bd78e25e3781f9574acd7204bce644c170eaebc783e06a0130e47e8afdd",
+      "release_sha256": "37eb7bd78e25e3781f9574acd7204bce644c170eaebc783e06a0130e47e8afdd",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000139_shortcut_personal_identity.sql",
+      "release": "000147_shortcut_personal_identity.sql",
+      "source_sha256": "9688f236d232411d13c4d4fa2655115de6374dd74cf0501b63d4aefe10817137",
+      "release_sha256": "9688f236d232411d13c4d4fa2655115de6374dd74cf0501b63d4aefe10817137",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000140_gitcode.sql",
+      "release": "000148_gitcode.sql",
+      "source_sha256": "ae952f1fe5841f353fe1b08ad1abdedc5a2d6c1abfaa2f14d2c02c96205d3c73",
+      "release_sha256": "ae952f1fe5841f353fe1b08ad1abdedc5a2d6c1abfaa2f14d2c02c96205d3c73",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000141_gongfeng.sql",
+      "release": "000149_gongfeng.sql",
+      "source_sha256": "b66e78e44aeacf0f340819c634bb4f109f2e4fc757d82d2e96fb874a48c1f3e2",
+      "release_sha256": "b66e78e44aeacf0f340819c634bb4f109f2e4fc757d82d2e96fb874a48c1f3e2",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000142_bitbucket_cloud.sql",
+      "release": "000150_bitbucket_cloud.sql",
+      "source_sha256": "4d535fb4c1025d08d30ee4887f32111032a918eb461294496498b911848c632c",
+      "release_sha256": "4d535fb4c1025d08d30ee4887f32111032a918eb461294496498b911848c632c",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000143_bugly_inbound.sql",
+      "release": "000151_bugly_inbound.sql",
+      "source_sha256": "80182958bfb22b9d54fd52320cb21512216cba79d386903dee5b819ef2c120bf",
+      "release_sha256": "80182958bfb22b9d54fd52320cb21512216cba79d386903dee5b819ef2c120bf",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000144_codecommit.sql",
+      "release": "000152_codecommit.sql",
+      "source_sha256": "43d7687a0f56bbcdbf22a7a78b7e76fb2a2671600d477de4a8ad3241dc6f6df2",
+      "release_sha256": "43d7687a0f56bbcdbf22a7a78b7e76fb2a2671600d477de4a8ad3241dc6f6df2",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000145_slack.sql",
+      "release": "000153_slack.sql",
+      "source_sha256": "420e368f346c2102badb4adf84598c31a72b265528d1d02f127c3be4d6ca3f21",
+      "release_sha256": "420e368f346c2102badb4adf84598c31a72b265528d1d02f127c3be4d6ca3f21",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000146_telegram.sql",
+      "release": "000154_telegram.sql",
+      "source_sha256": "8526eeb82c33d259c36a68b50bd8a8997ecfcb7beabcab068be8e7e614370977",
+      "release_sha256": "8526eeb82c33d259c36a68b50bd8a8997ecfcb7beabcab068be8e7e614370977",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000148_qq.sql",
+      "release": "000155_qq.sql",
+      "source_sha256": "031333d634c70332b65ad6d45702d905599f559b556b05a38023b9d4d466056d",
+      "release_sha256": "031333d634c70332b65ad6d45702d905599f559b556b05a38023b9d4d466056d",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000149_discord.sql",
+      "release": "000156_discord.sql",
+      "source_sha256": "ee3f96509d2a1419c784345474012fc1afa99a43f83500db0aa67d4bc4c2a7fa",
+      "release_sha256": "ee3f96509d2a1419c784345474012fc1afa99a43f83500db0aa67d4bc4c2a7fa",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000150_teams.sql",
+      "release": "000157_teams.sql",
+      "source_sha256": "21f32f49e4fe6389841aa788b87da17758585b1d77626498348b0ba426a36780",
+      "release_sha256": "21f32f49e4fe6389841aa788b87da17758585b1d77626498348b0ba426a36780",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000151_gemini_runtime.sql",
+      "release": "000158_gemini_runtime.sql",
+      "source_sha256": "f1bbba0c188de6ae7796fcb425de30f3b924a51e825f884e92b7a445875ea63e",
+      "release_sha256": "f1bbba0c188de6ae7796fcb425de30f3b924a51e825f884e92b7a445875ea63e",
+      "adjustment": "renumber only"
+    },
+    {
+      "source": "000152_zoho_bugtracker.sql",
+      "release": "000159_zoho_bugtracker.sql",
+      "source_sha256": "9e05e0590ebe870d1a37a56b170c2f60f9fa1f441161cbb8bc194a89b9dd49b3",
+      "release_sha256": "9e05e0590ebe870d1a37a56b170c2f60f9fa1f441161cbb8bc194a89b9dd49b3",
+      "adjustment": "renumber only"
+    }
+  ]
+}

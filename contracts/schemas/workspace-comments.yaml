@@ -1,0 +1,550 @@
+{
+  "paths": {
+    "list": {
+      "parameters": [
+        {
+          "name": "organizationID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "conversationID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "listWorkspaceComments",
+        "responses": {
+          "200": {
+            "description": "Authorized discussion snapshot; private no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/schemas/WorkspaceCommentPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid, unauthorized, unavailable or conflicting request. 409 requires reloading the thread; saved input is retained."
+          },
+          "401": {
+            "description": "Invalid, unauthorized, unavailable or conflicting request. 409 requires reloading the thread; saved input is retained."
+          },
+          "403": {
+            "description": "Invalid, unauthorized, unavailable or conflicting request. 409 requires reloading the thread; saved input is retained."
+          },
+          "404": {
+            "description": "Invalid, unauthorized, unavailable or conflicting request. 409 requires reloading the thread; saved input is retained."
+          },
+          "409": {
+            "description": "Invalid, unauthorized, unavailable or conflicting request. 409 requires reloading the thread; saved input is retained."
+          },
+          "410": {
+            "description": "Invalid, unauthorized, unavailable or conflicting request. 409 requires reloading the thread; saved input is retained."
+          }
+        },
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "thread": {
+      "parameters": [
+        {
+          "name": "organizationID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "conversationID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "threadID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "getWorkspaceComment",
+        "responses": {
+          "200": {
+            "description": "Authorized discussion snapshot; private no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/schemas/WorkspaceCommentThread"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid, unauthorized, unavailable or conflicting request. 409 requires reloading the thread; saved input is retained."
+          },
+          "401": {
+            "description": "Invalid, unauthorized, unavailable or conflicting request. 409 requires reloading the thread; saved input is retained."
+          },
+          "403": {
+            "description": "Invalid, unauthorized, unavailable or conflicting request. 409 requires reloading the thread; saved input is retained."
+          },
+          "404": {
+            "description": "Invalid, unauthorized, unavailable or conflicting request. 409 requires reloading the thread; saved input is retained."
+          },
+          "409": {
+            "description": "Invalid, unauthorized, unavailable or conflicting request. 409 requires reloading the thread; saved input is retained."
+          },
+          "410": {
+            "description": "Invalid, unauthorized, unavailable or conflicting request. 409 requires reloading the thread; saved input is retained."
+          }
+        }
+      },
+      "put": {
+        "operationId": "createWorkspaceComment",
+        "responses": {
+          "200": {
+            "description": "Authorized discussion snapshot; private no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/schemas/WorkspaceCommentThread"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid, unauthorized, unavailable or conflicting request. 409 requires reloading the thread; saved input is retained."
+          },
+          "401": {
+            "description": "Invalid, unauthorized, unavailable or conflicting request. 409 requires reloading the thread; saved input is retained."
+          },
+          "403": {
+            "description": "Invalid, unauthorized, unavailable or conflicting request. 409 requires reloading the thread; saved input is retained."
+          },
+          "404": {
+            "description": "Invalid, unauthorized, unavailable or conflicting request. 409 requires reloading the thread; saved input is retained."
+          },
+          "409": {
+            "description": "Invalid, unauthorized, unavailable or conflicting request. 409 requires reloading the thread; saved input is retained."
+          },
+          "410": {
+            "description": "Invalid, unauthorized, unavailable or conflicting request. 409 requires reloading the thread; saved input is retained."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/schemas/WorkspaceCommentSource"
+              }
+            }
+          }
+        },
+        "description": "Session/CSRF and conversation write authorization; no Agent invocation. Client thread ID is the idempotency key for the complete normalized source and author within the organization. Same payload replays the original result, changed payload returns 409; keys retained with revisions. File I/O occurs outside transactions followed by source revalidation."
+      },
+      "patch": {
+        "operationId": "updateWorkspaceComment",
+        "responses": {
+          "200": {
+            "description": "Authorized discussion snapshot; private no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/schemas/WorkspaceCommentThread"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid, unauthorized, unavailable or conflicting request. 409 requires reloading the thread; saved input is retained."
+          },
+          "401": {
+            "description": "Invalid, unauthorized, unavailable or conflicting request. 409 requires reloading the thread; saved input is retained."
+          },
+          "403": {
+            "description": "Invalid, unauthorized, unavailable or conflicting request. 409 requires reloading the thread; saved input is retained."
+          },
+          "404": {
+            "description": "Invalid, unauthorized, unavailable or conflicting request. 409 requires reloading the thread; saved input is retained."
+          },
+          "409": {
+            "description": "Invalid, unauthorized, unavailable or conflicting request. 409 requires reloading the thread; saved input is retained."
+          },
+          "410": {
+            "description": "Invalid, unauthorized, unavailable or conflicting request. 409 requires reloading the thread; saved input is retained."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/schemas/WorkspaceCommentMutation"
+              }
+            }
+          }
+        },
+        "description": "Conversation write authorization and optimistic thread version. Editing a post requires its author; participants may reply or resolve/reopen. A client operation_id freezes each mutation; replays return its original revision, different payload returns 409. No run or message is created, cancelled or auto-resolved."
+      }
+    },
+    "resolve": {
+      "parameters": [
+        {
+          "name": "organizationID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "conversationID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "threadID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "resolutionID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "put": {
+        "operationId": "resolveWorkspaceAnchor",
+        "description": "Session/CSRF and conversation write authorization required. Immutable derived result; original anchor unchanged. No browser input resolves a file against current head. Browser input is an explicit user-selected fresh capture, never automatic selector replay. At most 100 resolutions per thread. Same ID/actor/payload retries return the stored result; version or parameter changes conflict. 10 MiB input, parsing outside transactions. Only exact target sources can be attached to a request using discussion.resolution_id. Application still rechecks current baseline and permissions. Private no-store.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/schemas/ResolveAnchorRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resolved snapshot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/schemas/AnchorResolution"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or limit"
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Changed thread/head or reused ID"
+          },
+          "410": {
+            "description": "Source unavailable"
+          }
+        }
+      }
+    }
+  },
+  "schemas": {
+    "CommentReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "version",
+        "comment_id"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "comment_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "resolution_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    },
+    "WorkspaceCommentSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 1024
+        },
+        "file": {
+          "$ref": "./artifact-reviews.yaml#/schemas/FileCommentContext"
+        },
+        "browser": {
+          "$ref": "./browser-contexts.yaml#/BrowserContext"
+        }
+      },
+      "description": "Exactly one of file or browser, containing one root comment. Original source identity and anchor are immutable. File creation validates source bytes; browser URLs omit query/fragment. At most 200 threads per conversation, 50 posts and 120 KiB per thread."
+    },
+    "WorkspaceCommentPost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "author_id",
+        "body",
+        "created_at"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "author_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "body": {
+          "type": "string",
+          "maxLength": 8192
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "edited_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "WorkspaceCommentThread": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "conversation_id",
+        "version",
+        "status",
+        "source",
+        "comments",
+        "updated_at"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "conversation_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "OPEN",
+            "RESOLVED"
+          ]
+        },
+        "source": {
+          "$ref": "#/schemas/WorkspaceCommentSource"
+        },
+        "comments": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "$ref": "#/schemas/WorkspaceCommentPost"
+          }
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "WorkspaceCommentPage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "threads",
+        "next_cursor"
+      ],
+      "properties": {
+        "threads": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "$ref": "#/schemas/WorkspaceCommentThread"
+          }
+        },
+        "next_cursor": {
+          "type": "string"
+        }
+      }
+    },
+    "WorkspaceCommentMutation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operation_id",
+        "version",
+        "action"
+      ],
+      "properties": {
+        "operation_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "reply",
+            "edit",
+            "resolve",
+            "reopen"
+          ]
+        },
+        "comment_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "body": {
+          "type": "string",
+          "maxLength": 8192
+        }
+      }
+    },
+    "AnchorResolution": {
+      "type": "object",
+      "required": [
+        "id",
+        "thread_id",
+        "thread_version",
+        "status",
+        "reason"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "thread_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "thread_version": {
+          "type": "integer"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "exact",
+            "approximate",
+            "ambiguous",
+            "orphaned"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "anchor": {
+          "$ref": "./artifact-reviews.yaml#/schemas/ArtifactReviewAnchor"
+        },
+        "target": {
+          "$ref": "#/schemas/WorkspaceCommentSource"
+        },
+        "target_file": {
+          "$ref": "./artifact-reviews.yaml#/schemas/ArtifactReviewFile"
+        }
+      }
+    },
+    "ResolveAnchorRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version"
+      ],
+      "properties": {
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "browser": {
+          "$ref": "#/schemas/WorkspaceCommentSource"
+        }
+      }
+    }
+  }
+}

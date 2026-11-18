@@ -1,0 +1,52 @@
+{
+ "meta": {
+  "schemaVersion": 1,
+  "skillId": "skillhub.bad.nomd",
+  "version": "1.0.0",
+  "digest": "d-skillhub.bad.nomd",
+  "name": {
+   "en": "No entry"
+  },
+  "description": {
+   "en": "x"
+  },
+  "listed": true,
+  "featured": false,
+  "icon": "https://example.test/icons/nomd.png",
+  "categoryIds": [
+   "writing"
+  ],
+  "tags": [
+   {
+    "zh-Hans": "示例"
+   },
+   {
+    "en": "Sample"
+   }
+  ],
+  "stats": {
+   "downloads": 1,
+   "installs": 1,
+   "stars": 7
+  },
+  "publisher": {
+   "name": "Sample Org",
+   "verified": true
+  },
+  "source": {
+   "origin": "skillhub"
+  }
+ },
+ "tree": {
+  "nodes": [
+   {
+    "type": "file",
+    "path": "README.md",
+    "size": 8,
+    "mime": "text/plain",
+    "previewable": true,
+    "sha256": "d99f230e059018e652f793cf02f2c10abebc5f4a6342077a0bb6dd6e76f8384a"
+   }
+  ]
+ }
+}

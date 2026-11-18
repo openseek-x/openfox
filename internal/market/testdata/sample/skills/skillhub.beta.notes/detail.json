@@ -1,0 +1,53 @@
+{
+ "meta": {
+  "schemaVersion": 1,
+  "skillId": "skillhub.beta.notes",
+  "version": "2.0.0",
+  "digest": "d-skillhub.beta.notes",
+  "name": {
+   "en": "Notes"
+  },
+  "description": {
+   "en": "Take notes quickly"
+  },
+  "listed": true,
+  "featured": false,
+  "icon": "https://example.test/icons/notes.png",
+  "categoryIds": [
+   "productivity",
+   "writing"
+  ],
+  "tags": [
+   {
+    "zh-Hans": "示例"
+   },
+   {
+    "en": "Sample"
+   }
+  ],
+  "stats": {
+   "downloads": 300,
+   "installs": 1,
+   "stars": 7
+  },
+  "publisher": {
+   "name": "Sample Org",
+   "verified": true
+  },
+  "source": {
+   "origin": "skillhub"
+  }
+ },
+ "tree": {
+  "nodes": [
+   {
+    "type": "file",
+    "path": "SKILL.md",
+    "size": 64,
+    "mime": "text/plain",
+    "previewable": true,
+    "sha256": "62475e2e195ffe3b7996ceb753ee97c158274922c0be32e73b40d25080bfa53d"
+   }
+  ]
+ }
+}

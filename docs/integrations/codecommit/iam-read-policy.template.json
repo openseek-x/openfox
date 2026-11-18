@@ -1,0 +1,30 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DiscoverRegionalRepositoryNames",
+      "Effect": "Allow",
+      "Action": [
+        "codecommit:ListRepositories"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ReadSelectedRepositoryMetadata",
+      "Effect": "Allow",
+      "Action": [
+        "codecommit:GetRepository",
+        "codecommit:ListPullRequests",
+        "codecommit:GetPullRequest",
+        "codecommit:DescribePullRequestEvents",
+        "codecommit:ListBranches",
+        "codecommit:GetBranch",
+        "codecommit:GetCommit",
+        "codecommit:BatchGetCommits"
+      ],
+      "Resource": [
+        "arn:aws:codecommit:REGION:ACCOUNT_ID:EXACT_CASE_SENSITIVE_REPOSITORY_NAME"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,805 @@
+{
+  "paths":
+    {
+      "create":
+        {
+          "post":
+            {
+              "operationId": "createBrowserBinding",
+              "description": "User session + CSRF. Requires current conversation invocation access and physical device ownership; administrator privileges do not substitute for ownership. One binding per organization/conversation/owner/device. A live binding returns 409 unless replace=true; replacing changes its ID/revision and invalidates the previous host. Pending claim expires in 60 seconds. JSON bodies are limited to 512 KiB and unknown fields are rejected. No-store for secrets and authorization results. No automatic mutation retry.",
+              "parameters":
+                [
+                  {
+                    "name": "organizationID",
+                    "in": "path",
+                    "required": true,
+                    "schema": { "type": "string", "format": "uuid" },
+                  },
+                  {
+                    "name": "conversationID",
+                    "in": "path",
+                    "required": true,
+                    "schema": { "type": "string", "format": "uuid" },
+                  },
+                ],
+              "responses":
+                {
+                  "201":
+                    {
+                      "description": "Success; browser page traffic never passes through this API.",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                { "$ref": "#/schemas/BrowserBindingCreated" },
+                            },
+                        },
+                    },
+                  "400":
+                    {
+                      "description": "Invalid request",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse",
+                                },
+                            },
+                        },
+                    },
+                  "401":
+                    {
+                      "description": "Authentication required",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse",
+                                },
+                            },
+                        },
+                    },
+                  "403":
+                    {
+                      "description": "Run authorization revoked or access denied",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse",
+                                },
+                            },
+                        },
+                    },
+                  "404":
+                    {
+                      "description": "Binding or object unavailable; does not distinguish missing, expired or foreign objects",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse",
+                                },
+                            },
+                        },
+                    },
+                  "409":
+                    {
+                      "description": "Live binding, stale generation or Run state conflict",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse",
+                                },
+                            },
+                        },
+                    },
+                  "500":
+                    {
+                      "description": "Internal error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse",
+                                },
+                            },
+                        },
+                    },
+                },
+              "requestBody":
+                {
+                  "required": true,
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            { "$ref": "#/schemas/BrowserBindingCreate" },
+                        },
+                    },
+                },
+            },
+        },
+      "revoke":
+        {
+          "delete":
+            {
+              "operationId": "revokeBrowserBinding",
+              "description": "User session + CSRF. Only the owner may revoke. Repeating revoke on an existing binding succeeds. Does not delete chat messages or website data. JSON bodies are limited to 512 KiB and unknown fields are rejected. No-store for secrets and authorization results. No automatic mutation retry.",
+              "parameters":
+                [
+                  {
+                    "name": "organizationID",
+                    "in": "path",
+                    "required": true,
+                    "schema": { "type": "string", "format": "uuid" },
+                  },
+                  {
+                    "name": "conversationID",
+                    "in": "path",
+                    "required": true,
+                    "schema": { "type": "string", "format": "uuid" },
+                  },
+                  {
+                    "name": "bindingID",
+                    "in": "path",
+                    "required": true,
+                    "schema": { "type": "string", "format": "uuid" },
+                  },
+                ],
+              "responses":
+                {
+                  "204":
+                    {
+                      "description": "Success; browser page traffic never passes through this API.",
+                    },
+                  "400":
+                    {
+                      "description": "Invalid request",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse",
+                                },
+                            },
+                        },
+                    },
+                  "401":
+                    {
+                      "description": "Authentication required",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse",
+                                },
+                            },
+                        },
+                    },
+                  "403":
+                    {
+                      "description": "Run authorization revoked or access denied",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse",
+                                },
+                            },
+                        },
+                    },
+                  "404":
+                    {
+                      "description": "Binding or object unavailable; does not distinguish missing, expired or foreign objects",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse",
+                                },
+                            },
+                        },
+                    },
+                  "409":
+                    {
+                      "description": "Live binding, stale generation or Run state conflict",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse",
+                                },
+                            },
+                        },
+                    },
+                  "500":
+                    {
+                      "description": "Internal error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse",
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+      "claim":
+        {
+          "post":
+            {
+              "operationId": "claimBrowserBinding",
+              "description": "Device bearer authentication. Atomically consumes the claim hash for this device and host identity; concurrent/replayed/expired claims fail. A lost response is not replayed: reconnect with a new explicit replacement binding. Rechecks owner membership, device ownership and conversation permission. Active lease is 30 seconds. JSON bodies are limited to 512 KiB and unknown fields are rejected. No-store for secrets and authorization results. No automatic mutation retry.",
+              "parameters":
+                [
+                  {
+                    "name": "organizationID",
+                    "in": "path",
+                    "required": true,
+                    "schema": { "type": "string", "format": "uuid" },
+                  },
+                  {
+                    "name": "bindingID",
+                    "in": "path",
+                    "required": true,
+                    "schema": { "type": "string", "format": "uuid" },
+                  },
+                ],
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Success; browser page traffic never passes through this API.",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema": { "$ref": "#/schemas/BrowserBinding" },
+                            },
+                        },
+                    },
+                  "400":
+                    {
+                      "description": "Invalid request",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse",
+                                },
+                            },
+                        },
+                    },
+                  "401":
+                    {
+                      "description": "Authentication required",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse",
+                                },
+                            },
+                        },
+                    },
+                  "403":
+                    {
+                      "description": "Run authorization revoked or access denied",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse",
+                                },
+                            },
+                        },
+                    },
+                  "404":
+                    {
+                      "description": "Binding or object unavailable; does not distinguish missing, expired or foreign objects",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse",
+                                },
+                            },
+                        },
+                    },
+                  "409":
+                    {
+                      "description": "Live binding, stale generation or Run state conflict",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse",
+                                },
+                            },
+                        },
+                    },
+                  "500":
+                    {
+                      "description": "Internal error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse",
+                                },
+                            },
+                        },
+                    },
+                },
+              "requestBody":
+                {
+                  "required": true,
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema": { "$ref": "#/schemas/BrowserBindingClaim" },
+                        },
+                    },
+                },
+            },
+        },
+      "heartbeat":
+        {
+          "post":
+            {
+              "operationId": "heartbeatBrowserBinding",
+              "description": "Device bearer authentication. Renew every 10 seconds, extending an unexpired active lease to 30 seconds. Checks host instance, epoch, revision and owner access. Expired or replaced bindings cannot be resurrected. JSON bodies are limited to 512 KiB and unknown fields are rejected. No-store for secrets and authorization results. No automatic mutation retry.",
+              "parameters":
+                [
+                  {
+                    "name": "organizationID",
+                    "in": "path",
+                    "required": true,
+                    "schema": { "type": "string", "format": "uuid" },
+                  },
+                  {
+                    "name": "bindingID",
+                    "in": "path",
+                    "required": true,
+                    "schema": { "type": "string", "format": "uuid" },
+                  },
+                ],
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Success; browser page traffic never passes through this API.",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema": { "$ref": "#/schemas/BrowserBinding" },
+                            },
+                        },
+                    },
+                  "400":
+                    {
+                      "description": "Invalid request",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse",
+                                },
+                            },
+                        },
+                    },
+                  "401":
+                    {
+                      "description": "Authentication required",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse",
+                                },
+                            },
+                        },
+                    },
+                  "403":
+                    {
+                      "description": "Run authorization revoked or access denied",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse",
+                                },
+                            },
+                        },
+                    },
+                  "404":
+                    {
+                      "description": "Binding or object unavailable; does not distinguish missing, expired or foreign objects",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse",
+                                },
+                            },
+                        },
+                    },
+                  "409":
+                    {
+                      "description": "Live binding, stale generation or Run state conflict",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse",
+                                },
+                            },
+                        },
+                    },
+                  "500":
+                    {
+                      "description": "Internal error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse",
+                                },
+                            },
+                        },
+                    },
+                },
+              "requestBody":
+                {
+                  "required": true,
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            { "$ref": "#/schemas/BrowserBindingIdentity" },
+                        },
+                    },
+                },
+            },
+        },
+      "authorize":
+        {
+          "post":
+            {
+              "operationId": "authorizeBrowserRun",
+              "description": "Device bearer authentication. Check on every tool call: RUNNING state, live Run and binding leases, generation, current grants, physical device owner equals actor, conversation identity, and all input messages are authenticated user inputs by that actor. Automation inputs are rejected. Optional client_message_id must belong to this Run. READ_ONLY/PLAN permits observe only. Returns metadata only; local explicit control grant and target checks are still required. No page contents or form values are accepted here. JSON bodies are limited to 512 KiB and unknown fields are rejected. No-store for secrets and authorization results. No automatic mutation retry.",
+              "parameters":
+                [
+                  {
+                    "name": "organizationID",
+                    "in": "path",
+                    "required": true,
+                    "schema": { "type": "string", "format": "uuid" },
+                  },
+                  {
+                    "name": "runID",
+                    "in": "path",
+                    "required": true,
+                    "schema": { "type": "string", "format": "uuid" },
+                  },
+                ],
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Success; browser page traffic never passes through this API.",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                { "$ref": "#/schemas/BrowserRunAuthorization" },
+                            },
+                        },
+                    },
+                  "400":
+                    {
+                      "description": "Invalid request",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse",
+                                },
+                            },
+                        },
+                    },
+                  "401":
+                    {
+                      "description": "Authentication required",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse",
+                                },
+                            },
+                        },
+                    },
+                  "403":
+                    {
+                      "description": "Run authorization revoked or access denied",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse",
+                                },
+                            },
+                        },
+                    },
+                  "404":
+                    {
+                      "description": "Binding or object unavailable; does not distinguish missing, expired or foreign objects",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse",
+                                },
+                            },
+                        },
+                    },
+                  "409":
+                    {
+                      "description": "Live binding, stale generation or Run state conflict",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse",
+                                },
+                            },
+                        },
+                    },
+                  "500":
+                    {
+                      "description": "Internal error",
+                      "content":
+                        {
+                          "application/json":
+                            {
+                              "schema":
+                                {
+                                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse",
+                                },
+                            },
+                        },
+                    },
+                },
+              "requestBody":
+                {
+                  "required": true,
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            {
+                              "$ref": "#/schemas/BrowserRunAuthorizationInput",
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
+  "schemas":
+    {
+      "BrowserBinding":
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required":
+            [
+              "id",
+              "organization_id",
+              "conversation_id",
+              "owner_user_id",
+              "device_id",
+              "host_instance_id",
+              "host_epoch",
+              "revision",
+              "lease_expires_at",
+            ],
+          "properties":
+            {
+              "id": { "type": "string", "format": "uuid" },
+              "organization_id": { "type": "string", "format": "uuid" },
+              "conversation_id": { "type": "string", "format": "uuid" },
+              "owner_user_id": { "type": "string", "format": "uuid" },
+              "device_id": { "type": "string", "format": "uuid" },
+              "host_instance_id": { "type": "string", "format": "uuid" },
+              "host_epoch": { "type": "integer", "minimum": 1 },
+              "revision": { "type": "integer", "minimum": 1 },
+              "lease_expires_at": { "type": "string", "format": "date-time" },
+            },
+        },
+      "BrowserBindingCreate":
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["device_id", "host_instance_id", "host_epoch"],
+          "properties":
+            {
+              "device_id": { "type": "string", "format": "uuid" },
+              "host_instance_id": { "type": "string", "format": "uuid" },
+              "host_epoch": { "type": "integer", "minimum": 1 },
+              "replace": { "type": "boolean", "default": false },
+            },
+        },
+      "BrowserBindingCreated":
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required":
+            [
+              "id",
+              "organization_id",
+              "conversation_id",
+              "owner_user_id",
+              "device_id",
+              "host_instance_id",
+              "host_epoch",
+              "revision",
+              "lease_expires_at",
+              "claim_secret",
+            ],
+          "properties":
+            {
+              "id": { "type": "string", "format": "uuid" },
+              "organization_id": { "type": "string", "format": "uuid" },
+              "conversation_id": { "type": "string", "format": "uuid" },
+              "owner_user_id": { "type": "string", "format": "uuid" },
+              "device_id": { "type": "string", "format": "uuid" },
+              "host_instance_id": { "type": "string", "format": "uuid" },
+              "host_epoch": { "type": "integer", "minimum": 1 },
+              "revision": { "type": "integer", "minimum": 1 },
+              "lease_expires_at": { "type": "string", "format": "date-time" },
+              "claim_secret":
+                {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$",
+                  "description": "One-time secret: trusted desktop main process and private local socket only. Never expose to renderer, URLs or logs. 60 second expiry.",
+                },
+            },
+        },
+      "BrowserBindingClaim":
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required":
+            ["host_instance_id", "host_epoch", "revision", "claim_secret"],
+          "properties":
+            {
+              "host_instance_id": { "type": "string", "format": "uuid" },
+              "host_epoch": { "type": "integer", "minimum": 1 },
+              "revision": { "type": "integer", "minimum": 1 },
+              "claim_secret": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+            },
+        },
+      "BrowserBindingIdentity":
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["host_instance_id", "host_epoch", "revision"],
+          "properties":
+            {
+              "host_instance_id": { "type": "string", "format": "uuid" },
+              "host_epoch": { "type": "integer", "minimum": 1 },
+              "revision": { "type": "integer", "minimum": 1 },
+            },
+        },
+      "BrowserRunAuthorizationInput":
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required":
+            [
+              "host_instance_id",
+              "host_epoch",
+              "revision",
+              "binding_id",
+              "generation",
+              "operation",
+            ],
+          "properties":
+            {
+              "host_instance_id": { "type": "string", "format": "uuid" },
+              "host_epoch": { "type": "integer", "minimum": 1 },
+              "revision": { "type": "integer", "minimum": 1 },
+              "binding_id": { "type": "string", "format": "uuid" },
+              "generation": { "type": "integer", "minimum": 1 },
+              "client_message_id": { "type": "string", "format": "uuid" },
+              "operation":
+                { "type": "string", "enum": ["observe", "act", "files"] },
+            },
+        },
+      "BrowserRunAuthorization":
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["binding", "run_id", "generation", "read_only"],
+          "properties":
+            {
+              "binding": { "$ref": "#/schemas/BrowserBinding" },
+              "run_id": { "type": "string", "format": "uuid" },
+              "generation": { "type": "integer", "minimum": 1 },
+              "read_only": { "type": "boolean" },
+            },
+        },
+    },
+}

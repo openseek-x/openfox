@@ -1,0 +1,122 @@
+export const bitbucketZh = {
+  linksTitle: "Bitbucket 关联",
+  completed: "授权确认已完成。当前连接状态请返回设置页查看。",
+  organizationTitle: "Bitbucket Cloud workspace",
+  organizationDescription:
+    "每个组织连接一个 Bitbucket Cloud workspace。只有 OpenFox 管理员且为该 workspace 管理员的账号可以授权。组织回链以此授权账号发送，不使用个人身份绑定的凭据。",
+  scopeNotice:
+    "组织 OAuth 权限为 account + pullrequest；后者还包含批准 PR、管理 PR task 和评论的权限。OpenFox 仅使用已批准的读取和任务回链功能，不创建、批准或合并 PR。",
+  notConfigured:
+    "服务端尚未配置 Bitbucket 组织 OAuth consumer，请联系管理员。个人身份需要另一个仅 account 权限的 consumer。",
+  completeTitle: "确认 Bitbucket 组织授权",
+  identityTitle: "Bitbucket 本人身份关联",
+  identityDescription:
+    "通过独立 account-only OAuth 一次核验本人 UUID，用于此 workspace 后续 PR 和 PR 评论活动的作者识别。不保存个人令牌，不代表持续 workspace 成员资格；上游撤销不会自动解绑，请在 OpenFox 本地解绑。历史作者和任务负责人保持不变。",
+  identityConsent: "我确认这是本人的 Bitbucket 身份，并理解它是一次身份关联。",
+  organizationConsent:
+    "我同意将此 workspace 授权给组织，后续任务回链将以显示的授权账号发送。",
+  senderChanged:
+    "组织回链的发送者将发生变化。已有未知发送结果仍按原发送者核对，不会自动重发。",
+  previousSender: "原发送者：{name} · {id}",
+  newSender: "新发送者：{name} · {id}",
+  senderConsent: "我明确同意更换后续回链的发送者。",
+  confirmWorkspace: "确认组织授权",
+  confirmIdentity: "确认绑定本人身份",
+  workspace: "Bitbucket workspace",
+  chooseWorkspace: "选择你管理的 workspace",
+  sameWorkspace:
+    "重新授权只能保留原 workspace。更换 workspace 需要先断开原连接。",
+  noWorkspace: "此账号没有可选择的管理员 workspace，无法完成组织授权。",
+  connect: "授权 Bitbucket workspace",
+  reauthorize: "重新授权",
+  delegatingUser: "组织发送者：{name} · {id}",
+  manageIdentity: "管理本人的身份关联",
+  openConfirmation: "打开授权确认页",
+  disconnectDescription:
+    "断开后停止新的关联与回链，个人身份不再用于新归属，已有关联和历史活动保留。已发出的请求无法撤回。请在 Bitbucket 手工移除 Webhook；本地断开不会撤销上游 consumer 授权。",
+  identityDisconnect:
+    "解绑后停止后续 PR 和 PR 评论活动归属到本人。已有活动保留，不会撤销 Bitbucket 侧授权。",
+  failed: "授权未完成、已被消费或已失效，请返回重新发起。",
+  expired: "本次授权已过期，请返回重新发起。",
+  permission: "当前账号没有此操作所需的组织或 workspace 管理员权限。",
+  scopeDenied:
+    "OAuth consumer 的权限与用途不符，请检查组织和个人 consumer 配置。",
+  appChanged: "OAuth consumer 配置已变化，请重新发起授权。",
+  changed: "组织连接或权限已变化，请刷新并重新授权。",
+  rateLimited: "Bitbucket 暂时限制请求，请稍后重试。",
+  needsAttention: "授权需要处理，请检查连接状态并重新授权。",
+  repositoriesTitle: "仓库与 Webhook",
+  repositoryScope:
+    "只关联显式选择仓库与允许空间中的任务。PR 默认开启、提交默认关闭；不会导入 Issue、克隆源码或自动修改任务状态。",
+  selectRepository: "选择仓库",
+  repository: "Bitbucket 仓库",
+  repositorySettings: "仓库关联设置",
+  hookReady: "已收到当前签名事件",
+  hookPending: "等待手工 Webhook 验证",
+  privateRepository: "私有仓库",
+  publicRepository: "公开仓库",
+  privacyUnknown: "隐私状态未知，禁止外发",
+  repositoryPaused: "仓库工作已暂停，请检查诊断后重新确认设置。",
+  removeRepository: "移除仓库",
+  removeDescription:
+    "移除后停止此仓库新工作，保留已有关联和历史活动。已发出的请求无法撤回；请在 Bitbucket 手工删除 Webhook。",
+  removeConsent: "我确认移除此仓库，并手工清理远端 Webhook。",
+  confirmRemove: "确认移除",
+  webhookTitle: "手工配置 Webhook",
+  webhookInstructions:
+    "在每个已选仓库的 Repository settings → Webhooks 中手工添加回调地址和签名 Secret，启用下列事件。需要仓库管理员权限。OpenFox 不自动创建或删除远端 Webhook；每个仓库收到有效新签名事件前不发送回链。",
+  viewWebhook: "查看手工 Webhook 配置",
+  payloadURL: "Payload URL",
+  signingSecret: "签名 Secret",
+  showSecret: "显示密钥",
+  hideSecret: "隐藏密钥",
+  webhookUnconfigured: "尚未生成回调地址与签名密钥。查看不会自动生成。",
+  rotateDescription:
+    "生成或轮换只修改本地配置。原地址立即失效，所有仓库的回链暂停等待新签名事件；必须手工更新每个远端 Webhook。不会撤回已发送请求。",
+  rotateConsent: "我理解影响，并将手工配置或更新所有已选仓库。",
+  rotateWebhook: "轮换回调地址与密钥",
+  createWebhook: "生成回调地址与密钥",
+  recentDeliveries: "最近投递",
+  queuedNotice: "QUEUED 表示已持久接收等待处理，不表示关联或外发已经成功。",
+  loadedRepositories: "已加载 {count} 个仓库",
+  loadMore: "加载更多仓库",
+  browseLimit:
+    "本次浏览已达 1000 项或 20 页上限，后续结果未加载。游标十分钟过期后请重新打开浏览。",
+  allowedSpaces: "允许关联的空间",
+  pullRequests: "关联 Pull Request",
+  commits: "关联提交（单次推送最多 100 个去重提交）",
+  privateBacklink: "在私有仓库 PR 发送任务回链",
+  publicBacklink: "在公开仓库 PR 发送任务回链",
+  metadataConsent:
+    "我同意这些空间的成员可看到此仓库的 PR、提交及作者元数据，包括私有仓库资料。",
+  backlinkConsent: "我确认使用组织授权账号 {name} 发送后续任务回链。",
+  publicConsent: "我明确同意将任务编号、标题和链接发布到公开仓库。",
+  commentActivity: "{author} 的 Bitbucket PR #{number} 评论 #{comment}",
+  externalAuthor: "外部作者",
+  boundAuthor: "已验证归属：{name}",
+  boundIdentity: "已验证的本地身份归属",
+  commentDeleted: "此源评论已删除",
+  commentUpdated: "此源评论已更新",
+  sourceUpdated: "源更新时间：",
+  openSourcePR: "查看来源 PR",
+  jobsTitle: "关联与回链诊断",
+  jobsDescription:
+    "显示最近更新的最多 50 项，不是完整历史。打开页面、重新授权或刷新不会自动解除 UNKNOWN 并重发。",
+  backlinkJob: "任务回链",
+  eventJob: "来源事件",
+  jobAttempts: "已尝试 {count} 次",
+  unknownDescription:
+    "发送结果未知：上游可能已经收到评论。自动重发已停止；请先检查来源 PR。未找到评论也不能证明未发送。",
+  inspectSource: "检查来源",
+  reviewResend: "核查并申请重发",
+  resendDescription:
+    "再次发送可能产生重复评论。仅在已人工核对源 PR 后继续；重试将使用执行时的当前组织授权账号，并记录审计。",
+  unsentConsent: "我已核对源 PR 并确认未发送，理解并接受重复评论风险。",
+  confirmResend: "确认未发送并重新发送",
+  alreadyConnected:
+    "此组织已连接一个 Bitbucket workspace，请使用现有连接或先断开。",
+  copyPayloadURL: "\u590d\u5236\u56de\u8c03\u5730\u5740",
+  copySecret: "\u590d\u5236\u7b7e\u540d\u5bc6\u94a5",
+  copyFailed:
+    "\u590d\u5236\u5931\u8d25\uff0c\u8bf7\u624b\u5de5\u9009\u62e9\u5e76\u590d\u5236\u3002",
+};

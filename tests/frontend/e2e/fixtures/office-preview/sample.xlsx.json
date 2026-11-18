@@ -1,0 +1,53 @@
+{
+  "kind": "xlsx",
+  "units": [
+    {
+      "id": "s1.n12",
+      "section": "Data",
+      "label": "A1",
+      "text": "Original text",
+      "type": "text",
+      "editable": true
+    },
+    {
+      "id": "s1.n15",
+      "section": "Data",
+      "label": "B1",
+      "text": "12.5",
+      "type": "number",
+      "editable": true
+    },
+    {
+      "id": "s1.n17",
+      "section": "Data",
+      "label": "C1",
+      "text": "=B1*2",
+      "type": "formula",
+      "editable": false
+    },
+    {
+      "id": "s1.n20",
+      "section": "Data",
+      "label": "D1",
+      "text": "1",
+      "type": "boolean",
+      "editable": true
+    },
+    {
+      "id": "s1.n23",
+      "section": "Data",
+      "label": "A2",
+      "text": "Original text",
+      "type": "text",
+      "editable": true
+    },
+    {
+      "id": "s2.n12",
+      "section": "Second",
+      "label": "A1",
+      "text": "Keep second sheet",
+      "type": "text",
+      "editable": true
+    }
+  ]
+}

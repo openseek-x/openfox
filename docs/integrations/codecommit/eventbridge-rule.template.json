@@ -1,0 +1,29 @@
+{
+  "source": [
+    "aws.codecommit"
+  ],
+  "account": [
+    "ACCOUNT_ID"
+  ],
+  "region": [
+    "REGION"
+  ],
+  "resources": [
+    "arn:aws:codecommit:REGION:ACCOUNT_ID:EXACT_CASE_SENSITIVE_REPOSITORY_NAME"
+  ],
+  "detail-type": [
+    "CodeCommit Repository State Change",
+    "CodeCommit Pull Request State Change"
+  ],
+  "detail": {
+    "event": [
+      "referenceCreated",
+      "referenceUpdated",
+      "referenceDeleted",
+      "pullRequestCreated",
+      "pullRequestSourceBranchUpdated",
+      "pullRequestStatusChanged",
+      "pullRequestMergeStatusUpdated"
+    ]
+  }
+}

@@ -1,0 +1,142 @@
+{
+  "BrowserContext":
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "source_url", "title", "captured_at", "comments"],
+      "properties":
+        {
+          "id": { "type": "string", "format": "uuid" },
+          "source_url": { "type": "string", "maxLength": 4096 },
+          "title": { "type": "string", "maxLength": 1024 },
+          "captured_at": { "type": "string", "format": "date-time" },
+          "comments":
+            {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 20,
+              "items":
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["id", "body", "anchor"],
+                  "properties":
+                    {
+                      "id": { "type": "string", "format": "uuid" },
+                      "body": { "type": "string", "maxLength": 8192 },
+                      "discussion": { "$ref": "./workspace-comments.yaml#/schemas/CommentReference" },
+                      "anchor":
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": ["kind", "live", "snapshot", "visual"],
+                          "properties":
+                            {
+                              "kind":
+                                {
+                                  "type": "string",
+                                  "enum": ["element", "text", "region"],
+                                },
+                              "live":
+                                {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "required":
+                                    [
+                                      "host_instance_id",
+                                      "tab_id",
+                                      "frame_id",
+                                      "document_generation",
+                                      "ref",
+                                    ],
+                                  "properties":
+                                    {
+                                      "host_instance_id":
+                                        { "type": "string", "format": "uuid" },
+                                      "tab_id":
+                                        { "type": "string", "format": "uuid" },
+                                      "frame_id":
+                                        { "type": "string", "maxLength": 128 },
+                                      "document_generation":
+                                        {
+                                          "type": "integer",
+                                          "minimum": 1,
+                                          "maximum": 9007199254740992,
+                                        },
+                                      "ref":
+                                        { "type": "string", "format": "uuid" },
+                                    },
+                                },
+                              "snapshot":
+                                {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "required":
+                                    [
+                                      "role",
+                                      "name",
+                                      "quote",
+                                      "prefix",
+                                      "suffix",
+                                      "selector_hint",
+                                    ],
+                                  "properties":
+                                    {
+                                      "role":
+                                        { "type": "string", "maxLength": 80 },
+                                      "name":
+                                        { "type": "string", "maxLength": 1024 },
+                                      "quote":
+                                        { "type": "string", "maxLength": 8192 },
+                                      "prefix":
+                                        { "type": "string", "maxLength": 128 },
+                                      "suffix":
+                                        { "type": "string", "maxLength": 128 },
+                                      "selector_hint":
+                                        { "type": "string", "maxLength": 1024 },
+                                    },
+                                },
+                              "visual":
+                                {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "required":
+                                    [
+                                      "width",
+                                      "height",
+                                      "scroll_x",
+                                      "scroll_y",
+                                      "rect",
+                                    ],
+                                  "properties":
+                                    {
+                                      "width": { "type": "number" },
+                                      "height": { "type": "number" },
+                                      "scroll_x": { "type": "number" },
+                                      "scroll_y": { "type": "number" },
+                                      "rect":
+                                        {
+                                          "type": "object",
+                                          "additionalProperties": false,
+                                          "required":
+                                            ["x", "y", "width", "height"],
+                                          "properties":
+                                            {
+                                              "x": { "type": "number" },
+                                              "y": { "type": "number" },
+                                              "width": { "type": "number" },
+                                              "height": { "type": "number" },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                      "screenshot_attachment_id":
+                        { "type": "string", "format": "uuid" },
+                    },
+                },
+            },
+        },
+    },
+}

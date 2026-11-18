@@ -1,0 +1,760 @@
+{
+  "paths": {
+    "office": {
+      "get": {
+        "operationId": "getOfficeArtifact",
+        "summary": "Read Office content projection",
+        "description": "Session and existing Run/conversation authorization apply. Private no-store. DOCX/XLSX/PPTX only, 10 MiB compressed, 32 MiB expanded, 8 MiB per part, 2048 entries, 10000 units, 1 MiB content text. Only chart-linked, validated XLSX embeddings are allowed; nested packages share the expanded byte and entry limits. No macros, other embeddings, signatures, external resource fetches or formula execution. Comments are attached to ordinary chat messages; the file-comment apply tool creates a review candidate; only explicit user acceptance updates the current content version. Workbook caches are invalidated on edits. Unsupported files remain download-only.",
+        "parameters": [
+          {
+            "name": "organizationID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "runID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "artifactID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bounded content projection; not an Office layout renderer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/schemas/OfficeView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid ID or unsupported package",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Artifact not visible or not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Expired, malformed or unsupported Office content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "officePreview": {
+      "get": {
+        "operationId": "getOfficeArtifactPreview",
+        "summary": "Render an Office layout preview",
+        "description": "Same session, tenant, Run and conversation authorization as the original download. Private no-store. Validated DOCX/XLSX/PPTX only; 10 MiB input, 32 MiB PDF output, 60 second renderer timeout, two concurrent conversions per server, no automatic retries. Uses an isolated administrator-configured LibreOffice service. Office text anchors remain source-based; region anchors are feedback only in rendered PDF page coordinates. Missing renderer, busy queue, conversion failure or oversized output returns 503. Fonts must be installed on the renderer to preserve typography. format=xlsx is limited to validated XLSX files and returns a disposable render copy, at most 10 MiB. It fills missing chart caches from stored source cells and removes only render-copy pane metadata; it neither evaluates formulas nor changes the original artifact. The authenticated Office projection provides its SHA256, original frozen panes and bounded drawing data (128 objects, 4 MiB image payload, 16 million decoded pixels per image). Unsupported drawing/caches return 410. Other formats return 400. No new configuration is required for XLSX previews.",
+        "parameters": [
+          {
+            "name": "organizationID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "runID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "artifactID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pdf",
+                "xlsx"
+              ],
+              "default": "pdf"
+            },
+            "description": "xlsx returns a disposable spreadsheet render copy. It is never a revised artifact."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Original layout preview",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid ID or unsupported package",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Artifact not visible or not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Expired, malformed or unsupported Office content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Renderer unavailable, busy, timed out or exceeded output limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../openapi.yaml#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "schemas": {
+    "ArtifactReviewAnchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "start",
+        "end",
+        "quote"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "text",
+            "cell",
+            "region",
+            "office",
+            "office_range",
+            "pdf_text"
+          ]
+        },
+        "start": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "end": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "quote": {
+          "type": "string"
+        },
+        "row": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "x": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "y": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "width": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "height": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "page": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "target": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "range": {
+          "type": "string",
+          "description": "Canonical inclusive A1 range for spreadsheet feedback; target is the original worksheet part. Does not authorize direct edits."
+        },
+        "quads": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 128,
+          "items": {
+            "type": "array",
+            "minItems": 8,
+            "maxItems": 8,
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "view_box": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {
+            "type": "number"
+          }
+        }
+      },
+      "description": "Text/cell ranges use exact UTF-8 bytes. Region anchors use page (one-based; image=1) and x/y/width/height fractions of an unrotated page or browser-oriented image; text fields are 0,0,empty. PDF page existence is checked by the preview parser; the API bounds page to 1..1000. Region comments can be sent as chat context; image/PDF editing and image/OCR extraction are not supported. Office anchors use target from the authenticated Office projection, exact decoded quote, and start=end=0 for a whole unit. Source-mapped Word/PPT text also accepts a nonempty UTF-8 byte range within that unit; quote must match that exact range. Only editable units can be annotated. The source file SHA256 binds target identities. Spreadsheet office_range anchors use original worksheet part as target, a canonical A1 range (at most 256 cells) and an exact TSV quote (at most 8192 UTF-8 bytes), including formulas and blank cells. They are feedback only and never authorize a direct edit. In native spreadsheet previews, region page is the one-based worksheet index and fractions refer to the complete worksheet canvas, not the scrolled viewport or a PDF print page. PDF pdf_text anchors contain a client-extracted quote and up to 128 clockwise quads (TL,TR,BR,BL) in unrotated PDF user space, plus the page view_box. The API validates bounded geometry, not extracted PDF text; these are feedback only and cannot authorize PDF edits. Image region coordinates use the browser EXIF-oriented decoded image."
+    },
+    "ArtifactReviewFile": {
+      "type": "object",
+      "description": "Preview file metadata. Native Markdown uses the document ID; it is not a review revision.",
+      "required": [
+        "organization_id",
+        "id",
+        "name",
+        "size_bytes",
+        "sha256",
+        "mime_type",
+        "state",
+        "pinned",
+        "version",
+        "created_at"
+      ],
+      "properties": {
+        "organization_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "run_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "name": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "mime_type": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "retention_until": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pinned": {
+          "type": "boolean"
+        },
+        "version": {
+          "type": "integer"
+        },
+        "native": {
+          "type": "boolean"
+        }
+      }
+    },
+    "OfficeUnit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "section",
+        "label",
+        "text",
+        "type",
+        "editable"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "section": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "text",
+            "number",
+            "boolean",
+            "formula",
+            "unsupported"
+          ]
+        },
+        "editable": {
+          "type": "boolean"
+        },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Plain Word run source location in the immutable OOXML; offset is UTF-16 code units, not edit authority.",
+          "required": [
+            "part",
+            "paragraph",
+            "offset"
+          ],
+          "properties": {
+            "part": {
+              "type": "string"
+            },
+            "paragraph": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "slide_source": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "PPT slide part and OOXML shape ID, with a UTF-16 offset in its text story.",
+          "required": [
+            "part",
+            "shape",
+            "offset"
+          ],
+          "properties": {
+            "part": {
+              "type": "string"
+            },
+            "shape": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "cell_source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "part",
+            "sheet",
+            "row",
+            "column"
+          ],
+          "properties": {
+            "part": {
+              "type": "string"
+            },
+            "sheet": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "row": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "column": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "OfficeView": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "sha256",
+        "units"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "docx",
+            "xlsx",
+            "pptx"
+          ]
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "units": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "$ref": "#/schemas/OfficeUnit"
+          }
+        },
+        "spreadsheet": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "sha256",
+            "sheets"
+          ],
+          "properties": {
+            "sha256": {
+              "type": "string"
+            },
+            "sheets": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "part",
+                  "name",
+                  "index",
+                  "hidden",
+                  "frozen_rows",
+                  "frozen_columns",
+                  "drawings"
+                ],
+                "properties": {
+                  "part": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "index": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "hidden": {
+                    "type": "boolean"
+                  },
+                  "frozen_rows": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "frozen_columns": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "drawings": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "kind",
+                        "name",
+                        "from",
+                        "width",
+                        "height"
+                      ],
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "image",
+                            "chart"
+                          ]
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "from": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "row",
+                            "column",
+                            "x",
+                            "y"
+                          ],
+                          "properties": {
+                            "row": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "column": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "x": {
+                              "type": "number"
+                            },
+                            "y": {
+                              "type": "number"
+                            }
+                          }
+                        },
+                        "to": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "row",
+                            "column",
+                            "x",
+                            "y"
+                          ],
+                          "properties": {
+                            "row": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "column": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "x": {
+                              "type": "number"
+                            },
+                            "y": {
+                              "type": "number"
+                            }
+                          }
+                        },
+                        "width": {
+                          "type": "number"
+                        },
+                        "height": {
+                          "type": "number"
+                        },
+                        "data": {
+                          "type": "string",
+                          "format": "byte"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "ArtifactAnnotation": {
+      "type": "object",
+      "required": [
+        "id",
+        "anchor",
+        "body"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "anchor": {
+          "$ref": "#/schemas/ArtifactReviewAnchor"
+        },
+        "body": {
+          "type": "string"
+        }
+      }
+    },
+    "FileComment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "thread_id",
+        "anchor",
+        "body"
+      ],
+      "properties": {
+        "thread_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "anchor": {
+          "$ref": "#/schemas/ArtifactReviewAnchor"
+        },
+        "body": {
+          "type": "string"
+        },
+        "discussion": {
+          "$ref": "./workspace-comments.yaml#/schemas/CommentReference"
+        }
+      }
+    },
+    "FileCommentContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "sha256",
+        "comments"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "artifact_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "space_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "node_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "node_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "comments": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "items": {
+            "$ref": "#/schemas/FileComment"
+          }
+        }
+      }
+    }
+  }
+}

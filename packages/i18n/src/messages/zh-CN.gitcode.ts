@@ -1,0 +1,88 @@
+export const gitcodeZh = {
+  title: "GitCode / AtomGit 组织仓库",
+  scope:
+    "使用组织管理员的 PAT 连接公共或私有仓库。仅支持官方 GitCode / AtomGit；不绑定个人账号、不提供克隆凭据。负责人以外部身份入站，不向远端写回负责人。",
+  token: "组织管理员 PAT",
+  discover: "验证 PAT 并选择组织",
+  organization: "远端组织",
+  connect: "连接组织",
+  credentials: "更新 PAT",
+  saveCredentials: "验证并更新 PAT",
+  sameSubject:
+    "只能更换同一稳定用户身份的 PAT；登录名改变不影响已有 UNKNOWN 对账。更换持有人须断开后新建连接。",
+  identity: "授权主体：{login}（{subject}）",
+  repositories: "仓库与工作记录",
+  add: "添加仓库",
+  search: "仓库搜索",
+  repository: "仓库",
+  space: "目标空间",
+  select: "请选择",
+  previous: "上一页",
+  next: "下一页",
+  refresh: "刷新",
+  inbound: "仅入站",
+  bidirectional: "双向同步",
+  direction: "同步方向",
+  bidiHelp:
+    "双向同步以此组织 PAT 发送任务标题、描述、状态和新增评论；不会回写负责人。",
+  history: "导入已有 Issue",
+  historyHelp:
+    "默认仅处理后续变化。导入已有 Issue 最多 50 页 / 5000 条，重复关联不会重建；已有本地任务不被历史补导重写。",
+  setupHelp:
+    "保存后自动创建密码 Webhook。私有仓库默认发送 Issue / PR 回链，公共仓库默认不发送；下方设置可调整。Hook 就绪后才开始同步。",
+  addConfirm: "添加并配置 Webhook",
+  empty: "尚未添加仓库。",
+  status: "同步：{status} · Hook：{hook}",
+  hookId: "远端 Hook ID：{id}",
+  permissions: "Issue 写权限：{issue} · 评论写权限：{comment}",
+  permissionHelp:
+    "UNVERIFIED 表示尚未发生实际写入，不能据读取或 Hook 成功推断写权限。VERIFIED / DENIED 是最近一次实际写入结果。",
+  repositoryChanged:
+    "远端仓库身份或公开范围已变化，同步已暂停。请移除后重新选择仓库以确认新范围；本地副本会保留。",
+  pause: "暂停",
+  resume: "恢复",
+  changeDirection: "改变同步方向",
+  historyNow: "补导已有 Issue",
+  historyConfirm: "开始历史补导？",
+  historyBody:
+    "只添加未关联的 Issue，保留已有副本与人工修改。最多 50 页 / 5000 条；失败会显示不完整状态。",
+  remove: "移除同步",
+  removeTitle: "移除此仓库同步？",
+  removeBody:
+    "立即停止新工作并保留已导入内容与关联。勾选后仅删除 OpenFox 所有的远端 Hook；结果未知时只对账，不重复创建。",
+  deleteHook: "同时删除 OpenFox 创建的远端 Hook",
+  cleanup:
+    "连接已断开，凭据已销毁。下列仓库与 Hook 标识用于人工清理，OpenFox 不再访问远端。",
+  disconnectBody:
+    "断开后立即销毁 PAT 和回调密钥，停止全部同步，保留任务及关联。远端 Hook 不会自动删除；需要清理时先逐仓库选择删除 Hook 并等待成功，再断开。",
+  rotate: "轮换回调密钥",
+  rotateTitle: "轮换此连接全部 Webhook？",
+  rotateBody:
+    "旧回调密钥立即失效，所有仓库暂停；全部 Hook 更新确认后恢复。Issue 会补查缺口，缺失的 PR / commit 事件无法完整补回，需要检查。发送中或 UNKNOWN 的 Hook 须先对账。",
+  work: "后台工作与恢复",
+  workEmpty: "暂无工作记录。",
+  unknown:
+    "结果未知：只核对原发送身份、仓库和标记，不会重新 POST。未找到也不会自动重发。",
+  reconcile: "重新核对",
+  retry: "重试失败工作",
+  pending: "后台处理中",
+  error: "状态原因：{code}",
+  settings: "关联与回链设置",
+  outboundWarning:
+    "打开回链会以组织 PAT 向远端发送评论；公开仓库中的评论对公众可见。",
+  link_pull_requests: "关联 Pull Request",
+  link_commits: "关联 Git Commit",
+  pr_backlink_private: "私有仓库 PR 回链",
+  pr_backlink_public: "公共仓库 PR 回链",
+  issue_backlink_private: "私有仓库 Issue 回链",
+  issue_backlink_public: "公共仓库 Issue 回链",
+  branch_format: "分支名称格式",
+  enableTitle: "启用远端写入？",
+  bidiTitle: "启用双向同步？",
+  confirm: "确认启用",
+  readOnly: "仅组织所有者和管理员可管理连接及仓库。",
+  repoLimit: "远端分页已达 50 页边界，列表可能不完整，请缩小搜索。",
+  workPage: "更早的工作记录",
+  repoPage: "更多仓库记录",
+  gap: "Webhook 曾中断。Issue 会补查，PR / commit 缺失事件需人工检查。",
+} as const;

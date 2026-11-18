@@ -1,0 +1,8 @@
+{
+ "path": "SKILL.md",
+ "size": 55,
+ "mime": "text/plain",
+ "previewable": true,
+ "sha256": "9bb3912c72fd1c616b2aa8346771655b49eaf2f3e2badaf67be8eb994d4e6717",
+ "content": "---\nname: bad-digest\ndescription: x\n---\n\nInstructions.\nx"
+}

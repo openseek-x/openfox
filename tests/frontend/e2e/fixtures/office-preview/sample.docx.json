@@ -1,0 +1,37 @@
+{
+  "kind": "docx",
+  "units": [
+    {
+      "id": "s1.n7",
+      "section": "Document",
+      "label": "P1 · 1",
+      "text": "Original text",
+      "type": "text",
+      "editable": true
+    },
+    {
+      "id": "s1.n11",
+      "section": "Document",
+      "label": "P1 · 2",
+      "text": " keep italic",
+      "type": "text",
+      "editable": true
+    },
+    {
+      "id": "s1.n14",
+      "section": "Document",
+      "label": "P2 · 1",
+      "text": "Keep paragraph two",
+      "type": "text",
+      "editable": true
+    },
+    {
+      "id": "s1.n27",
+      "section": "Document",
+      "label": "P3 · 1",
+      "text": "Keep table",
+      "type": "text",
+      "editable": true
+    }
+  ]
+}

@@ -1,0 +1,214 @@
+{
+  "kind": "docx",
+  "units": [
+    {
+      "id": "s1.n9",
+      "section": "Document",
+      "label": "P1 · 1",
+      "text": "中文报告 · 协作进展",
+      "type": "text",
+      "editable": true,
+      "source": {
+        "part": "word/document.xml",
+        "paragraph": 0,
+        "offset": 0
+      }
+    },
+    {
+      "id": "s1.n12",
+      "section": "Document",
+      "label": "P2 · 1",
+      "text": "原版式验证：中文、English、表格与图像应保持可读。",
+      "type": "text",
+      "editable": true,
+      "source": {
+        "part": "word/document.xml",
+        "paragraph": 1,
+        "offset": 0
+      }
+    },
+    {
+      "id": "s1.n17",
+      "section": "Document",
+      "label": "P3 · 1",
+      "text": "前半段 ",
+      "type": "text",
+      "editable": true,
+      "source": {
+        "part": "word/document.xml",
+        "paragraph": 2,
+        "offset": 0
+      }
+    },
+    {
+      "id": "s1.n21",
+      "section": "Document",
+      "label": "P3 · 2",
+      "text": "重复文本",
+      "type": "text",
+      "editable": true,
+      "source": {
+        "part": "word/document.xml",
+        "paragraph": 2,
+        "offset": 4
+      }
+    },
+    {
+      "id": "s1.n23",
+      "section": "Document",
+      "label": "P3 · 3",
+      "text": " 后半段；同一句里保留独立的源文字节点。",
+      "type": "text",
+      "editable": true,
+      "source": {
+        "part": "word/document.xml",
+        "paragraph": 2,
+        "offset": 8
+      }
+    },
+    {
+      "id": "s1.n62",
+      "section": "Document",
+      "label": "P5 · 1",
+      "text": "阶段",
+      "type": "text",
+      "editable": true,
+      "source": {
+        "part": "word/document.xml",
+        "paragraph": 4,
+        "offset": 0
+      }
+    },
+    {
+      "id": "s1.n68",
+      "section": "Document",
+      "label": "P6 · 1",
+      "text": "状态",
+      "type": "text",
+      "editable": true,
+      "source": {
+        "part": "word/document.xml",
+        "paragraph": 5,
+        "offset": 0
+      }
+    },
+    {
+      "id": "s1.n74",
+      "section": "Document",
+      "label": "P7 · 1",
+      "text": "备注",
+      "type": "text",
+      "editable": true,
+      "source": {
+        "part": "word/document.xml",
+        "paragraph": 6,
+        "offset": 0
+      }
+    },
+    {
+      "id": "s1.n81",
+      "section": "Document",
+      "label": "P8 · 1",
+      "text": "第一阶段",
+      "type": "text",
+      "editable": true,
+      "source": {
+        "part": "word/document.xml",
+        "paragraph": 7,
+        "offset": 0
+      }
+    },
+    {
+      "id": "s1.n87",
+      "section": "Document",
+      "label": "P9 · 1",
+      "text": "完成",
+      "type": "text",
+      "editable": true,
+      "source": {
+        "part": "word/document.xml",
+        "paragraph": 8,
+        "offset": 0
+      }
+    },
+    {
+      "id": "s1.n93",
+      "section": "Document",
+      "label": "P10 · 1",
+      "text": "重复文本",
+      "type": "text",
+      "editable": true,
+      "source": {
+        "part": "word/document.xml",
+        "paragraph": 9,
+        "offset": 0
+      }
+    },
+    {
+      "id": "s1.n100",
+      "section": "Document",
+      "label": "P11 · 1",
+      "text": "第二阶段",
+      "type": "text",
+      "editable": true,
+      "source": {
+        "part": "word/document.xml",
+        "paragraph": 10,
+        "offset": 0
+      }
+    },
+    {
+      "id": "s1.n107",
+      "section": "Document",
+      "label": "P12 · 1",
+      "text": "横向合并单元格",
+      "type": "text",
+      "editable": true,
+      "source": {
+        "part": "word/document.xml",
+        "paragraph": 11,
+        "offset": 0
+      }
+    },
+    {
+      "id": "s1.n113",
+      "section": "Document",
+      "label": "P14 · 1",
+      "text": "第二页 · 独立分页",
+      "type": "text",
+      "editable": true,
+      "source": {
+        "part": "word/document.xml",
+        "paragraph": 13,
+        "offset": 0
+      }
+    },
+    {
+      "id": "s1.n116",
+      "section": "Document",
+      "label": "P15 · 1",
+      "text": "重复文本",
+      "type": "text",
+      "editable": true,
+      "source": {
+        "part": "word/document.xml",
+        "paragraph": 14,
+        "offset": 0
+      }
+    },
+    {
+      "id": "s1.n119",
+      "section": "Document",
+      "label": "P16 · 1",
+      "text": "页眉页脚应重复出现；文字选区必须区分相同内容的不同位置。",
+      "type": "text",
+      "editable": true,
+      "source": {
+        "part": "word/document.xml",
+        "paragraph": 15,
+        "offset": 0
+      }
+    }
+  ],
+  "sha256": "8ce9dd18e04f3fd057a4d70e0d301de422b670fa76f25c3ec935d6bcf281587c"
+}

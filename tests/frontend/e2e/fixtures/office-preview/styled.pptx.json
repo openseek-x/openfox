@@ -1,0 +1,32 @@
+{
+  "kind": "pptx",
+  "units": [
+    {
+      "id": "s1.n36",
+      "section": "Slide 1",
+      "label": "Text 1",
+      "text": "中文报告 · 产品进展",
+      "type": "text",
+      "editable": true,
+      "slide_source": {
+        "part": "ppt/slides/slide1.xml",
+        "shape": 2,
+        "offset": 0
+      }
+    },
+    {
+      "id": "s1.n59",
+      "section": "Slide 1",
+      "label": "Text 2",
+      "text": "Original text",
+      "type": "text",
+      "editable": true,
+      "slide_source": {
+        "part": "ppt/slides/slide1.xml",
+        "shape": 3,
+        "offset": 0
+      }
+    }
+  ],
+  "sha256": "9f4403af39a9f5ef08a50b1167d475e9e3969fa75fc70d563bd83ceac30b7cd0"
+}

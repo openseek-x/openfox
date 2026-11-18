@@ -1,0 +1,67 @@
+{
+ "schemaVersion": 2,
+ "catalogVersion": "2026-01-01.1",
+ "digest": "abc123",
+ "updatedAt": "2026-01-01T00:00:00Z",
+ "iconBaseUrl": "https://example.test/icons",
+ "categories": [
+  {
+   "id": "productivity",
+   "name": {
+    "en": "Productivity",
+    "zh-Hans": "效率"
+   },
+   "order": 10,
+   "skillCount": 0,
+   "templateCount": 9
+  },
+  {
+   "id": "writing",
+   "name": {
+    "en": "Writing"
+   },
+   "order": 20,
+   "skillCount": 0,
+   "templateCount": 9
+  },
+  {
+   "id": "empty",
+   "name": {
+    "en": "Empty"
+   },
+   "order": 30,
+   "skillCount": 0,
+   "templateCount": 0
+  }
+ ],
+ "packs": [
+  {
+   "id": "starter",
+   "name": {
+    "en": "Starter"
+   },
+   "tint": "#33bbff",
+   "members": [
+    {
+     "skillId": "skillhub.alpha.pdf-tools",
+     "version": "1.0.0",
+     "name": {
+      "en": "PDF Tools"
+     },
+     "icon": "https://example.test/i.png"
+    },
+    {
+     "skillId": "skillhub.nowhere.gone",
+     "version": "1.0.0",
+     "name": {
+      "en": "Gone"
+     }
+    }
+   ]
+  }
+ ],
+ "counts": {
+  "skills": 1000,
+  "templates": 400
+ }
+}

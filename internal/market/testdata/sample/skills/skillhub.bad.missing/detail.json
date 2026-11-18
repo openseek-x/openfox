@@ -1,0 +1,60 @@
+{
+ "meta": {
+  "schemaVersion": 1,
+  "skillId": "skillhub.bad.missing",
+  "version": "1.0.0",
+  "digest": "d-skillhub.bad.missing",
+  "name": {
+   "en": "Missing"
+  },
+  "description": {
+   "en": "x"
+  },
+  "listed": true,
+  "featured": false,
+  "icon": "https://example.test/icons/missing.png",
+  "categoryIds": [
+   "writing"
+  ],
+  "tags": [
+   {
+    "zh-Hans": "示例"
+   },
+   {
+    "en": "Sample"
+   }
+  ],
+  "stats": {
+   "downloads": 1,
+   "installs": 1,
+   "stars": 7
+  },
+  "publisher": {
+   "name": "Sample Org",
+   "verified": true
+  },
+  "source": {
+   "origin": "skillhub"
+  }
+ },
+ "tree": {
+  "nodes": [
+   {
+    "type": "file",
+    "path": "SKILL.md",
+    "size": 56,
+    "mime": "text/plain",
+    "previewable": true,
+    "sha256": "c7275afd72f422e4438954a9084e19457f32f7184fe15f10c3be2a65d0078280"
+   },
+   {
+    "type": "file",
+    "path": "big.txt",
+    "size": 12,
+    "mime": "text/plain",
+    "previewable": true,
+    "sha256": "290f493c44f5d63d06b374d0a5abd292fae38b92cab2fae5efefe1b0e9347f56"
+   }
+  ]
+ }
+}

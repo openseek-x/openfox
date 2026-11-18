@@ -1,0 +1,47 @@
+{
+ "meta": {
+  "schemaVersion": 1,
+  "templateId": "skillhub.tpl-second",
+  "version": "1.0.0",
+  "name": {
+   "zh-Hans": "写作助手",
+   "en": "Writer"
+  },
+  "jobTitle": {
+   "zh-Hans": "写手",
+   "en": "Writer"
+  },
+  "tagline": {
+   "en": "Writes things"
+  },
+  "description": {
+   "en": "Writes all the things"
+  },
+  "categoryIds": [
+   "productivity"
+  ],
+  "keywords": [
+   "writing",
+   "docs"
+  ],
+  "avatar": {
+   "type": "image",
+   "url": "https://example.test/a.png"
+  },
+  "quickPrompts": [
+   {
+    "en": "Draft a post",
+    "zh-Hans": "写一篇"
+   }
+  ],
+  "instructionFiles": [
+   "instructions.en.md"
+  ],
+  "skillRefs": [],
+  "publishedAt": "2026-04-22T13:54:57Z"
+ },
+ "instructions": {
+  "instructions.en.md": "You are a writer.",
+  "instructions.zh-Hans.md": "你是写手。"
+ }
+}

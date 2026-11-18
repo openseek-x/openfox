@@ -1,0 +1,345 @@
+[
+  {
+    "key": "assignments",
+    "group": "",
+    "level": "normal",
+    "default_level": "normal",
+    "customized": false
+  },
+  {
+    "key": "task_assigned_assignee",
+    "group": "assignments",
+    "level": "important",
+    "default_level": "important",
+    "customized": false
+  },
+  {
+    "key": "task_unassigned_assignee",
+    "group": "assignments",
+    "level": "normal",
+    "default_level": "normal",
+    "customized": false
+  },
+  {
+    "key": "task_assignee_updated_assignee",
+    "group": "assignments",
+    "level": "important",
+    "default_level": "important",
+    "customized": false
+  },
+  {
+    "key": "task_assignee_updated_follower",
+    "group": "assignments",
+    "level": "normal",
+    "default_level": "normal",
+    "customized": false
+  },
+  {
+    "key": "task_subscribed_follower",
+    "group": "assignments",
+    "level": "normal",
+    "default_level": "normal",
+    "customized": false
+  },
+  {
+    "key": "status_changes",
+    "group": "",
+    "level": "normal",
+    "default_level": "normal",
+    "customized": false
+  },
+  {
+    "key": "task_status_updated_assignee",
+    "group": "status_changes",
+    "level": "important",
+    "default_level": "important",
+    "customized": false
+  },
+  {
+    "key": "task_status_updated_follower",
+    "group": "status_changes",
+    "level": "normal",
+    "default_level": "normal",
+    "customized": false
+  },
+  {
+    "key": "task_priority_updated_assignee",
+    "group": "status_changes",
+    "level": "important",
+    "default_level": "important",
+    "customized": false
+  },
+  {
+    "key": "task_priority_updated_follower",
+    "group": "status_changes",
+    "level": "normal",
+    "default_level": "normal",
+    "customized": false
+  },
+  {
+    "key": "task_start_date_updated_assignee",
+    "group": "status_changes",
+    "level": "important",
+    "default_level": "important",
+    "customized": false
+  },
+  {
+    "key": "task_start_date_updated_follower",
+    "group": "status_changes",
+    "level": "normal",
+    "default_level": "normal",
+    "customized": false
+  },
+  {
+    "key": "task_due_date_updated_assignee",
+    "group": "status_changes",
+    "level": "important",
+    "default_level": "important",
+    "customized": false
+  },
+  {
+    "key": "task_due_date_updated_follower",
+    "group": "status_changes",
+    "level": "normal",
+    "default_level": "normal",
+    "customized": false
+  },
+  {
+    "key": "task_completed_assignee",
+    "group": "status_changes",
+    "level": "important",
+    "default_level": "important",
+    "customized": false
+  },
+  {
+    "key": "task_completed_follower",
+    "group": "status_changes",
+    "level": "normal",
+    "default_level": "normal",
+    "customized": false
+  },
+  {
+    "key": "comments",
+    "group": "",
+    "level": "normal",
+    "default_level": "normal",
+    "customized": false
+  },
+  {
+    "key": "comment_created_member_assignee",
+    "group": "comments",
+    "level": "important",
+    "default_level": "important",
+    "customized": false
+  },
+  {
+    "key": "comment_replied_member_assignee",
+    "group": "comments",
+    "level": "important",
+    "default_level": "important",
+    "customized": false
+  },
+  {
+    "key": "comment_created_member_follower",
+    "group": "comments",
+    "level": "normal",
+    "default_level": "normal",
+    "customized": false
+  },
+  {
+    "key": "comment_replied_member_follower",
+    "group": "comments",
+    "level": "normal",
+    "default_level": "normal",
+    "customized": false
+  },
+  {
+    "key": "comment_replied_member_author",
+    "group": "comments",
+    "level": "normal",
+    "default_level": "normal",
+    "customized": false
+  },
+  {
+    "key": "reaction_created_member_author",
+    "group": "comments",
+    "level": "normal",
+    "default_level": "normal",
+    "customized": false
+  },
+  {
+    "key": "comment_created_agent_assignee",
+    "group": "comments",
+    "level": "normal",
+    "default_level": "normal",
+    "customized": false
+  },
+  {
+    "key": "comment_replied_agent_assignee",
+    "group": "comments",
+    "level": "normal",
+    "default_level": "normal",
+    "customized": false
+  },
+  {
+    "key": "comment_created_agent_follower",
+    "group": "comments",
+    "level": "normal",
+    "default_level": "normal",
+    "customized": false
+  },
+  {
+    "key": "comment_replied_agent_follower",
+    "group": "comments",
+    "level": "normal",
+    "default_level": "normal",
+    "customized": false
+  },
+  {
+    "key": "comment_replied_agent_author",
+    "group": "comments",
+    "level": "normal",
+    "default_level": "normal",
+    "customized": false
+  },
+  {
+    "key": "reaction_created_agent_author",
+    "group": "comments",
+    "level": "normal",
+    "default_level": "normal",
+    "customized": false
+  },
+  {
+    "key": "mentions",
+    "group": "",
+    "level": "normal",
+    "default_level": "normal",
+    "customized": false
+  },
+  {
+    "key": "comment_mentioned_member_recipient",
+    "group": "mentions",
+    "level": "important",
+    "default_level": "important",
+    "customized": false
+  },
+  {
+    "key": "comment_mentioned_agent_recipient",
+    "group": "mentions",
+    "level": "important",
+    "default_level": "important",
+    "customized": false
+  },
+  {
+    "key": "chat_mentioned_member_recipient",
+    "group": "mentions",
+    "level": "important",
+    "default_level": "important",
+    "customized": false
+  },
+  {
+    "key": "chat_mentioned_agent_recipient",
+    "group": "mentions",
+    "level": "important",
+    "default_level": "important",
+    "customized": false
+  },
+  {
+    "key": "agent_activity",
+    "group": "",
+    "level": "normal",
+    "default_level": "normal",
+    "customized": false
+  },
+  {
+    "key": "chat_replied_participant",
+    "group": "agent_activity",
+    "level": "off",
+    "default_level": "off",
+    "customized": false
+  },
+  {
+    "key": "task_agent_completed_participant",
+    "group": "agent_activity",
+    "level": "off",
+    "default_level": "off",
+    "customized": false
+  },
+  {
+    "key": "task_failed_participant",
+    "group": "agent_activity",
+    "level": "off",
+    "default_level": "off",
+    "customized": false
+  },
+  {
+    "key": "task_agent_blocked_participant",
+    "group": "agent_activity",
+    "level": "important",
+    "default_level": "important",
+    "customized": false
+  },
+  {
+    "key": "task_needs_human_input_participant",
+    "group": "agent_activity",
+    "level": "off",
+    "default_level": "off",
+    "customized": false
+  },
+  {
+    "key": "task_review_requested_participant",
+    "group": "agent_activity",
+    "level": "off",
+    "default_level": "off",
+    "customized": false
+  },
+  {
+    "key": "automation_runs",
+    "group": "",
+    "level": "normal",
+    "default_level": "normal",
+    "customized": false
+  },
+  {
+    "key": "automation_run_completed_recipient",
+    "group": "automation_runs",
+    "level": "off",
+    "default_level": "off",
+    "customized": false
+  },
+  {
+    "key": "automation_run_failed_recipient",
+    "group": "automation_runs",
+    "level": "important",
+    "default_level": "important",
+    "customized": false
+  },
+  {
+    "key": "automation_run_cancelled_recipient",
+    "group": "automation_runs",
+    "level": "important",
+    "default_level": "important",
+    "customized": false
+  },
+  {
+    "key": "automation_run_skipped_recipient",
+    "group": "automation_runs",
+    "level": "important",
+    "default_level": "important",
+    "customized": false
+  },
+  {
+    "key": "human_chat",
+    "group": "",
+    "level": "normal",
+    "default_level": "normal",
+    "customized": false
+  },
+  {
+    "key": "chat_message_received_recipient",
+    "group": "human_chat",
+    "level": "off",
+    "default_level": "off",
+    "customized": false
+  }
+]

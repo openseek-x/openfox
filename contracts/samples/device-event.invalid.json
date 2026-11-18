@@ -1,0 +1,8 @@
+{
+  "event_id": "not-a-uuid",
+  "computer_id": "00000000-0000-4000-8000-000000000002",
+  "run_id": "00000000-0000-4000-8000-000000000003",
+  "generation": -1,
+  "sequence": 7,
+  "type": "unknown"
+}
