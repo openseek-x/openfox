@@ -259,6 +259,13 @@
     "customized": false
   },
   {
+    "key": "task_creation_result_requester",
+    "group": "agent_activity",
+    "level": "normal",
+    "default_level": "normal",
+    "customized": false
+  },
+  {
     "key": "task_agent_completed_participant",
     "group": "agent_activity",
     "level": "off",

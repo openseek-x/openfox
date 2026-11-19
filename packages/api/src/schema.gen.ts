@@ -6425,6 +6425,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/organizations/{organizationID}/spaces/{spaceID}/tasks/agent-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationID: components["parameters"]["OrganizationID"];
+                spaceID: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 提交后台建单需求，完成后向发起人发送收件箱通知 */
+        post: operations["createTaskWithAgent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/organizations/{organizationID}/spaces/{spaceID}/tasks/counts": {
         parameters: {
             query?: never;
@@ -18392,6 +18412,38 @@ export interface components {
              */
             after_task_id?: string | null;
         };
+        /** @description 选择 agent_id 或 crew_id 之一。用户明确选择的任务属性由服务端应用。 */
+        AgentTaskRequest: {
+            brief: string;
+            /** Format: uuid */
+            agent_id?: string;
+            /** Format: uuid */
+            crew_id?: string;
+            /** Format: uuid */
+            project_id?: string;
+            /** Format: uuid */
+            type_id?: string;
+            /** Format: uuid */
+            status_id?: string;
+            /** Format: uuid */
+            parent_task_id?: string;
+            /** Format: uuid */
+            iteration_id?: string;
+            /** Format: date */
+            due_date?: string;
+            priority?: components["schemas"]["TaskPriority"];
+            submit_to_triage?: boolean;
+        } & ({
+            /** Format: uuid */
+            agent_id: string;
+        } | {
+            /** Format: uuid */
+            crew_id: string;
+        });
+        AgentTaskReceipt: {
+            /** Format: uuid */
+            request_id: string;
+        };
         TaskCreateRequest: {
             /**
              * Format: date-time
@@ -18920,6 +18972,7 @@ export interface components {
         InboxNotificationKind: "MENTION" | "HANDOFF" | "HANDOFF_REVIEW" | "REPLY" | "TASK_COMMENT" | "RUN_FAILED" | "TASK_ASSIGNED" | "TRIAGE_NEW" | "AUTOMATION_RESULT" | "TASK_UPDATED" | "TASK_REACTION" | "RUN_COMPLETED" | "RUN_BLOCKED" | "DIRECT_MESSAGE";
         /** @description 按任务、对话、自动化或真人私聊聚合。可选字段为空时不输出。 */
         InboxGroup: {
+            task_creation_draft?: components["schemas"]["AgentTaskRequest"];
             /** @description 组内最新可投递通知的既有叶键 */
             inbox_event?: string;
             /** Format: uuid */
@@ -21235,6 +21288,19 @@ export interface components {
             actor_id?: string;
             /** @description 当前运行的输入来自自动化，用于工作区存储分类 */
             automation_origin?: boolean;
+            space_tools?: {
+                /** @description 本次运行只能按请求创建一个任务 */
+                create_only?: boolean;
+                /** Format: uuid */
+                space_id: string;
+                space_name: string;
+                space_prefix: string;
+                public_url: string;
+                limits: {
+                    create: number;
+                    update: number;
+                };
+            };
             /** @description 当前中心接受运行范围内的回复、提及和表态 */
             social_tools?: boolean;
             /** @description 当前运行是小队对话里队长的运行（非委派产生），可用 crew_delegate 工具 */
@@ -21363,7 +21429,7 @@ export interface components {
             text: string;
         };
         /** @enum {string} */
-        DeviceCommandKind: "runtime_probe" | "runtime_test" | "storage_cleanup" | "skill_scan" | "skill_import" | "device_settings" | "workspace_path" | "runtime_session_export" | "key_rotate";
+        DeviceCommandKind: "runtime_probe" | "runtime_test" | "storage_cleanup" | "skill_scan" | "skill_import" | "device_settings" | "workspace_path" | "runtime_session_export" | "key_rotate" | "task_draft";
         /** @enum {string} */
         DeviceCommandStatus: "PENDING" | "DELIVERED" | "SUCCEEDED" | "FAILED" | "EXPIRED";
         /**
@@ -21424,7 +21490,7 @@ export interface components {
             /**
              * @description runtime_probe、skill_scan 为 {}。storage_cleanup 传 {} 使用既有保留规则；传 action、days、categories 则按组织和来源预览或清理；按任务状态时另传 statuses。clean 必须带同一条件的 preview_id。旧设备拒绝筛选请求。
              *     runtime_test = {provider: codex / claude-code / opencode / pi / codebuddy / hermes / gemini（缺省 codex）, model?: string(≤128)}。
-             *     skill_import 只能通过 createSkillRuntimeImport 下发，这里传 400。
+             *     skill_import 由 createSkillRuntimeImport 下发，task_draft 由 createTaskWithAgent 下发。此接口拒绝这两种命令。
              *     设备收到的 skill_import params = {space_id, names}。
              *     workspace_path = WorkspacePathRequest。会话访问权、实际 Run/代次/设备及请求人必须全部匹配。
              *     同设备存在不同参数的未完成路径请求返回 409；完全相同参数才复用。过期请求不允许重放。
@@ -35388,6 +35454,49 @@ export interface operations {
                 };
             };
             400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    createTaskWithAgent: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                organizationID: components["parameters"]["OrganizationID"];
+                spaceID: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentTaskRequest"];
+            };
+        };
+        responses: {
+            /** @description 重放同一请求 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTaskReceipt"];
+                };
+            };
+            /** @description 建单请求已入队 */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTaskReceipt"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
             403: components["responses"]["Error"];
             404: components["responses"]["Error"];
             409: components["responses"]["Error"];

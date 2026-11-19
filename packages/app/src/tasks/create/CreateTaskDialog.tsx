@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
 
 import {
@@ -16,6 +16,7 @@ import {
   DateFieldPopover,
   Icon,
   IconButton,
+  Kbd,
   Menu,
   MenuItem,
   Switch,
@@ -54,13 +55,19 @@ import {
   useStatuses,
 } from "../queries";
 import { useOrgRole, useSpaceDetail } from "../../spaces/queries";
+import { useDirectory } from "../../agents/queries";
 import { ProjectPicker } from "../../projects/ProjectPicker";
 import { EstimateInput, useSpaceEstimation } from "../../spaces/EstimateField";
 import { ComposeFields, ComposeShell } from "./ComposeShell";
+import { TaskCreatorPicker } from "./TaskCreatorPicker";
+import { isMacPlatform } from "../../me/shortcuts";
 import { usePriorityLevels } from "../../organization/queries";
 
 export interface CreateTaskInit {
   spaceId?: string;
+  manual?: boolean;
+  priority?: Priority;
+  dueDate?: string;
   typeId?: string;
   statusId?: string;
   parentTaskId?: string;
@@ -116,6 +123,32 @@ export function CreateTaskDialog({
   const labels = usePickerLabels(orgId, spaceId || undefined);
   const agents = useSpaceAgents(orgId, spaceId || undefined);
   const people = usePeople(orgId, space);
+  const modeKey = `openfox:task-create-mode:${orgId}`;
+  const canUseAgent =
+    !init.relateTo &&
+    !init.sourceComment &&
+    (!init.assignee || /^(agent|crew):/.test(init.assignee.value));
+  const [agentMode, setAgentMode] = useState(
+    () =>
+      canUseAgent && !init.manual && localStorage.getItem(modeKey) === "agent",
+  );
+  const directory = useDirectory(orgId, agentMode);
+  const creators = (directory.data?.entries ?? []).filter(
+    (entry) =>
+      entry.space_id === spaceId &&
+      !entry.archived_at &&
+      (entry.type === "crew"
+        ? !!entry.leader
+        : entry.allow_assign && entry.allow_direct_chat),
+  );
+  const [creatorValue, setCreatorValue] = useState(init.assignee?.value ?? "");
+  const creator =
+    creators.find((entry) => `${entry.type}:${entry.id}` === creatorValue) ??
+    creators[0];
+  const [brief, setBrief] = useState(
+    [init.title, init.description].filter(Boolean).join("\n\n"),
+  );
+  const [priorityOpen, setPriorityOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
   const { candidates: invitations } = useInvitationAssignees(
     orgId,
@@ -129,7 +162,7 @@ export function CreateTaskDialog({
   const [description, setDescription] = useState(init.description ?? "");
   // 阶段 12f · 验收要求（B-01），与描述同样限长 10000
   const [acceptance, setAcceptance] = useState("");
-  const [priority, setPriority] = useState<Priority>("NONE");
+  const [priority, setPriority] = useState<Priority>(init.priority ?? "NONE");
   // 阶段 12f · 处理人值列表（user:/agent:/crew:/invitation:），人员是否多选由空间开关决定
   const [assignees, setAssignees] = useState<string[]>(
     init.assignee ? [init.assignee.value] : [],
@@ -137,7 +170,7 @@ export function CreateTaskDialog({
   const multiAssignee = spaceDetail.data?.multi_assignee ?? false;
   const [labelIds, setLabelIds] = useState<string[]>([]);
   const [startDate, setStartDate] = useState<string | null>(null);
-  const [dueDate, setDueDate] = useState<string | null>(null);
+  const [dueDate, setDueDate] = useState<string | null>(init.dueDate ?? null);
   // 阶段 3a · 估时（只在启用估时的空间显示）
   const estimation = useSpaceEstimation(orgId, spaceId || undefined);
   const [estimate, setEstimate] = useState<number | null>(null);
@@ -212,6 +245,7 @@ export function CreateTaskDialog({
   };
 
   const dirty =
+    (agentMode && brief.trim() !== "") ||
     title.trim() !== "" ||
     description.trim() !== "" ||
     acceptance.trim() !== "";
@@ -224,7 +258,88 @@ export function CreateTaskDialog({
   const agentList = (agents.data ?? []).filter((a) => !a.archived_at);
   const labelList: Label[] = labels.data ?? [];
 
+  const changeMode = (next: boolean) => {
+    if (next === agentMode) return;
+    if (next)
+      setBrief([title.trim(), description.trim()].filter(Boolean).join("\n\n"));
+    else if (title.trim()) {
+      const boundary = brief.indexOf("\n\n");
+      const first = boundary < 0 ? brief : brief.slice(0, boundary);
+      if (first.length <= 500) {
+        setTitle(first);
+        setDescription(boundary < 0 ? "" : brief.slice(boundary + 2));
+      } else {
+        setTitle("");
+        setDescription(brief);
+      }
+    } else setDescription(brief);
+    setAgentMode(next);
+    localStorage.setItem(modeKey, next ? "agent" : "manual");
+    requestAnimationFrame(() =>
+      panel.current?.querySelector<HTMLElement>("[data-autofocus]")?.focus(),
+    );
+  };
+  // Reuse the key after an uncertain delivery, until the user changes the request.
+  const previousBriefRequest = useRef<{ payload: string; key: string } | null>(
+    null,
+  );
+  const submitBrief = useMutation({
+    mutationFn: () => {
+      if (!creator) throw new Error("Missing creator");
+      const input = {
+        brief: brief.trim(),
+        ...(creator.type === "crew"
+          ? { crew_id: creator.id }
+          : { agent_id: creator.id }),
+        priority,
+        ...(projectId && { project_id: projectId }),
+        ...(dueDate && { due_date: dueDate }),
+        ...(type && { type_id: type.id }),
+        ...(effectiveStatus && { status_id: effectiveStatus.id }),
+        ...(submitToTriage && { submit_to_triage: true }),
+        ...(iterationId && { iteration_id: iterationId }),
+        ...(init.parentTaskId && { parent_task_id: init.parentTaskId }),
+      };
+      const payload = JSON.stringify([spaceId, input]);
+      if (previousBriefRequest.current?.payload !== payload)
+        previousBriefRequest.current = { payload, key: newIdempotencyKey() };
+      return api.tasks.createWithAgent(
+        orgId,
+        spaceId,
+        input,
+        previousBriefRequest.current.key,
+      );
+    },
+    onSuccess: () => {
+      toast(t("tasks.create.queued"));
+      if (!keepCreating) {
+        onClose();
+        return;
+      }
+      previousBriefRequest.current = null;
+      setCreatedCount((n) => n + 1);
+      setTitle("");
+      setDescription("");
+      setBrief("");
+    },
+    onError: (error) => {
+      toast(taskErrorMessage(t, error), { tone: "error" });
+      if (isApiError(error) && !error.uncertain)
+        previousBriefRequest.current = null;
+    },
+  });
   const submit = () => {
+    if (agentMode) {
+      if (
+        space &&
+        creator &&
+        brief.trim() &&
+        brief.length <= 10000 &&
+        !submitBrief.isPending
+      )
+        submitBrief.mutate();
+      return;
+    }
     if (!space || !type || !title.trim() || create.isPending) return;
     const assigneeRefs = assignees.flatMap((value) => {
       const ref = refFromValue(value);
@@ -351,16 +466,43 @@ export function CreateTaskDialog({
     ]);
   };
 
-  const heading = type
-    ? t("tasks.create.newOf", { type: type.name })
-    : t("tasks.create.dialog");
+  const heading = agentMode
+    ? t("tasks.create.withAgent")
+    : type
+      ? t("tasks.create.newOf", { type: type.name })
+      : t("tasks.create.dialog");
+
+  const projectPicker = spaceDetail.data?.features.projects && (
+    <ProjectPicker
+      orgId={orgId}
+      spaceId={spaceId}
+      value={projectId}
+      onSelect={setProjectId}
+      trigger={(name, { ref, toggle, open }) => (
+        <PropertyChip
+          ref={ref}
+          active={open}
+          onClick={toggle}
+          label={t("projects.title")}
+          muted={!projectId}
+          icon={<Icon name="folder" size={14} />}
+        >
+          {name ?? t("projects.title")}
+        </PropertyChip>
+      )}
+    />
+  );
 
   return (
     <ComposeShell
       panelRef={panel}
       label={heading}
       onBackdrop={requestClose}
-      style={expanded ? { width: 896, height: "83%" } : { width: 672 }}
+      style={
+        expanded
+          ? { width: 896, height: "83%" }
+          : { width: agentMode ? 576 : 672 }
+      }
       breadcrumb={
         <>
           <Menu
@@ -379,9 +521,15 @@ export function CreateTaskDialog({
                     : undefined
                 }
                 onClick={toggle}
-                className="flex h-6 items-center gap-1.5 rounded-full border border-line-default px-2 hover:bg-surface-hover disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                className={
+                  agentMode
+                    ? "flex h-6 min-w-0 items-center gap-1 rounded-sm text-fg-muted hover:text-fg-default"
+                    : "flex h-6 items-center gap-1.5 rounded-full border border-line-default px-2 hover:bg-surface-hover disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                }
               >
-                <Avatar name={space?.name ?? "?"} kind="agent" size={16} />
+                {!agentMode && (
+                  <Avatar name={space?.name ?? "?"} kind="agent" size={16} />
+                )}
                 <span className="max-w-[160px] truncate">
                   {space?.name ?? t("tasks.create.noSpace")}
                 </span>
@@ -413,7 +561,9 @@ export function CreateTaskDialog({
             </>
           )}
           <Icon name="chevron-right" size={12} className="text-fg-subtle" />
-          <span className="truncate text-fg-default">{heading}</span>
+          <span className="truncate font-medium text-fg-default">
+            {heading}
+          </span>
         </>
       }
       actions={
@@ -447,53 +597,90 @@ export function CreateTaskDialog({
         />
       }
     >
-      <ComposeFields
-        fill={expanded}
-        rows={expanded ? 12 : 3}
-        title={title}
-        onTitle={setTitle}
-        titlePlaceholder={t("tasks.create.titlePlaceholder")}
-        description={description}
-        onDescription={setDescription}
-        descPlaceholder={t("tasks.create.descPlaceholder")}
-        onSubmit={submit}
-      >
-        <div>
-          <Menu
-            label={t("tasks.create.switchType")}
-            trigger={({ ref, toggle, open }) => (
-              <button
-                ref={ref}
-                type="button"
-                aria-expanded={open}
-                aria-label={`${t("tasks.fields.type")}: ${type?.name ?? ""}`}
-                onClick={toggle}
-                className="inline-flex h-6 items-center gap-1.5 rounded-md bg-surface-muted px-2 text-body-sm"
-              >
-                <TaskTypeIcon icon={type?.icon} size={14} />
-                {type?.name ?? "—"}
-                <Icon name="chevron-down" size={12} className="text-fg-muted" />
-              </button>
-            )}
-          >
-            {typeList.map((x) => (
-              <MenuItem
-                key={x.id}
-                icon={<TaskTypeIcon icon={x.icon} />}
-                selected={x.id === type?.id}
-                onSelect={() => {
-                  setTypeId(x.id);
-                  setStatusId("");
-                }}
-              >
-                {x.name}
-              </MenuItem>
-            ))}
-          </Menu>
+      {agentMode ? (
+        <div
+          className={`flex min-h-0 flex-col gap-2 px-5 ${expanded ? "flex-1" : ""}`}
+        >
+          <TaskCreatorPicker
+            creators={creators}
+            creator={creator}
+            loading={directory.isPending}
+            onSelect={setCreatorValue}
+          />
+          <textarea
+            data-autofocus
+            aria-label={t("tasks.create.brief")}
+            placeholder={t("tasks.create.briefExample")}
+            value={brief}
+            maxLength={10000}
+            rows={6}
+            onChange={(event) => setBrief(event.target.value)}
+            onKeyDown={(event) => {
+              if (
+                !event.nativeEvent.isComposing &&
+                event.key === "Enter" &&
+                (event.metaKey || event.ctrlKey)
+              ) {
+                event.preventDefault();
+                submit();
+              }
+            }}
+            className="min-h-12 w-full flex-auto resize-none rounded-sm bg-transparent text-body leading-6 text-fg-default outline-none placeholder:text-fg-muted focus-visible:shadow-none"
+          />
         </div>
-      </ComposeFields>
+      ) : (
+        <ComposeFields
+          fill={expanded}
+          rows={expanded ? 12 : 3}
+          title={title}
+          onTitle={setTitle}
+          titlePlaceholder={t("tasks.create.titlePlaceholder")}
+          description={description}
+          onDescription={setDescription}
+          descPlaceholder={t("tasks.create.descPlaceholder")}
+          onSubmit={submit}
+        >
+          <div>
+            <Menu
+              label={t("tasks.create.switchType")}
+              trigger={({ ref, toggle, open }) => (
+                <button
+                  ref={ref}
+                  type="button"
+                  aria-expanded={open}
+                  aria-label={`${t("tasks.fields.type")}: ${type?.name ?? ""}`}
+                  onClick={toggle}
+                  className="inline-flex h-6 items-center gap-1.5 rounded-md bg-surface-muted px-2 text-body-sm"
+                >
+                  <TaskTypeIcon icon={type?.icon} size={14} />
+                  {type?.name ?? "—"}
+                  <Icon
+                    name="chevron-down"
+                    size={12}
+                    className="text-fg-muted"
+                  />
+                </button>
+              )}
+            >
+              {typeList.map((x) => (
+                <MenuItem
+                  key={x.id}
+                  icon={<TaskTypeIcon icon={x.icon} />}
+                  selected={x.id === type?.id}
+                  onSelect={() => {
+                    setTypeId(x.id);
+                    setStatusId("");
+                  }}
+                >
+                  {x.name}
+                </MenuItem>
+              ))}
+            </Menu>
+          </div>
+        </ComposeFields>
+      )}
 
-      <div className="px-5">
+      <div hidden={agentMode} className="px-5">
         <textarea
           aria-label={t("tasks.create.acceptancePlaceholder")}
           placeholder={t("tasks.create.acceptancePlaceholder")}
@@ -505,131 +692,151 @@ export function CreateTaskDialog({
         />
       </div>
 
-      <div className="flex flex-wrap items-center gap-1.5 px-5 py-3">
-        <Picker
-          label={t("tasks.fields.assignee")}
-          groups={assigneeGroups(t, people, agentList, { invitations })}
-          open={assignOpen}
-          onOpenChange={setAssignOpen}
-          multiple
-          selected={assignees.length ? assignees : ["none"]}
-          onSelect={toggleAssignees}
-          trigger={({ ref, toggle, open }) => (
-            <PropertyChip
-              ref={ref}
-              active={open}
-              onClick={toggle}
+      <div
+        className={
+          agentMode
+            ? "flex flex-wrap items-center gap-1.5 px-4 pt-2 pb-3"
+            : "flex flex-wrap items-center gap-1.5 px-5 py-3"
+        }
+      >
+        {!agentMode && (
+          <>
+            <Picker
               label={t("tasks.fields.assignee")}
-              muted={!assigneeName}
-              icon={
-                assigneeName ? (
-                  <TaskAssigneeAvatar
-                    name={assigneeName}
-                    kind={refFromValue(assignees[0] ?? "")?.kind ?? "HUMAN"}
-                    size={16}
-                  />
-                ) : (
-                  <Icon name="user" size={14} />
-                )
-              }
-            >
-              {assigneeName ?? t("tasks.fields.assignee")}
-            </PropertyChip>
-          )}
-        />
-        <Picker
-          label={t("tasks.fields.status")}
-          groups={statusGroups(choices)}
-          selected={effectiveStatus ? [effectiveStatus.id] : []}
-          onSelect={setStatusId}
-          trigger={({ ref, toggle, open }) => (
-            <PropertyChip
-              ref={ref}
-              active={open}
-              onClick={guestTriage ? undefined : toggle}
-              label={
-                guestTriage
-                  ? t("spaces.triage.enterHint")
-                  : t("tasks.fields.status")
-              }
-              icon={
-                effectiveStatus && (
-                  <StatusIcon
-                    category={effectiveStatus.category}
-                    color={effectiveStatus.color}
-                    size={14}
-                  />
-                )
-              }
-              muted={!effectiveStatus}
-            >
-              {effectiveStatus?.name ?? t("tasks.fields.status")}
-            </PropertyChip>
-          )}
-        />
-        <Picker
-          label={t("tasks.fields.priority")}
-          groups={priorityGroups(t, priorityLevels)}
-          selected={[priority]}
-          onSelect={(v) => setPriority(v as Priority)}
-          trigger={({ ref, toggle, open }) => (
-            <PropertyChip
-              ref={ref}
-              active={open}
-              onClick={toggle}
-              label={t("tasks.fields.priority")}
-              muted={priority === "NONE"}
-              icon={<PriorityIcon priority={priority} size={14} />}
-            >
-              {priority === "NONE"
-                ? t("tasks.priorityNone")
-                : t(`tasks.priority.${priority}`)}
-            </PropertyChip>
-          )}
-        />
-        <Picker
-          label={t("tasks.fields.label")}
-          multiple
-          groups={labelGroups(labelList)}
-          selected={labelIds}
-          onSelect={(id) =>
-            setLabelIds((prev) => toggleLabel(prev, id, labelList))
-          }
-          footer={{
-            label: (query) => t("tasks.create.createLabel", { name: query }),
-            requiresQuery: true,
-            icon: <Icon name="plus" />,
-            onSelect: (query) => void createLabel(query),
-          }}
-          trigger={({ ref, toggle, open }) => {
-            const chosen = labelList.filter((l) => labelIds.includes(l.id));
-            return (
+              groups={assigneeGroups(t, people, agentList, { invitations })}
+              open={assignOpen}
+              onOpenChange={setAssignOpen}
+              multiple
+              selected={assignees.length ? assignees : ["none"]}
+              onSelect={toggleAssignees}
+              trigger={({ ref, toggle, open }) => (
+                <PropertyChip
+                  ref={ref}
+                  active={open}
+                  onClick={toggle}
+                  label={t("tasks.fields.assignee")}
+                  muted={!assigneeName}
+                  icon={
+                    assigneeName ? (
+                      <TaskAssigneeAvatar
+                        name={assigneeName}
+                        kind={refFromValue(assignees[0] ?? "")?.kind ?? "HUMAN"}
+                        size={16}
+                      />
+                    ) : (
+                      <Icon name="user" size={14} />
+                    )
+                  }
+                >
+                  {assigneeName ?? t("tasks.fields.assignee")}
+                </PropertyChip>
+              )}
+            />
+            <Picker
+              label={t("tasks.fields.status")}
+              groups={statusGroups(choices)}
+              selected={effectiveStatus ? [effectiveStatus.id] : []}
+              onSelect={setStatusId}
+              trigger={({ ref, toggle, open }) => (
+                <PropertyChip
+                  ref={ref}
+                  active={open}
+                  onClick={guestTriage ? undefined : toggle}
+                  label={
+                    guestTriage
+                      ? t("spaces.triage.enterHint")
+                      : t("tasks.fields.status")
+                  }
+                  icon={
+                    effectiveStatus && (
+                      <StatusIcon
+                        category={effectiveStatus.category}
+                        color={effectiveStatus.color}
+                        size={14}
+                      />
+                    )
+                  }
+                  muted={!effectiveStatus}
+                >
+                  {effectiveStatus?.name ?? t("tasks.fields.status")}
+                </PropertyChip>
+              )}
+            />
+          </>
+        )}
+        {agentMode && projectPicker}
+        {(!agentMode || priorityOpen || priority !== "NONE") && (
+          <Picker
+            label={t("tasks.fields.priority")}
+            open={priorityOpen}
+            onOpenChange={setPriorityOpen}
+            groups={priorityGroups(t, priorityLevels)}
+            selected={[priority]}
+            onSelect={(v) => setPriority(v as Priority)}
+            trigger={({ ref, toggle, open }) => (
               <PropertyChip
                 ref={ref}
                 active={open}
                 onClick={toggle}
-                label={t("tasks.fields.label")}
-                muted={chosen.length === 0}
-                icon={
-                  chosen[0] ? (
-                    <LabelDot color={chosen[0].color} />
-                  ) : (
-                    <Icon name="tag" size={14} />
-                  )
-                }
+                label={t("tasks.fields.priority")}
+                muted={priority === "NONE"}
+                icon={<PriorityIcon priority={priority} size={14} />}
               >
-                {chosen.length === 0
-                  ? t("tasks.fields.label")
-                  : chosen.length === 1
-                    ? chosen[0]!.name
-                    : t("tasks.filters.valuesCount", {
-                        count: chosen.length,
-                      })}
+                {priority === "NONE"
+                  ? t("tasks.priorityNone")
+                  : t(`tasks.priority.${priority}`)}
               </PropertyChip>
-            );
-          }}
-        />
-        {(showDates.start || startDate) && (
+            )}
+          />
+        )}
+        {!agentMode && (
+          <>
+            <Picker
+              label={t("tasks.fields.label")}
+              multiple
+              groups={labelGroups(labelList)}
+              selected={labelIds}
+              onSelect={(id) =>
+                setLabelIds((prev) => toggleLabel(prev, id, labelList))
+              }
+              footer={{
+                label: (query) =>
+                  t("tasks.create.createLabel", { name: query }),
+                requiresQuery: true,
+                icon: <Icon name="plus" />,
+                onSelect: (query) => void createLabel(query),
+              }}
+              trigger={({ ref, toggle, open }) => {
+                const chosen = labelList.filter((l) => labelIds.includes(l.id));
+                return (
+                  <PropertyChip
+                    ref={ref}
+                    active={open}
+                    onClick={toggle}
+                    label={t("tasks.fields.label")}
+                    muted={chosen.length === 0}
+                    icon={
+                      chosen[0] ? (
+                        <LabelDot color={chosen[0].color} />
+                      ) : (
+                        <Icon name="tag" size={14} />
+                      )
+                    }
+                  >
+                    {chosen.length === 0
+                      ? t("tasks.fields.label")
+                      : chosen.length === 1
+                        ? chosen[0]!.name
+                        : t("tasks.filters.valuesCount", {
+                            count: chosen.length,
+                          })}
+                  </PropertyChip>
+                );
+              }}
+            />
+          </>
+        )}
+        {!agentMode && (showDates.start || startDate) && (
           <PropertyChip
             ref={(node) => {
               startAnchor.current = node;
@@ -645,7 +852,7 @@ export function CreateTaskDialog({
               : t("tasks.fields.startDate")}
           </PropertyChip>
         )}
-        {(showDates.due || dueDate) && (
+        {(dateOpen === "due" || showDates.due || dueDate) && (
           <PropertyChip
             ref={(node) => {
               dueAnchor.current = node;
@@ -661,7 +868,7 @@ export function CreateTaskDialog({
               : t("tasks.fields.dueDate")}
           </PropertyChip>
         )}
-        {estimation && (
+        {!agentMode && estimation && (
           <EstimateInput
             estimation={estimation}
             value={estimate}
@@ -669,7 +876,7 @@ export function CreateTaskDialog({
             className="h-7 w-[120px] text-body-sm"
           />
         )}
-        {spaceDetail.data?.features.iterations && (
+        {!agentMode && spaceDetail.data?.features.iterations && (
           <Picker
             label={t("spaces.sections.iterations")}
             groups={[
@@ -698,26 +905,7 @@ export function CreateTaskDialog({
             )}
           />
         )}
-        {spaceDetail.data?.features.projects && (
-          <ProjectPicker
-            orgId={orgId}
-            spaceId={spaceId}
-            value={projectId}
-            onSelect={setProjectId}
-            trigger={(name, { ref, toggle, open }) => (
-              <PropertyChip
-                ref={ref}
-                active={open}
-                onClick={toggle}
-                label={t("projects.title")}
-                muted={!projectId}
-                icon={<Icon name="folder" size={14} />}
-              >
-                {name ?? t("projects.title")}
-              </PropertyChip>
-            )}
-          />
-        )}
+        {!agentMode && projectPicker}
         <Menu
           label={t("tasks.create.more")}
           trigger={({ ref, toggle, open }) => (
@@ -732,21 +920,30 @@ export function CreateTaskDialog({
             />
           )}
         >
+          {agentMode ? (
+            <MenuItem
+              icon={<PriorityIcon priority="NONE" size={14} />}
+              onSelect={() => setPriorityOpen(true)}
+            >
+              {t("tasks.fields.priority")}
+            </MenuItem>
+          ) : (
+            <MenuItem
+              icon={<Icon name="calendar" />}
+              onSelect={() => {
+                setShowDates((d) => ({ ...d, start: true }));
+                // 等胶囊渲染出来再打开日期浮层
+                requestAnimationFrame(() => setDateOpen("start"));
+              }}
+            >
+              {t("tasks.fields.startDate")}
+            </MenuItem>
+          )}
           <MenuItem
             icon={<Icon name="calendar" />}
             onSelect={() => {
-              setShowDates((d) => ({ ...d, start: true }));
-              // 等胶囊渲染出来再打开日期浮层
-              requestAnimationFrame(() => setDateOpen("start"));
-            }}
-          >
-            {t("tasks.fields.startDate")}
-          </MenuItem>
-          <MenuItem
-            icon={<Icon name="calendar" />}
-            onSelect={() => {
-              setShowDates((d) => ({ ...d, due: true }));
-              requestAnimationFrame(() => setDateOpen("due"));
+              if (!agentMode) setShowDates((d) => ({ ...d, due: true }));
+              setDateOpen("due");
             }}
           >
             {t("tasks.fields.dueDate")}
@@ -768,8 +965,28 @@ export function CreateTaskDialog({
         />
       </div>
 
-      <div className="flex h-14 shrink-0 items-center gap-3 border-t border-line-default px-5">
-        <span className="ml-auto flex items-center gap-2 text-body-sm">
+      <div className="flex shrink-0 flex-wrap items-center justify-end gap-x-3 gap-y-2 border-t border-line-default px-4 py-3">
+        {createdCount > 0 && (
+          <span className="mr-auto text-body-sm text-fg-muted">
+            {t("tasks.create.createdCount", { count: createdCount })}
+          </span>
+        )}
+        {canUseAgent && (
+          <button
+            type="button"
+            disabled={create.isPending || submitBrief.isPending}
+            onClick={() => changeMode(!agentMode)}
+            className="inline-flex min-h-7 items-center gap-1.5 rounded-md px-1.5 text-body-sm text-fg-muted hover:bg-surface-hover hover:text-fg-default disabled:opacity-50"
+          >
+            <Icon name="arrow-left-right" size={14} />
+            {t(
+              agentMode
+                ? "tasks.create.switchToManual"
+                : "tasks.create.switchToAgent",
+            )}
+          </button>
+        )}
+        <label className="flex cursor-pointer items-center gap-2 text-body-sm text-fg-muted">
           <Switch
             label={t("tasks.create.keepCreating")}
             checked={keepCreating}
@@ -777,18 +994,27 @@ export function CreateTaskDialog({
             onCheckedChange={setKeepCreating}
           />
           {t("tasks.create.keepCreating")}
-          {createdCount > 0 && (
-            <span className="text-accent">
-              {t("tasks.create.createdCount", { count: createdCount })}
-            </span>
-          )}
-        </span>
+        </label>
         <Button
+          trailing={
+            agentMode && (
+              <span aria-hidden="true" className="hidden sm:inline-flex">
+                <Kbd className="h-4 border-current/25 bg-transparent text-current">
+                  {isMacPlatform() ? "⌘" : "Ctrl"} ↵
+                </Kbd>
+              </span>
+            )
+          }
           onClick={submit}
-          disabled={!title.trim() || !type || !space}
-          loading={create.isPending}
+          disabled={
+            !space ||
+            (agentMode
+              ? !creator || !brief.trim() || brief.length > 10000
+              : !title.trim() || !type)
+          }
+          loading={create.isPending || submitBrief.isPending}
         >
-          {t("tasks.create.submit")}
+          {t(agentMode ? "tasks.create.submitBrief" : "tasks.create.submit")}
         </Button>
       </div>
     </ComposeShell>

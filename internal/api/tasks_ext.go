@@ -28,6 +28,7 @@ func (h *Handler) registerTaskRoutes(mux *http.ServeMux) {
 	}
 	mux.HandleFunc("GET "+taskBase, h.listTasks)
 	mux.HandleFunc("POST "+taskBase, h.createTask)
+	mux.HandleFunc("POST "+taskBase+"/agent-requests", h.createTaskWithAgent)
 	mux.HandleFunc("GET "+taskBase+"/counts", h.countTasks)
 	mux.HandleFunc("POST "+taskBase+"/batch-update", h.batchUpdateTasks)
 	h.registerTaskStatsFavoriteRoutes(mux)

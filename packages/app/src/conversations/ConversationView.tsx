@@ -37,7 +37,6 @@ import { attachmentErrorMessage } from "../attachments/model";
 import { RunArtifactButtons } from "./artifacts/ArtifactButtons";
 import { Composer, type ComposerAgent, type ComposerSubmit } from "./Composer";
 import { ComputerNotice } from "./ComputerNotice";
-import { RuntimeDefaultsSummary } from "./RuntimeDefaultsSummary";
 import { ContextUsage } from "./ContextUsage";
 import { QueueFullNotice } from "./QueueFullNotice";
 import {
@@ -787,9 +786,6 @@ function ConversationViewContent({
               >
                 {t("chat.fork.notice")} {t("chat.fork.limits")}
               </p>
-            )}
-            {!crew && (
-              <RuntimeDefaultsSummary effective={conversation?.effective} />
             )}
             <ContextUsage
               orgId={orgId}

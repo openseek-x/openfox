@@ -135,6 +135,10 @@ func LoadRunEnvironment(ctx context.Context, tx pgx.Tx, box *secrets.Box, organi
 	if err := tx.QueryRow(ctx, `SELECT r.computer_id::text,COALESCE(r.runtime,c.runtime) FROM openfox.runs r JOIN openfox.agent_config_versions c ON c.organization_id=r.organization_id AND c.agent_id=r.agent_id AND c.config_version=r.config_version WHERE r.organization_id=openfox_private.current_organization_id() AND r.id=$1::uuid AND r.computer_id=$2::uuid`, runID, deviceID).Scan(&computerID, &runtime); err != nil {
 		return nil, err
 	}
+	return loadAgentEnvironment(ctx, tx, box, organizationID, agentID, computerID, runtime)
+}
+
+func loadAgentEnvironment(ctx context.Context, tx pgx.Tx, box *secrets.Box, organizationID, agentID, computerID, runtime string) ([]EnvironmentVariable, error) {
 	rows, err := tx.Query(ctx, `
  SELECT name,value_ciphertext,value_nonce,key_id,source FROM (
  SELECT name,value_ciphertext,value_nonce,key_id,'agent'::text AS source FROM openfox.agent_env_vars

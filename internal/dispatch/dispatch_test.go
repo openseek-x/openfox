@@ -168,9 +168,9 @@ func TestWorkerUsesOrganizationWorkerContextAndReportsPhaseFailures(t *testing.T
 	if !errors.Is(err, failure) {
 		t.Fatalf("RunOrganization error = %v", err)
 	}
-	// 第一个事务是指派事件扫描（task_agent_events），之后每个阶段一个。
-	if runner.calls != 8 {
-		t.Fatalf("phase transactions = %d, want 8 (assignment scan + one per phase)", runner.calls)
+	// 先扫描起草结果和指派事件，之后每个阶段一个。
+	if runner.calls != 9 {
+		t.Fatalf("phase transactions = %d, want 9 (draft and assignment scans + one per phase)", runner.calls)
 	}
 	for i, source := range runner.sources {
 		selection := runner.selections[i]

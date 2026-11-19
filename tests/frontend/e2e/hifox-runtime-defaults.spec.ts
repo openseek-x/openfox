@@ -43,7 +43,7 @@ async function login(page: Page, email: string) {
     org,
   );
 }
-test("R06 owner saves masked Runtime defaults, opts Agent into inheritance, and sees durable source metadata", async ({
+test("R06 owner saves masked Runtime defaults and the conversation inherits them without showing source details", async ({
   page,
   browser,
 }) => {
@@ -133,10 +133,6 @@ test("R06 owner saves masked Runtime defaults, opts Agent into inheritance, and 
     agent_id: agent.id,
   });
   await page.goto(`/o/${org}/chat/${conversation.id}`);
-  await page.getByText("有效模型与变量来源", { exact: true }).click();
-  await expect(
-    page.getByText("CONTROLLED_API_KEY", { exact: true }),
-  ).toBeVisible();
   expect(
     (await request(page, `${base}/conversations/${conversation.id}`)).effective,
   ).toMatchObject({
@@ -144,6 +140,13 @@ test("R06 owner saves masked Runtime defaults, opts Agent into inheritance, and 
     model_source: "computer",
     environment: [{ name: "CONTROLLED_API_KEY", source: "computer" }],
   });
+  await expect(page.getByRole("textbox", { name: "输入消息" })).toBeVisible();
+  await expect(
+    page.getByText("有效模型与变量来源", { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText("CONTROLLED_API_KEY", { exact: true }),
+  ).toHaveCount(0);
   const other = await browser.newContext();
   const member = await other.newPage();
   await login(member, "carol@example.test");

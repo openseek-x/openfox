@@ -50,14 +50,13 @@ function stepLines(step: StepView, t: Translate): string[] {
       break;
     }
     case "thinking": {
+      if (!step.text?.trim()) break;
       const running = step.status === "running";
       lines.push(
         t(running ? "steps.thinking.running" : "steps.thinking.done") +
           suffix(step, t),
       );
-      lines.push(
-        indent(step.text?.trim() ? step.text : t("steps.thinking.empty"), 1),
-      );
+      lines.push(indent(step.text, 1));
       break;
     }
     case "agent_text":

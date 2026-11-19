@@ -38,7 +38,6 @@ export const stepsEn: Messages["steps"] = {
   thinking: {
     running: "Thinking",
     done: "Thought",
-    empty: "No thinking content to show",
   },
   tool: {
     running: "Running",

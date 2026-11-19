@@ -643,6 +643,18 @@ export const enUS: Messages = {
         "Tasks are unavailable right now. Check your connection and try again.",
     },
     create: {
+      switchToManual: "Switch to manual",
+      switchToAgent: "Switch to agent",
+      withAgent: "Create with agent",
+      brief: "Task request",
+      briefExample:
+        "Describe the work, e.g. summarize this week’s customer feedback and list the three most common issues",
+      creator: "Created by",
+      noCreators: "No eligible agents or squads in this space",
+      queued: "Request submitted. The result will appear in your inbox.",
+      recoverBrief: "Creation failed. Open to create manually.",
+      agentCreated: "Task created by agent",
+      submitBrief: "Create",
       menuLabel: "Choose a task type",
       manageTypes: "Manage task types",
       noTypes: "No task types available",
@@ -1583,16 +1595,7 @@ export const enUS: Messages = {
         "Use a valid, non-reserved name; at most 100 variables and 8192 UTF-8 bytes per value.",
       conflict:
         "Settings changed elsewhere. Your draft is preserved. Close and reopen to read the latest revision before retrying.",
-      effective: "Effective model and variable sources",
-      gitAuthor:
-        "Git author settings take precedence over ordinary GIT_AUTHOR_* and GIT_COMMITTER_* variables.",
       inherit: "Inherit machine model",
-      sources: {
-        conversation: "Conversation override",
-        agent: "Agent",
-        computer: "Computer",
-        runtime: "Runtime default",
-      },
     },
     localService: {
       login: "Start automatically at login",

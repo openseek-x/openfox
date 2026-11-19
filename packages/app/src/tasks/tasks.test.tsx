@@ -137,6 +137,80 @@ describe("空间任务看板", () => {
 });
 
 describe("新建任务", () => {
+  it("通过智能体提交需求，保留切换前的文字并记住创建方式", async () => {
+    const user = userEvent.setup();
+    const server = renderAt(spaceTasks, (call) => {
+      if (call.path.endsWith("/agent-directory"))
+        return json(200, {
+          entries: [
+            entry("writer", { space_id: SPACE }),
+            entry("editor", { space_id: SPACE }),
+          ],
+          archived_count: 0,
+          truncated: false,
+        });
+      if (call.path.endsWith("/agent-requests"))
+        return json(201, { request_id: "request-1" });
+      return undefined;
+    });
+    await screen.findByRole("region", { name: "待处理 2" });
+    await user.keyboard("c");
+    const dialog = await screen.findByRole("dialog", { name: "新建任务" });
+    await user.type(
+      within(dialog).getByRole("textbox", { name: "标题" }),
+      "整理登录问题",
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: "切换到智能体" }),
+    );
+    const brief = within(dialog).getByRole("textbox", { name: "需求描述" });
+    expect(dialog).toHaveAccessibleName("通过智能体创建");
+    await user.click(
+      within(dialog).getByRole("button", { name: /创建者.*writer/ }),
+    );
+    await user.click(await screen.findByRole("option", { name: /editor/ }));
+    expect(
+      within(dialog).queryByRole("button", { name: /^优先级:/ }),
+    ).toBeNull();
+    await user.click(within(dialog).getByRole("button", { name: "更多属性" }));
+    await user.click(await screen.findByRole("menuitem", { name: "优先级" }));
+    await user.click(await screen.findByRole("option", { name: "高" }));
+    expect(
+      within(dialog).getByRole("button", { name: "优先级: 高" }),
+    ).toBeVisible();
+    expect(
+      within(dialog).queryByRole("button", { name: /^截止日期:/ }),
+    ).toBeNull();
+    await user.click(within(dialog).getByRole("button", { name: "更多属性" }));
+    await user.click(await screen.findByRole("menuitem", { name: "截止日期" }));
+    await user.click(await screen.findByRole("menuitem", { name: /^明天/ }));
+    expect(brief).toHaveValue("整理登录问题");
+    await user.type(brief, "，保留复现步骤");
+    await user.click(
+      within(dialog).getByRole("button", { name: "切换到手动" }),
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: "切换到智能体" }),
+    );
+    await user.click(within(dialog).getByRole("button", { name: "创建" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+    const call = server.find("POST", "/agent-requests")[0]!;
+    expect(call.body).toMatchObject({
+      agent_id: "editor",
+      brief: "整理登录问题，保留复现步骤",
+      priority: "HIGH",
+      due_date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+    });
+    expect(call.headers.get("Idempotency-Key")).toBeTruthy();
+    await user.keyboard("c");
+    expect(
+      await screen.findByRole("dialog", { name: "通过智能体创建" }),
+    ).toBeVisible();
+    expect(screen.getByRole("textbox", { name: "需求描述" })).toHaveValue("");
+  });
+
   it("可将任务创建给待接受邀请，只提交邀请 ID", async () => {
     const user = userEvent.setup();
     const server = renderAt(spaceTasks, (call) =>

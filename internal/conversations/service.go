@@ -29,6 +29,66 @@ func (Service) CheckActor(ctx context.Context, tx pgx.Tx, organizationID string,
 	})
 }
 
+// ResolveDraftAgent applies the same space, agent and crew access rules as interactive invocation.
+func (s Service) ResolveDraftAgent(ctx context.Context, tx pgx.Tx, org string, actor Actor, input CreateInput) (string, error) {
+	if input.CrewID != "" {
+		leader, err := s.resolveCrewForCreate(ctx, tx, org, input, actor)
+		if err != nil {
+			return "", err
+		}
+		input.AgentID = leader
+	}
+	return input.AgentID, s.checkCreationAgent(ctx, tx, org, actor, input)
+}
+
+func (s Service) checkCreationAgent(ctx context.Context, tx pgx.Tx, organizationID string, actor Actor, input CreateInput) error {
+	if err := s.authorizeSpace(ctx, tx, organizationID, actor, input.SpaceID, input.ID, policy.ActionCreateObject); err != nil {
+		return err
+	}
+	var agentStatus string
+	var agentSpace string
+	var archivedAt *time.Time
+	var builtinKind, agentOwner, agentVisibility string
+	var directChat bool
+	if err := tx.QueryRow(ctx, `
+		SELECT a.space_id::text, a.status, a.archived_at, COALESCE(a.builtin_kind, ''), COALESCE(a.owner_user_id::text, ''),
+		       a.visibility,
+		       a.allow_direct_chat AND NOT EXISTS (
+		           SELECT 1 FROM openfox.agent_crew_members m
+		            WHERE m.organization_id = a.organization_id AND m.agent_id = a.id AND m.exclusive)
+		  FROM openfox.agents a
+		 WHERE a.organization_id = openfox_private.current_organization_id()
+		   AND a.id = $1::uuid`, input.AgentID).Scan(&agentSpace, &agentStatus, &archivedAt, &builtinKind, &agentOwner,
+		&agentVisibility, &directChat); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		return err
+	}
+	// 他人的私有 Agent 不可见（阶段 2a）。
+	if agentVisibility == "PRIVATE" && agentOwner != actor.UserID {
+		return ErrNotFound
+	}
+	if agentSpace != input.SpaceID || agentStatus != "ACTIVE" || archivedAt != nil {
+		return ErrForbidden
+	}
+	// 单聊（不挂任务的会话）：Agent 须允许单聊且不是小队的专属成员（阶段 2a）。任务会话不受影响。
+	// 飞书任务助手（TASK_ASSISTANT）是空间共享的内置 Agent，不受单聊开关限制（阶段 6d-2）。
+	if input.TaskID == "" && builtinKind == "" && !directChat && input.CrewID == "" {
+		return ErrForbidden
+	}
+	// 内置小助手只属于本人：别人看不到它，会话只能是本人的私有会话、不能挂任务。
+	if builtinKind == BuiltinAssistant {
+		if agentOwner != actor.UserID {
+			return ErrNotFound
+		}
+		if input.Visibility != VisibilityPrivate || input.TaskID != "" {
+			return ErrInvalidRequest
+		}
+	}
+	return nil
+}
+
 func (s Service) Create(ctx context.Context, tx pgx.Tx, organizationID string, actor Actor, input CreateInput) (Conversation, error) {
 	if err := s.CheckActor(ctx, tx, organizationID, actor); err != nil {
 		return Conversation{}, err
@@ -54,49 +114,8 @@ func (s Service) Create(ctx context.Context, tx pgx.Tx, organizationID string, a
 	if err != nil || !membership.ValidateUUID(input.ID) || !membership.ValidateUUID(input.SpaceID) || !membership.ValidateUUID(input.AgentID) || (input.TaskID != "" && !membership.ValidateUUID(input.TaskID)) {
 		return Conversation{}, ErrInvalidRequest
 	}
-	if err := s.authorizeSpace(ctx, tx, organizationID, actor, input.SpaceID, input.ID, policy.ActionCreateObject); err != nil {
+	if err := s.checkCreationAgent(ctx, tx, organizationID, actor, input); err != nil {
 		return Conversation{}, err
-	}
-	var agentStatus string
-	var agentSpace string
-	var archivedAt *time.Time
-	var builtinKind, agentOwner, agentVisibility string
-	var directChat bool
-	if err := tx.QueryRow(ctx, `
-		SELECT a.space_id::text, a.status, a.archived_at, COALESCE(a.builtin_kind, ''), COALESCE(a.owner_user_id::text, ''),
-		       a.visibility,
-		       a.allow_direct_chat AND NOT EXISTS (
-		           SELECT 1 FROM openfox.agent_crew_members m
-		            WHERE m.organization_id = a.organization_id AND m.agent_id = a.id AND m.exclusive)
-		  FROM openfox.agents a
-		 WHERE a.organization_id = openfox_private.current_organization_id()
-		   AND a.id = $1::uuid`, input.AgentID).Scan(&agentSpace, &agentStatus, &archivedAt, &builtinKind, &agentOwner,
-		&agentVisibility, &directChat); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return Conversation{}, ErrNotFound
-		}
-		return Conversation{}, err
-	}
-	// 他人的私有 Agent 不可见（阶段 2a）。
-	if agentVisibility == "PRIVATE" && agentOwner != actor.UserID {
-		return Conversation{}, ErrNotFound
-	}
-	if agentSpace != input.SpaceID || agentStatus != "ACTIVE" || archivedAt != nil {
-		return Conversation{}, ErrForbidden
-	}
-	// 单聊（不挂任务的会话）：Agent 须允许单聊且不是小队的专属成员（阶段 2a）。任务会话不受影响。
-	// 飞书任务助手（TASK_ASSISTANT）是空间共享的内置 Agent，不受单聊开关限制（阶段 6d-2）。
-	if input.TaskID == "" && builtinKind == "" && !directChat && input.CrewID == "" {
-		return Conversation{}, ErrForbidden
-	}
-	// 内置小助手只属于本人：别人看不到它，会话只能是本人的私有会话、不能挂任务。
-	if builtinKind == BuiltinAssistant {
-		if agentOwner != actor.UserID {
-			return Conversation{}, ErrNotFound
-		}
-		if input.Visibility != VisibilityPrivate || input.TaskID != "" {
-			return Conversation{}, ErrInvalidRequest
-		}
 	}
 	if input.TaskID != "" {
 		var taskSpace string

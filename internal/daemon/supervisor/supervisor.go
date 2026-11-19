@@ -186,12 +186,8 @@ func (s *Supervisor) SetOrganizations(organizations []string) {
 	s.mu.Unlock()
 }
 
-// ActiveRuns 返回正在执行的 Run 数（含准备阶段）。
-func (s *Supervisor) ActiveRuns() int {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return len(s.active)
-}
+// ActiveRuns includes ordinary runs and standalone drafts occupying a local execution slot.
+func (s *Supervisor) ActiveRuns() int { return len(s.slots) }
 
 // HandleMessage 是 RemoteClient.OnRunMessage 回调：非阻塞，只做登记与转发。
 func (s *Supervisor) HandleMessage(message daemon.Message) {

@@ -14,7 +14,11 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"openfox/internal/collaboration"
+	"openfox/internal/conversations"
 	"openfox/internal/daemon/storage"
+	"openfox/internal/dispatch"
+	"openfox/internal/membership"
 	"openfox/internal/platform/postgres"
 	"openfox/internal/runtimepolicy"
 	"openfox/internal/tenancy"
@@ -85,7 +89,7 @@ func (kind CommandKind) ExecutionTimeout() time.Duration {
 
 // maxResultBytes 是该种命令回执结果的大小上限。
 func (kind CommandKind) maxResultBytes() int {
-	if kind == CommandSkillScan {
+	if kind == CommandSkillScan || kind == dispatch.TaskDraftCommand {
 		return maxSkillScanResultBytes
 	}
 	return maxCommandResultBytes
@@ -482,7 +486,7 @@ func CreateCommandInTx(ctx context.Context, tx pgx.Tx, selection tenancy.Organiz
 				openfox_private.current_organization_id(), $1::uuid, $2, $3::jsonb,
 				openfox_private.current_actor_id(), clock_timestamp() + make_interval(secs => $4)
 			)
-			ON CONFLICT (organization_id, device_id, kind) WHERE status IN ('PENDING', 'DELIVERED') DO NOTHING
+			ON CONFLICT (organization_id, device_id, kind) WHERE status IN ('PENDING', 'DELIVERED') AND kind<>'task_draft' DO NOTHING
 			RETURNING `+commandColumns, deviceID, string(kind), []byte(params), claimWindow.Seconds())
 		inserted, err := scanCommand(row)
 		if err == nil {
@@ -622,7 +626,7 @@ func (s PostgresStore) ClaimCommand(ctx context.Context, selection tenancy.Organ
 			   SET status = 'DELIVERED', delivered_at = statement_timestamp(),
 			       -- 截止时间与 delivered_at 取同一个时间点，二者之差恰为执行超时 + 余量。
 			       expires_at = CASE WHEN kind='workspace_path' THEN expires_at ELSE statement_timestamp() + make_interval(secs => CASE kind
-			           WHEN 'storage_cleanup' THEN $3::double precision WHEN 'skill_import' THEN $3::double precision ELSE $4::double precision END) END
+			           WHEN 'task_draft' THEN $3::double precision WHEN 'storage_cleanup' THEN $3::double precision WHEN 'skill_import' THEN $3::double precision ELSE $4::double precision END) END
 			 WHERE organization_id = openfox_private.current_organization_id()
 			   AND device_id = $1::uuid AND id = $2::uuid
 			   AND status = 'PENDING' AND expires_at > clock_timestamp()
@@ -631,6 +635,19 @@ func (s PostgresStore) ClaimCommand(ctx context.Context, selection tenancy.Organ
 			(CommandRuntimeProbe.ExecutionTimeout() + commandExecutionGrace).Seconds()))
 		if err == nil {
 			command = claimed
+			if claimed.Kind == dispatch.TaskDraftCommand {
+				rc, err := dispatch.TaskDraftContext(ctx, tx, s.Secrets, selection.OrganizationID, deviceID, commandID)
+				if errors.Is(err, conversations.ErrForbidden) || errors.Is(err, conversations.ErrNotFound) || errors.Is(err, conversations.ErrInvalidRequest) || errors.Is(err, membership.ErrAuthorizationStale) || errors.Is(err, collaboration.ErrSpaceRetired) {
+					_, err = tx.Exec(ctx, `UPDATE openfox.device_commands SET status='FAILED',completed_at=now(),error_code='AUTHORIZATION_REVOKED' WHERE organization_id=openfox_private.current_organization_id() AND id=$1`, commandID)
+					outcome = ErrCommandConflict
+					return err
+				}
+				if err != nil {
+					return err
+				}
+				command.Params, err = json.Marshal(rc)
+				return err
+			}
 			if claimed.Kind == CommandStorageCleanup {
 				var f storage.CleanupFilter
 				if err := json.Unmarshal(claimed.Params, &f); err != nil {

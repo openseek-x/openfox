@@ -1000,3 +1000,21 @@ to `SET ROLE openfox_migrator`. The metadata schema is not granted to
 ## 000168 · 设备认证 challenge 过期清理
 
 部署时先应用迁移再升级 worker。清理复用已有过期索引，每分钟最多回收一批 1,000 条过期超过七天的记录，跳过被锁行。函数仅向控制平面角色开放。回滚先回退 worker，再执行 `DROP FUNCTION openfox_private.purge_device_challenges();`。已清理的过期 challenge 只能从备份恢复，恢复记录不会延长其有效期。
+
+## 000169 · 通过智能体创建任务
+
+先应用 `000169_task_creation_requests.sql`，再升级中心、执行端和 Web 客户端。新表按组织和原始消息保存建单选项及生成的任务编号。任务写入与登记在同一事务中完成。收件箱新增“通过智能体创建任务的结果”偏好，默认普通通知。无需回填或新增环境变量。回退时先停止提交新请求，让队列中已有请求完成，再回退应用并保留表和通知偏好。
+
+## 000170 · 独立后台建单
+
+先应用 `000170_standalone_task_drafts.sql`，再启用支持 `task_draft` 的执行端和中心。脚本新增按组织隔离的请求表，扩展设备命令和通知来源，并让调度器发现只有起草工作的组织。现有业务数据无需回填。普通设备管理命令继续按设备和种类去重。
+
+回退旧中心前，先暂停接收建单请求，待起草队列处理完毕后停服。在部署库执行下列语句，恢复旧中心创建设备命令所需的唯一索引，再启动旧版。保留请求表和已完成的结果。
+
+```sql
+CREATE UNIQUE INDEX IF NOT EXISTS device_commands_rollback_unique
+    ON openfox.device_commands (organization_id, device_id, kind)
+    WHERE status IN ('PENDING', 'DELIVERED');
+```
+
+再次升级时，先在停服窗口执行 `DROP INDEX IF EXISTS openfox.device_commands_rollback_unique;`，再启动新版中心，允许同一设备排队处理多个起草请求。

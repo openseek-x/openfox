@@ -559,12 +559,56 @@ func (s Store) evaluate(ctx context.Context, tx pgx.Tx, organizationID, conversa
 		}
 		return "", runParams{}, err
 	}
+	reason, params, err := agentRunParams(ctx, tx, agentID, actorID, conversation.SpaceID)
+	if err != nil || reason != "" {
+		return reason, params, err
+	}
+	if conversation.TaskID != "" {
+		var category string
+		err := tx.QueryRow(ctx, `
+			SELECT s.category FROM openfox.tasks t
+			  JOIN openfox.task_statuses s ON s.organization_id = t.organization_id AND s.id = t.status_id
+			 WHERE t.organization_id = openfox_private.current_organization_id() AND t.id = $1::uuid AND t.deleted_at IS NULL`, conversation.TaskID).Scan(&category)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return rejectTaskGate, runParams{}, nil
+			}
+			return "", runParams{}, err
+		}
+		// 用户在对话中显式 @Agent 属于明确唤醒，DONE 任务允许运行；
+		// 其他不可执行分类直接拒绝。阶段 12d（G-02）：待规划（TRIAGE / BACKLOG）任务收到自动触发时
+		// 改为排队等待（TASK_GATE），人工输入仍按原规则拒绝。
+		switch execution.TaskCategory(category) {
+		case execution.TaskTriage, execution.TaskBacklog:
+			if !automatic {
+				return rejectTaskGate, runParams{}, nil
+			}
+			params.TaskGated = true
+		case execution.TaskCancelled, execution.TaskDuplicate:
+			return rejectTaskGate, runParams{}, nil
+		}
+	}
+	params.SpaceID = conversation.SpaceID
+	params.TaskID = conversation.TaskID
+	// 对话覆盖只作用于对话绑定的 Agent：小队对话（不允许有覆盖）和 @ 召唤的其他 Agent 一律用该 Agent 自己的配置。
+	var overrides runtimepolicy.Overrides
+	if agentID == conversation.AgentID && conversation.CrewID == "" {
+		if overrides, err = loadConversationOverrides(ctx, tx, conversationID); err != nil {
+			return "", runParams{}, err
+		}
+	}
+	params.Effective = runtimepolicy.Effective(params.Effective, overrides)
+	return "", params, nil
+}
+
+// agentRunParams resolves an agent and checks its device grant independently of any chat.
+func agentRunParams(ctx context.Context, tx pgx.Tx, agentID, actorID, spaceID string) (rejectionReason, runParams, error) {
 	var params runParams
 	var agentStatus, visibility, ownerID, agentDeviceID string
 	var archived bool
 	var configVersion *int64
 	var parentID *string
-	err = tx.QueryRow(ctx, `
+	err := tx.QueryRow(ctx, `
 		SELECT status, visibility, COALESCE(owner_user_id::text, ''), archived_at IS NOT NULL,
 		       current_config_version, device_id::text, parent_agent_id::text
 		  FROM openfox.agents
@@ -620,46 +664,12 @@ func (s Store) evaluate(ctx context.Context, tx pgx.Tx, organizationID, conversa
 	if params.ComputerID != agentDeviceID {
 		return rejectAgent, runParams{}, nil
 	}
-	if reason, version, err := grantAllows(ctx, tx, params.GrantID, params.ComputerID, actorID, conversation.SpaceID); err != nil || reason != "" {
+	if reason, version, err := grantAllows(ctx, tx, params.GrantID, params.ComputerID, actorID, spaceID); err != nil || reason != "" {
 		return reason, runParams{}, err
 	} else {
 		params.GrantVersion = version
 	}
-	if conversation.TaskID != "" {
-		var category string
-		err := tx.QueryRow(ctx, `
-			SELECT s.category FROM openfox.tasks t
-			  JOIN openfox.task_statuses s ON s.organization_id = t.organization_id AND s.id = t.status_id
-			 WHERE t.organization_id = openfox_private.current_organization_id() AND t.id = $1::uuid AND t.deleted_at IS NULL`, conversation.TaskID).Scan(&category)
-		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return rejectTaskGate, runParams{}, nil
-			}
-			return "", runParams{}, err
-		}
-		// 用户在对话中显式 @Agent 属于明确唤醒，DONE 任务允许运行；
-		// 其他不可执行分类直接拒绝。阶段 12d（G-02）：待规划（TRIAGE / BACKLOG）任务收到自动触发时
-		// 改为排队等待（TASK_GATE），人工输入仍按原规则拒绝。
-		switch execution.TaskCategory(category) {
-		case execution.TaskTriage, execution.TaskBacklog:
-			if !automatic {
-				return rejectTaskGate, runParams{}, nil
-			}
-			params.TaskGated = true
-		case execution.TaskCancelled, execution.TaskDuplicate:
-			return rejectTaskGate, runParams{}, nil
-		}
-	}
-	params.SpaceID = conversation.SpaceID
-	params.TaskID = conversation.TaskID
-	// 对话覆盖只作用于对话绑定的 Agent：小队对话（不允许有覆盖）和 @ 召唤的其他 Agent 一律用该 Agent 自己的配置。
-	var overrides runtimepolicy.Overrides
-	if agentID == conversation.AgentID && conversation.CrewID == "" {
-		if overrides, err = loadConversationOverrides(ctx, tx, conversationID); err != nil {
-			return "", runParams{}, err
-		}
-	}
-	params.Effective = runtimepolicy.Effective(agentConfig, overrides)
+	params.Effective = agentConfig
 	return "", params, nil
 }
 
@@ -809,6 +819,7 @@ func rejectInputs(ctx context.Context, tx pgx.Tx, conversationID string, inputs 
 	if err != nil {
 		return err
 	}
+
 	if err := conversations.RecordDiscordRejectedInputs(ctx, tx, conversationID, messageID, ids); err != nil {
 		return err
 	}

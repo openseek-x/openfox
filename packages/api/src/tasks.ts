@@ -135,6 +135,20 @@ export function createTasksApi(http: HttpClient) {
         http.request<TaskByDisplayID>(
           `${org(orgId)}/tasks/by-display-id/${seg(displayId)}`,
         ),
+      createWithAgent: (
+        orgId: string,
+        spaceId: string,
+        input: JsonBody<"createTaskWithAgent">,
+        idempotencyKey: string,
+      ) =>
+        http.request<S["AgentTaskReceipt"]>(
+          `${org(orgId)}/spaces/${seg(spaceId)}/tasks/agent-requests`,
+          {
+            method: "POST",
+            body: input,
+            idempotencyKey,
+          },
+        ),
       create: (
         orgId: string,
         spaceId: string,

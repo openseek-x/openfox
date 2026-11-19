@@ -23,6 +23,7 @@ import { keys, useApi } from "../context";
 import { conversationPath } from "../conversations/ChatPanel";
 import { directChatPath } from "../conversations/DirectChat";
 import { withChatRail } from "../conversations/chatNavigation";
+import { useOptionalCreateTaskDialog } from "../tasks/create/CreateTaskProvider";
 import { useOpenTaskPage } from "../tasks/navigation";
 import { LoadMore, useTaskParam } from "../tasks/parts";
 import { formatRelativeTime } from "../tasks/primitives/dates";
@@ -55,6 +56,7 @@ export function InboxPage() {
   const { orgId = "" } = useParams();
   const taskParam = useTaskParam();
   const openTaskPage = useOpenTaskPage();
+  const createDialog = useOptionalCreateTaskDialog();
   const [section, setSection] = useState<InboxSection>("inbox");
   const [importance, setImportance] = useState<Importance>("all");
   const [spaceIds, setSpaceIds] = useState<string[]>([]);
@@ -123,6 +125,23 @@ export function InboxPage() {
 
   const openGroup = (group: InboxGroup) => {
     if (group.unread && section !== "cleared") run("read", group);
+    const draft = group.task_creation_draft;
+    if (draft && group.space_id && createDialog) {
+      createDialog.openCreate({
+        manual: true,
+        spaceId: group.space_id,
+        description: draft.brief,
+        projectId: draft.project_id,
+        priority: draft.priority,
+        dueDate: draft.due_date,
+        typeId: draft.type_id,
+        statusId: draft.status_id,
+        iterationId: draft.iteration_id,
+        parentTaskId: draft.parent_task_id,
+        submitToTriage: draft.submit_to_triage,
+      });
+      return;
+    }
     // 通知同时带任务和会话：进任务全页并打开该会话的 AI 面板
     if (group.task_display_id && group.conversation_id)
       openTaskPage(group.task_display_id, group.conversation_id);
@@ -523,11 +542,20 @@ const Row = memo(function Row({
   const [snoozeOpen, setSnoozeOpen] = useState(false);
   const snoozeAnchor = useRef<HTMLButtonElement | null>(null);
   const cleared = section === "cleared";
+  const creationResult = group.inbox_event === "task_creation_result_requester";
   const title =
-    group.task_title ?? group.actor_name ?? t(`inbox.kinds.${group.kind}`);
-  const event = t(`inbox.events.${group.kind}`);
+    group.task_creation_draft?.brief ??
+    group.task_title ??
+    group.actor_name ??
+    t(`inbox.kinds.${group.kind}`);
+  const event = group.task_creation_draft
+    ? t("tasks.create.recoverBrief")
+    : creationResult && group.kind === "RUN_COMPLETED"
+      ? t("tasks.create.agentCreated")
+      : t(`inbox.events.${group.kind}`);
   // 服务端的固定 REPLY 摘要与事件文字重复；真实回复和错误摘要原样保留。
   const summary =
+    creationResult ||
     group.kind === "DIRECT_MESSAGE" ||
     (group.kind === "REPLY" &&
       group.safe_summary === "An Agent replied in a conversation.")

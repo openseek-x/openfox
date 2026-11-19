@@ -36,7 +36,6 @@ export const stepsZh = {
   thinking: {
     running: "正在思考",
     done: "思考",
-    empty: "没有可显示的思考内容",
   },
   tool: {
     running: "运行中",

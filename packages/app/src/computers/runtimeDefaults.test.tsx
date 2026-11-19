@@ -6,7 +6,6 @@ import { createApi, HttpClient } from "@openfox/api";
 import { I18nProvider } from "@openfox/i18n";
 import { ApiProvider } from "../context";
 import { RuntimeDefaultsEditor } from "./RuntimeDefaultsEditor";
-import { RuntimeDefaultsSummary } from "../conversations/RuntimeDefaultsSummary";
 
 function mount(secretsAvailable = true, conflict = false) {
   const calls: Record<string, unknown>[] = [];
@@ -109,22 +108,5 @@ describe("machine Runtime defaults", () => {
     expect(await screen.findByLabelText("变量名称")).toBeDisabled();
     expect(screen.getByLabelText("新秘密值")).toBeDisabled();
     expect(screen.getByLabelText("机器默认模型")).toBeEnabled();
-  });
-  it("shows only model and variable names with their sources", () => {
-    render(
-      <I18nProvider initialLocale="zh-CN">
-        <RuntimeDefaultsSummary
-          effective={{
-            runtime: "pi",
-            model: "machine-model",
-            model_source: "computer",
-            approval_mode: "FOLLOW_RUNTIME",
-            environment: [{ name: "API_KEY", source: "agent" }],
-          }}
-        />
-      </I18nProvider>,
-    );
-    expect(screen.getByText("API_KEY")).toBeInTheDocument();
-    expect(screen.getByText(/machine-model/)).toHaveTextContent("电脑");
   });
 });
