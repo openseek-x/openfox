@@ -236,8 +236,8 @@ func (w *Worker) RunOrganization(ctx context.Context, organizationID string) (Pa
 		}},
 	}
 	// 指派事件先于物化输入处理：指派后发的消息在同一轮就能变成 Run。
+	firstErr := w.finishTaskDrafts(ctx, organizationID, limit)
 	w.runTaskAgentEvents(ctx, organizationID)
-	var firstErr error
 	for _, phase := range phases {
 		if err := w.inOrganization(ctx, organizationID, phase.fn); err != nil {
 			// 回滚的阶段计数作废，避免汇总中出现未提交的结果。

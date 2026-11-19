@@ -627,6 +627,18 @@ export const zhCN = {
       errorDesc: "暂时无法获取任务，请检查网络连接后重试。",
     },
     create: {
+      switchToManual: "切换到手动",
+      switchToAgent: "切换到智能体",
+      withAgent: "通过智能体创建",
+      brief: "需求描述",
+      briefExample:
+        "描述你希望完成的工作，例如：整理本周的客户反馈，列出最常见的三个问题",
+      creator: "创建者",
+      noCreators: "当前空间没有可建单的智能体或小队",
+      queued: "已提交，建单结果会发到收件箱。",
+      recoverBrief: "建单失败，打开后可手动创建",
+      agentCreated: "智能体已创建任务",
+      submitBrief: "创建",
       menuLabel: "选择任务类型",
       manageTypes: "管理任务类型",
       noTypes: "暂无可用的任务类型",
@@ -1535,16 +1547,7 @@ export const zhCN = {
         "请使用合法且非保留名称；最多 100 项，每个值最多 8192 UTF-8 字节。",
       conflict:
         "配置已被其他请求修改，草稿已保留。请关闭并重新打开，读取最新版本后重试。",
-      effective: "有效模型与变量来源",
-      gitAuthor:
-        "Git 提交人设置优先于普通 GIT_AUTHOR_* / GIT_COMMITTER_* 环境变量。",
       inherit: "继承机器模型",
-      sources: {
-        conversation: "会话覆盖",
-        agent: "Agent",
-        computer: "电脑",
-        runtime: "Runtime 默认",
-      },
     },
     localService: {
       login: "登录系统时自动启动",

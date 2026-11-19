@@ -357,7 +357,7 @@ export function ThinkingRow({ step }: { step: StepView }) {
       {open && (
         <Body>
           <p className="whitespace-pre-wrap border-l-2 border-line-default pl-3 text-body-sm text-fg-muted">
-            {step.text?.trim() ? step.text : t("steps.thinking.empty")}
+            {step.text}
           </p>
         </Body>
       )}

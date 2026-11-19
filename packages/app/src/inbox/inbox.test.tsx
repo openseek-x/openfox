@@ -83,6 +83,42 @@ beforeEach(() => {
 afterEach(() => localStorage.clear());
 
 describe("收件箱", () => {
+  it("从建单失败通知取回原文，并打开手动表单", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(`openfox:task-create-mode:${ORG}`, "agent");
+    renderInbox([
+      {
+        id: "conversation",
+        notification_id: "failure",
+        kind: "RUN_FAILED",
+        actor_name: "保留原始需求",
+        space_id: "s1",
+        task_type_icon: null,
+        safe_summary: "打开以手动创建",
+        count: 1,
+        unread: true,
+        latest_at: "2026-11-18T00:00:00Z",
+        task_creation_draft: {
+          brief: "保留原始需求",
+          agent_id: "writer",
+          priority: "HIGH",
+          due_date: "2027-02-05",
+        },
+      },
+    ]);
+    await user.click(
+      await screen.findByRole("button", { name: "保留原始需求" }),
+    );
+    const dialog = await screen.findByRole("dialog", { name: "新建任务" });
+    expect(
+      within(dialog).getByRole("button", { name: "切换到智能体" }),
+    ).toBeVisible();
+    expect(within(dialog).getByDisplayValue("保留原始需求")).toBeVisible();
+    expect(
+      within(dialog).getByRole("button", { name: "创 建" }),
+    ).toBeDisabled();
+  });
+
   it("显示分区计数与事件文字；切换「重要」请求带 importance=primary", async () => {
     const user = userEvent.setup();
     const server = renderInbox();

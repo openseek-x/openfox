@@ -8886,6 +8886,36 @@ paths:
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
+  /v1/organizations/{organizationID}/spaces/{spaceID}/tasks/agent-requests:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - { name: spaceID, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      operationId: createTaskWithAgent
+      summary: 提交后台建单需求，完成后向发起人发送收件箱通知
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AgentTaskRequest' }
+      responses:
+        '201':
+          description: 建单请求已入队
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AgentTaskReceipt' }
+        '200':
+          description: 重放同一请求
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AgentTaskReceipt' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
   /v1/organizations/{organizationID}/spaces/{spaceID}/tasks/counts:
     parameters:
       - $ref: '#/components/parameters/OrganizationID'
@@ -26704,6 +26734,37 @@ components:
       properties:
         before_task_id: { type: [string, 'null'], format: uuid, description: 放到该任务之前 }
         after_task_id: { type: [string, 'null'], format: uuid, description: 放到该任务之后 }
+    AgentTaskRequest:
+      type: object
+      additionalProperties: false
+      description: 选择 agent_id 或 crew_id 之一。用户明确选择的任务属性由服务端应用。
+      required: [brief]
+      oneOf:
+        - type: object
+          required: [agent_id]
+          properties:
+            agent_id: { type: string, format: uuid }
+        - type: object
+          required: [crew_id]
+          properties:
+            crew_id: { type: string, format: uuid }
+      properties:
+        brief: { type: string, minLength: 1, maxLength: 10000 }
+        agent_id: { type: string, format: uuid }
+        crew_id: { type: string, format: uuid }
+        project_id: { type: string, format: uuid }
+        type_id: { type: string, format: uuid }
+        status_id: { type: string, format: uuid }
+        parent_task_id: { type: string, format: uuid }
+        iteration_id: { type: string, format: uuid }
+        due_date: { type: string, format: date }
+        priority: { $ref: '#/components/schemas/TaskPriority' }
+        submit_to_triage: { type: boolean }
+    AgentTaskReceipt:
+      type: object
+      required: [request_id]
+      properties:
+        request_id: { type: string, format: uuid }
     TaskCreateRequest:
       type: object
       required: [title]
@@ -27206,6 +27267,7 @@ components:
       description: 按任务、对话、自动化或真人私聊聚合。可选字段为空时不输出。
       required: [id, notification_id, kind, task_type_icon, safe_summary, count, unread, latest_at]
       properties:
+        task_creation_draft: { $ref: '#/components/schemas/AgentTaskRequest' }
         inbox_event: { type: string, description: 组内最新可投递通知的既有叶键 }
         id: { type: string, format: uuid }
         notification_id: { type: string, format: uuid, description: 组内最新一条通知 }
@@ -30557,6 +30619,21 @@ components:
         automation_origin:
           type: boolean
           description: 当前运行的输入来自自动化，用于工作区存储分类
+        space_tools:
+          type: object
+          required: [space_id, space_name, space_prefix, public_url, limits]
+          properties:
+            create_only: { type: boolean, description: 本次运行只能按请求创建一个任务 }
+            space_id: { type: string, format: uuid }
+            space_name: { type: string }
+            space_prefix: { type: string }
+            public_url: { type: string }
+            limits:
+              type: object
+              required: [create, update]
+              properties:
+                create: { type: integer }
+                update: { type: integer }
         social_tools:
           type: boolean
           description: 当前中心接受运行范围内的回复、提及和表态
@@ -30738,6 +30815,7 @@ components:
         - workspace_path
         - runtime_session_export
         - key_rotate
+        - task_draft
     DeviceCommandStatus:
       type: string
       enum: [PENDING, DELIVERED, SUCCEEDED, FAILED, EXPIRED]
@@ -30791,7 +30869,7 @@ components:
           description: |
             runtime_probe、skill_scan 为 {}。storage_cleanup 传 {} 使用既有保留规则；传 action、days、categories 则按组织和来源预览或清理；按任务状态时另传 statuses。clean 必须带同一条件的 preview_id。旧设备拒绝筛选请求。
             runtime_test = {provider: codex / claude-code / opencode / pi / codebuddy / hermes / gemini（缺省 codex）, model?: string(≤128)}。
-            skill_import 只能通过 createSkillRuntimeImport 下发，这里传 400。
+            skill_import 由 createSkillRuntimeImport 下发，task_draft 由 createTaskWithAgent 下发。此接口拒绝这两种命令。
             设备收到的 skill_import params = {space_id, names}。
             workspace_path = WorkspacePathRequest。会话访问权、实际 Run/代次/设备及请求人必须全部匹配。
             同设备存在不同参数的未完成路径请求返回 409；完全相同参数才复用。过期请求不允许重放。

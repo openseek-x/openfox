@@ -20,6 +20,7 @@ import (
 )
 
 const (
+	KindTaskDraft            = "task_draft"
 	KindWorkspacePath        = "workspace_path"
 	KindDeviceSettings       = "device_settings"
 	KindRuntimeProbe         = "runtime_probe"
@@ -81,14 +82,14 @@ type Config struct {
 // DefaultTimeouts 是规格约定的执行上限：probe / test / skill_scan 30 秒，cleanup / skill_import 5 分钟。
 func DefaultTimeouts() map[string]time.Duration {
 	return map[string]time.Duration{
-		KindDeviceSettings: 30 * time.Second, KindRuntimeProbe: 30 * time.Second, KindRuntimeTest: 30 * time.Second, KindRuntimeSessionExport: 3 * time.Minute, KindStorageCleanup: 5 * time.Minute,
+		KindTaskDraft: 5 * time.Minute, KindDeviceSettings: 30 * time.Second, KindRuntimeProbe: 30 * time.Second, KindRuntimeTest: 30 * time.Second, KindRuntimeSessionExport: 3 * time.Minute, KindStorageCleanup: 5 * time.Minute,
 		KindSkillScan: 30 * time.Second, KindSkillImport: 5 * time.Minute, KindKeyRotate: 25 * time.Second,
 	}
 }
 
 // resultLimit 返回该 kind 的结果字节上限。
 func resultLimit(kind string) int {
-	if kind == KindSkillScan {
+	if kind == KindSkillScan || kind == KindTaskDraft {
 		return MaxSkillScanResultBytes
 	}
 	return MaxResultBytes
@@ -215,7 +216,7 @@ func (e *Executor) poll(ctx context.Context) {
 	}
 }
 
-// start 在该 kind 空闲时领取并执行命令；同一 kind 串行（中心也保证同 kind 只有一条未完成）。
+// start 在该 kind 空闲时领取并执行命令；同一 kind 串行。
 func (e *Executor) start(ctx context.Context, organizationID string, command supervisor.DeviceCommand) {
 	kind := command.Kind
 	e.mu.Lock()

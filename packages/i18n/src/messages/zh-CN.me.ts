@@ -268,6 +268,7 @@ export const meZh = {
         chat_mentioned_agent_recipient: "Agent 在会话里提到你时",
         chat_message_received_recipient: "收到真人对话消息时",
         chat_replied_participant: "你与 Agent 的对话有新回复时",
+        task_creation_result_requester: "通过智能体创建任务的结果",
         task_agent_completed_participant: "你与 Agent 的对话完成时",
         task_failed_participant: "你与 Agent 的对话运行失败时",
         task_agent_blocked_participant: "你与 Agent 的对话运行受阻时",
@@ -281,6 +282,8 @@ export const meZh = {
       help: {
         chat_replied_participant:
           "你在任务里发起的对话中，Agent 发表了新回复；只有发起人会收到",
+        task_creation_result_requester:
+          "查看已创建的任务，或取回未成功建单的原始描述",
         task_agent_completed_participant: "Agent 已完成当前对话中的执行",
         task_failed_participant: "Agent 运行失败，需要你查看错误信息",
         task_agent_blocked_participant: "Agent 运行受阻，需要你处理后继续",

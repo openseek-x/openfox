@@ -27,6 +27,7 @@ type heartbeatRequester interface {
 
 // commandHandlers 实现五种远程命令。都不调用模型、不消耗 token。
 type commandHandlers struct {
+	draftTask       commands.Handler
 	workDirectory   func(context.Context, workdirpath.Scope) (string, error)
 	reporter        *capabilityReporter
 	storage         *storageReporter
@@ -46,7 +47,7 @@ type commandHandlers struct {
 }
 
 func newCommandExecutor(executor *executorRuntime, reporter *capabilityReporter, stats *storageReporter, heartbeat heartbeatRequester, organizations []string, rotator *daemon.KeyRotator) (*commands.Executor, error) {
-	handlers := &commandHandlers{workDirectory: executor.supervisor.WorkDirectoryPath, storagePolicy: executor.supervisor.StoragePolicy, reporter: reporter, storage: stats, cleanup: executor.supervisor.CleanupStorage, filteredCleanup: executor.supervisor.FilteredCleanup, deviceSettings: executor.supervisor.ConfigureDevice, heartbeat: heartbeat,
+	handlers := &commandHandlers{draftTask: executor.supervisor.DraftTask, workDirectory: executor.supervisor.WorkDirectoryPath, storagePolicy: executor.supervisor.StoragePolicy, reporter: reporter, storage: stats, cleanup: executor.supervisor.CleanupStorage, filteredCleanup: executor.supervisor.FilteredCleanup, deviceSettings: executor.supervisor.ConfigureDevice, heartbeat: heartbeat,
 		userSkillDirs: executor.adapter.UserSkillDirs, uploader: executor.client,
 		sessionExporter: executor.sessionExporter, sessionUpload: executor.client.UploadRuntimeSessionExport}
 	if rotator != nil {
@@ -82,7 +83,7 @@ func (h *commandHandlers) all() map[string]commands.Handler {
 
 func (h *commandHandlers) baseHandlers() map[string]commands.Handler {
 	return map[string]commands.Handler{
-		commands.KindWorkspacePath: h.workspacePath,
+		commands.KindWorkspacePath: h.workspacePath, commands.KindTaskDraft: h.draftTask,
 		commands.KindDeviceSettings: func(ctx context.Context, raw json.RawMessage) (any, error) {
 			v, e := runtimepolicy.ParseDeviceSettings(raw)
 			if e != nil {

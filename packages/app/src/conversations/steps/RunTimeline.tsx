@@ -296,7 +296,7 @@ export function RunTimeline({
   const markFailed = useMarkReconciliationFailed(orgId, runId);
   const list = events.data?.events;
   const turn = useMemo(
-    () => foldRunEvents(list ?? [], { terminal }),
+    () => foldRunEvents(list ?? [], { terminal, hideRoutinePreparation: true }),
     [list, terminal],
   );
 

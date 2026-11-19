@@ -50,6 +50,8 @@ export interface Turn {
 export interface FoldOptions {
   /** Run 已处于终态（SUCCEEDED / FAILED / CANCELED）：即使事件里没有结束标记也按已结束处理 */
   terminal?: boolean;
+  /** 会话里只显示异常的环境准备步骤，完整运行记录保留准备明细。 */
+  hideRoutinePreparation?: boolean;
 }
 
 const STEP_KINDS: ReadonlySet<string> = new Set<StepKind>([
@@ -326,6 +328,13 @@ export function foldRunEvents(
       continue;
     }
     const view = views.get(entry.key)!;
+    if (view.kind === "thinking" && !view.text?.trim()) continue;
+    if (
+      options.hideRoutinePreparation &&
+      view.kind === "prep_env" &&
+      (view.status === "running" || view.status === "done")
+    )
+      continue;
     const group = groups.get(entry.key);
     if (group) {
       items.push(group);

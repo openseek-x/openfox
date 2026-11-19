@@ -1037,9 +1037,11 @@ describe("RunTimelineView", () => {
     expect(screen.getByRole("status", { name: "" })).toHaveTextContent(
       "正在思考",
     );
+    expect(screen.getAllByText("正在思考")).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: /思考/ })).toBeNull();
     const more = [
       ...events,
-      stepEvent({ id: "t", kind: "thinking", state: "done" }),
+      stepEvent({ id: "t", kind: "thinking", state: "done", text: " \n" }),
     ];
     rerender(
       <Providers>
@@ -1047,6 +1049,7 @@ describe("RunTimelineView", () => {
       </Providers>,
     );
     expect(screen.getByText("处理中")).toBeInTheDocument();
+    expect(screen.queryByText("思考")).not.toBeInTheDocument();
     expect(screen.getByText("12 秒")).toBeInTheDocument();
     act(() => vi.advanceTimersByTime(3000));
     expect(screen.getByText("15 秒")).toBeInTheDocument();
@@ -1249,8 +1252,10 @@ describe("<RunTimeline>", () => {
         <RunTimeline orgId="o1" runId="r1" />
       </Providers>,
     );
-    expect(await screen.findByText("环境就绪")).toBeInTheDocument();
-    expect(screen.getByTestId("exec-output")).toHaveTextContent("vitest run");
+    expect(await screen.findByTestId("exec-output")).toHaveTextContent(
+      "vitest run",
+    );
+    expect(screen.queryByText("环境就绪")).not.toBeInTheDocument();
     const eventCalls = () =>
       calls.filter((call) => call.path.endsWith("/events"));
     expect(eventCalls().map((call) => call.query.get("after"))).toEqual([

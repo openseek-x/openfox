@@ -216,6 +216,16 @@ func (q ListQuery) normalize() (ListQuery, error) {
 	return q, nil
 }
 
+// A drafting run starts in its own conversation. Its first message and the
+// task creation request commit together. Keep that execution record out of
+// chat discovery while preserving direct access from run history.
+const userChatSQL = `NOT EXISTS (
+	SELECT 1 FROM openfox.messages brief
+	JOIN openfox.task_creation_requests request
+	  ON request.organization_id = brief.organization_id AND request.message_id = brief.id
+	WHERE brief.organization_id = c.organization_id AND brief.conversation_id = c.id AND brief.seq = 1
+)`
+
 // $1 is the actor's organization role. The spaces table must be joined as s.
 const visibleConversationSQL = `(c.owner_user_id = openfox_private.current_actor_id()
 		        OR (c.visibility = 'SHARED' AND EXISTS (
@@ -226,7 +236,7 @@ const visibleConversationSQL = `(c.owner_user_id = openfox_private.current_actor
 		               AND cm.user_id = openfox_private.current_actor_id()
 		               AND om.status = 'ACTIVE')))
 		   -- 空间可读按协作策略（SHARED 空间对非访客可读，被撤销的空间成员不可读），$1 为大写组织角色
-		   AND ` + collaboration.SpaceReadableSQL
+		   AND ` + collaboration.SpaceReadableSQL + ` AND ` + userChatSQL
 
 // ListSummaries 返回当前成员可见的会话（所有者，或共享会话的 ACTIVE 成员；空间按协作策略可读），
 // 按 updated_at DESC, id DESC 排序。先按条件取一页 ID，再用 = ANY 一次补齐摘要字段。

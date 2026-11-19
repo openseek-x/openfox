@@ -177,7 +177,7 @@ func TestInboxPolicySnapshotAndChannels(t *testing.T) {
 	type pref struct{ Key, Group, Level string }
 	var rows []pref
 	e.member.must(200, "GET", path, nil, &rows)
-	if len(rows) != 49 {
+	if len(rows) != 50 {
 		t.Fatalf("catalog has %d rows", len(rows))
 	}
 	patch := func(k, v string) { e.member.must(200, "PATCH", path, map[string]string{"key": k, "level": v}, nil) }

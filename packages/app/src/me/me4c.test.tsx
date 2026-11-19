@@ -267,8 +267,8 @@ describe("通知设置", () => {
         }),
       ),
     );
-    expect(await screen.findByText("已开启 38/42 个事件")).toBeInTheDocument();
-    expect(screen.getByText("已开启 20/42 个事件")).toBeInTheDocument();
+    expect(await screen.findByText("已开启 39/43 个事件")).toBeInTheDocument();
+    expect(screen.getByText("已开启 21/43 个事件")).toBeInTheDocument();
     expect(
       screen.getByText("可通过飞书、钉钉、企业微信或邮件在手机上接收"),
     ).toBeVisible();
@@ -1029,7 +1029,7 @@ describe("通知细项与独立服务商", () => {
     });
     await user.click(await screen.findByText("桌面端"));
     await screen.findByRole("switch", { name: "任务指派给你时" });
-    expect(screen.getAllByRole("switch")).toHaveLength(51); // 42 leaves + 7 groups + channel + separate consent
+    expect(screen.getAllByRole("switch")).toHaveLength(52); // 43 leaves + 7 groups + channel + separate consent
     expect(
       screen.getByRole("switch", { name: "任务指派给你时" }),
     ).not.toBeChecked();

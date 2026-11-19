@@ -76,30 +76,31 @@ type InboxQuery struct {
 }
 
 type InboxGroup struct {
-	InboxEvent         string     `json:"inbox_event,omitempty"`
-	DirectChatID       string     `json:"direct_chat_id,omitempty"`
-	DirectMessageID    string     `json:"direct_message_id,omitempty"`
-	AutomationID       string     `json:"automation_id,omitempty"`
-	ID                 string     `json:"id"`
-	NotificationID     string     `json:"notification_id"`
-	Kind               string     `json:"kind"`
-	TaskID             string     `json:"task_id,omitempty"`
-	TaskDisplayID      string     `json:"task_display_id,omitempty"`
-	TaskTitle          string     `json:"task_title,omitempty"`
-	TaskStatusCategory string     `json:"task_status_category,omitempty"`
-	TaskTypeIcon       *string    `json:"task_type_icon"`
-	ConversationID     string     `json:"conversation_id,omitempty"`
-	SpaceID            string     `json:"space_id,omitempty"`
-	SpaceName          string     `json:"space_name,omitempty"`
-	AgentID            string     `json:"agent_id,omitempty"`
-	ActorKind          string     `json:"actor_kind,omitempty"`
-	ActorName          string     `json:"actor_name,omitempty"`
-	SafeSummary        string     `json:"safe_summary"`
-	Count              int        `json:"count"`
-	Unread             bool       `json:"unread"`
-	SnoozedUntil       *time.Time `json:"snoozed_until,omitempty"`
-	ClearedAt          *time.Time `json:"cleared_at,omitempty"`
-	LatestAt           time.Time  `json:"latest_at"`
+	TaskCreationDraft  *TaskCreationRequest `json:"task_creation_draft,omitempty"`
+	InboxEvent         string               `json:"inbox_event,omitempty"`
+	DirectChatID       string               `json:"direct_chat_id,omitempty"`
+	DirectMessageID    string               `json:"direct_message_id,omitempty"`
+	AutomationID       string               `json:"automation_id,omitempty"`
+	ID                 string               `json:"id"`
+	NotificationID     string               `json:"notification_id"`
+	Kind               string               `json:"kind"`
+	TaskID             string               `json:"task_id,omitempty"`
+	TaskDisplayID      string               `json:"task_display_id,omitempty"`
+	TaskTitle          string               `json:"task_title,omitempty"`
+	TaskStatusCategory string               `json:"task_status_category,omitempty"`
+	TaskTypeIcon       *string              `json:"task_type_icon"`
+	ConversationID     string               `json:"conversation_id,omitempty"`
+	SpaceID            string               `json:"space_id,omitempty"`
+	SpaceName          string               `json:"space_name,omitempty"`
+	AgentID            string               `json:"agent_id,omitempty"`
+	ActorKind          string               `json:"actor_kind,omitempty"`
+	ActorName          string               `json:"actor_name,omitempty"`
+	SafeSummary        string               `json:"safe_summary"`
+	Count              int                  `json:"count"`
+	Unread             bool                 `json:"unread"`
+	SnoozedUntil       *time.Time           `json:"snoozed_until,omitempty"`
+	ClearedAt          *time.Time           `json:"cleared_at,omitempty"`
+	LatestAt           time.Time            `json:"latest_at"`
 }
 
 type InboxCounts struct {
@@ -146,6 +147,10 @@ const (
 // 收件人失去访问权限后，通知保留在库中但不再展示。
 // 两个分支都按协作策略判断空间可读（collaboration.SpaceReadableSQL）；任务分支还要求任务未删除。
 const notificationVisibleSQL = `(
+    (n.task_id IS NULL AND n.task_draft_id IS NOT NULL AND EXISTS (
+        SELECT 1 FROM openfox.task_drafts d JOIN openfox.spaces s ON s.organization_id=d.organization_id AND s.id=d.space_id
+        WHERE d.organization_id=n.organization_id AND d.id=n.task_draft_id AND d.requester_id=openfox_private.current_actor_id() AND ` + collaboration.SpaceReadableSQL + `
+    )) OR
     (n.direct_chat_id IS NOT NULL AND EXISTS (
        SELECT 1 FROM openfox.direct_chats d JOIN openfox.organization_members peer ON peer.organization_id=d.organization_id
          AND peer.user_id=CASE WHEN d.user_low=n.recipient_user_id THEN d.user_high ELSE d.user_low END AND peer.status='ACTIVE'
@@ -225,7 +230,7 @@ const notificationSpaceSQL = `COALESCE(
 	(SELECT t.space_id FROM openfox.tasks t
 	  WHERE t.organization_id = n.organization_id AND t.id = n.task_id),
 	(SELECT c.space_id FROM openfox.conversations c
-	  WHERE c.organization_id = n.organization_id AND c.id = n.conversation_id), (SELECT a.space_id FROM openfox.automations a WHERE a.organization_id=n.organization_id AND a.id=n.automation_id))`
+	  WHERE c.organization_id = n.organization_id AND c.id = n.conversation_id), (SELECT a.space_id FROM openfox.automations a WHERE a.organization_id=n.organization_id AND a.id=n.automation_id), (SELECT d.space_id FROM openfox.task_drafts d WHERE d.organization_id=n.organization_id AND d.id=n.task_draft_id))`
 
 // inboxFilter 是校验后的筛选条件，按占位符名填进 SQL。
 type inboxFilter struct {
@@ -289,9 +294,9 @@ func (scope InboxScope) filter() (inboxFilter, error) {
 func inboxGroupsSQL(filter inboxFilter) string {
 	return `
 		WITH visible AS (
-			SELECT n.id, n.kind, n.inbox_event, n.direct_chat_id, n.direct_message_id, n.automation_id, n.actor_agent_id, n.comment_id, n.task_id, n.conversation_id, n.message_id, n.actor_user_id,
+			SELECT n.id, n.kind, n.inbox_event, n.task_draft_id, n.direct_chat_id, n.direct_message_id, n.automation_id, n.actor_agent_id, n.comment_id, n.task_id, n.conversation_id, n.message_id, n.actor_user_id,
 			       n.safe_summary, n.read_at, n.snoozed_until, n.cleared_at, n.created_at,
-			       COALESCE(n.task_id, n.conversation_id, n.automation_id, n.direct_chat_id) AS group_id
+			       COALESCE(n.task_id, n.conversation_id, n.automation_id, n.direct_chat_id, n.task_draft_id) AS group_id
 			  FROM openfox.notifications n
 			 WHERE n.organization_id = openfox_private.current_organization_id()
 			   AND n.recipient_user_id = openfox_private.current_actor_id()
@@ -301,7 +306,7 @@ func inboxGroupsSQL(filter inboxFilter) string {
 			   AND ` + strings.ReplaceAll(notificationVisibleSQL, "$1", "{role}") + `
 		), grouped AS (
 			SELECT DISTINCT ON (v.group_id)
-			       v.group_id, v.id, v.kind, v.inbox_event, v.direct_chat_id, v.direct_message_id, v.automation_id, v.actor_agent_id, v.comment_id, v.task_id, v.conversation_id, v.message_id,
+			       v.group_id, v.id, v.kind, v.inbox_event, v.task_draft_id, v.direct_chat_id, v.direct_message_id, v.automation_id, v.actor_agent_id, v.comment_id, v.task_id, v.conversation_id, v.message_id,
 			       v.actor_user_id, v.safe_summary, v.snoozed_until, v.cleared_at,
 			       count(*) OVER w AS item_count,
 			       bool_or(v.read_at IS NULL) OVER w AS unread,
@@ -324,9 +329,10 @@ func inboxGroupsSQL(filter inboxFilter) string {
 			  LEFT JOIN openfox.conversations c
 			    ON c.organization_id = openfox_private.current_organization_id() AND c.id = g.conversation_id
 			  LEFT JOIN openfox.automations auto ON auto.organization_id=openfox_private.current_organization_id() AND auto.id=g.automation_id
-              LEFT JOIN openfox.spaces sp
+              LEFT JOIN openfox.task_drafts draft ON draft.organization_id=openfox_private.current_organization_id() AND draft.id=g.task_draft_id
+ LEFT JOIN openfox.spaces sp
 			    ON sp.organization_id = openfox_private.current_organization_id()
-			   AND sp.id = COALESCE(t.space_id, c.space_id, auto.space_id)
+			   AND sp.id = COALESCE(t.space_id, c.space_id, auto.space_id,draft.space_id)
 			  LEFT JOIN openfox.messages m
 			    ON m.organization_id = openfox_private.current_organization_id() AND m.id = g.message_id
 			  LEFT JOIN openfox.task_comments tc ON tc.organization_id=openfox_private.current_organization_id() AND tc.id=g.comment_id
@@ -398,8 +404,12 @@ func (s Service) ListInbox(ctx context.Context, tx pgx.Tx, organizationID string
 		                     WHEN g.author_kind = 'USER' THEN split_part(g.message_user_email, '@', 1)
 		                     WHEN g.actor_user_id IS NOT NULL THEN split_part(g.actor_user_email, '@', 1)
 		                     ELSE g.conversation_agent_name END, ''),
-		       g.safe_summary, g.item_count, g.unread, g.snoozed_until, g.cleared_at, g.latest_at
+		       g.safe_summary, g.item_count, g.unread, g.snoozed_until, g.cleared_at, g.latest_at,
+		       CASE WHEN d.id IS NOT NULL THEN d.options || jsonb_build_object('brief',d.brief) WHEN brief.id IS NOT NULL THEN q.options || jsonb_build_object('brief',brief.body) END
 		  FROM matched g
+		  LEFT JOIN openfox.task_drafts d ON g.kind='RUN_FAILED' AND d.organization_id=openfox_private.current_organization_id() AND d.id=g.task_draft_id AND d.requester_id=openfox_private.current_actor_id()
+ LEFT JOIN openfox.task_creation_requests q ON g.kind='RUN_FAILED' AND q.organization_id=openfox_private.current_organization_id() AND q.message_id=g.message_id AND q.task_id IS NULL
+		  LEFT JOIN openfox.messages brief ON brief.organization_id=q.organization_id AND brief.id=q.message_id AND brief.author_user_id=openfox_private.current_actor_id()
 		 WHERE ($5::timestamptz IS NULL OR (g.latest_at, g.group_id) < ($5::timestamptz, NULLIF($6, '')::uuid))
 		 ORDER BY g.latest_at DESC, g.group_id DESC
 		 LIMIT $2`
@@ -415,7 +425,7 @@ func (s Service) ListInbox(ctx context.Context, tx pgx.Tx, organizationID string
 			&group.TaskID, &group.TaskDisplayID, &group.TaskTitle, &group.TaskStatusCategory, &group.TaskTypeIcon,
 			&group.ConversationID, &group.SpaceID, &group.SpaceName, &group.AgentID,
 			&group.ActorKind, &group.ActorName, &group.SafeSummary, &group.Count, &group.Unread,
-			&group.SnoozedUntil, &group.ClearedAt, &group.LatestAt); err != nil {
+			&group.SnoozedUntil, &group.ClearedAt, &group.LatestAt, &group.TaskCreationDraft); err != nil {
 			return InboxPage{}, err
 		}
 		groups = append(groups, group)
@@ -449,7 +459,7 @@ func (Service) inboxCounts(ctx context.Context, tx pgx.Tx, role string) (InboxCo
 	var counts InboxCounts
 	err := tx.QueryRow(ctx, `
 		WITH visible AS (
-			SELECT COALESCE(n.task_id, n.conversation_id, n.automation_id, n.direct_chat_id) AS group_id, n.read_at,
+			SELECT COALESCE(n.task_id, n.conversation_id, n.automation_id, n.direct_chat_id, n.task_draft_id) AS group_id, n.read_at,
 			       `+inboxOtherKindsSQL+` AS is_other,
 			       `+inboxSectionInboxSQL+` AS in_inbox,
 			       `+inboxSectionLaterSQL+` AS in_later,
@@ -531,7 +541,7 @@ func (s Service) ApplyInboxAction(ctx context.Context, tx pgx.Tx, organizationID
 		   SET `+set+`
 		 WHERE n.organization_id = openfox_private.current_organization_id()
 		   AND n.recipient_user_id = openfox_private.current_actor_id()
-		   AND COALESCE(n.task_id, n.conversation_id, n.automation_id, n.direct_chat_id) = ANY($1::uuid[]) AND n.inbox_level IS DISTINCT FROM 'off'
+		   AND COALESCE(n.task_id, n.conversation_id, n.automation_id, n.direct_chat_id, n.task_draft_id) = ANY($1::uuid[]) AND n.inbox_level IS DISTINCT FROM 'off'
 		   AND `+sectionCondition, args...)
 	if err != nil {
 		return 0, err
@@ -554,7 +564,7 @@ func (s Service) ApplyInboxBulk(ctx context.Context, tx pgx.Tx, organizationID s
 	where := `n.organization_id = openfox_private.current_organization_id()
 		   AND n.recipient_user_id = openfox_private.current_actor_id()
 		   AND ` + sectionCondition + filter.importance + `
-		   AND COALESCE(n.task_id, n.conversation_id, n.automation_id, n.direct_chat_id) IN (SELECT group_id FROM matched)`
+		   AND COALESCE(n.task_id, n.conversation_id, n.automation_id, n.direct_chat_id, n.task_draft_id) IN (SELECT group_id FROM matched)`
 	var set string
 	switch operation {
 	case InboxBulkMarkRead:
@@ -571,7 +581,7 @@ func (s Service) ApplyInboxBulk(ctx context.Context, tx pgx.Tx, organizationID s
 		       SELECT 1 FROM openfox.notifications u
 		        WHERE u.organization_id = n.organization_id
 		          AND u.recipient_user_id = n.recipient_user_id
-		          AND COALESCE(u.task_id, u.conversation_id, u.automation_id, u.direct_chat_id) = COALESCE(n.task_id, n.conversation_id, n.automation_id, n.direct_chat_id)
+		          AND COALESCE(u.task_id, u.conversation_id, u.automation_id, u.direct_chat_id, u.task_draft_id) = COALESCE(n.task_id, n.conversation_id, n.automation_id, n.direct_chat_id, n.task_draft_id)
 		          AND u.read_at IS NULL
 		          AND ` + strings.ReplaceAll(sectionCondition, "n.", "u.") + `)`
 	case InboxBulkClearAll:

@@ -157,7 +157,7 @@ describe("foldRunEvents", () => {
         command: "make",
         exit_code: 2,
       }),
-      step(4, { id: "t1", kind: "thinking", state: "running" }),
+      step(4, { id: "t1", kind: "thinking", state: "running", text: "检查中" }),
       step(5, {
         id: "turn_end",
         kind: "turn_end",
@@ -183,8 +183,25 @@ describe("foldRunEvents", () => {
       step(1, { id: "x1", kind: "exec", state: "done", command: "ls" }),
       step(2, { id: "t1", kind: "thinking", state: "running" }),
     ]);
-    expect(steps(turn.items).map((s) => s.status)).toEqual(["done", "running"]);
+    expect(steps(turn.items).map((s) => s.status)).toEqual(["done"]);
     expect(turn.activeKind).toBe("thinking");
+  });
+
+  it("会话略去常规环境准备，保留异常和完整运行记录", () => {
+    for (const state of [
+      "running",
+      "done",
+      "failed",
+      "interrupted",
+      "denied",
+    ] as const) {
+      const events = [step(1, { id: "prep", kind: "prep_env", state })];
+      const chat = foldRunEvents(events, { hideRoutinePreparation: true });
+      expect(chat.items).toHaveLength(
+        state === "running" || state === "done" ? 0 : 1,
+      );
+      expect(foldRunEvents(events).items).toHaveLength(1);
+    }
   });
 
   it("覆盖全部 kind：patch / write_file / read / search / web_search / web_fetch / todo", () => {
@@ -403,9 +420,7 @@ describe("foldRunEvents", () => {
         { generation: 2, id: "g2-1" },
       ),
     ]);
-    expect(steps(otherGeneration.items).map((s) => s.kind)).toEqual([
-      "thinking",
-    ]);
+    expect(otherGeneration.items).toEqual([]);
   });
 
   it("实测乱序：started 的 stream_seq 排在最后，仍按 (generation, sequence) 折叠", () => {
@@ -536,7 +551,7 @@ describe("foldRunEvents", () => {
         state: "running",
         command: "sleep 100",
       }),
-      step(2, { id: "t", kind: "thinking", state: "running" }),
+      step(2, { id: "t", kind: "thinking", state: "running", text: "检查中" }),
     ];
     expect(steps(foldRunEvents(events).items).map((s) => s.status)).toEqual([
       "running",

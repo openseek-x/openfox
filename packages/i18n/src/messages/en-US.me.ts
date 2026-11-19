@@ -313,6 +313,7 @@ export const meEn: Messages["me"] = {
           "When you receive a message in a human conversation",
         chat_replied_participant:
           "When your conversation with an Agent gets a new reply",
+        task_creation_result_requester: "Results of task creation requests",
         task_agent_completed_participant:
           "When your conversation with an Agent finishes running",
         task_failed_participant:
@@ -335,6 +336,8 @@ export const meEn: Messages["me"] = {
       help: {
         chat_replied_participant:
           "The Agent posted a new reply in a task conversation you started; only the starter is notified",
+        task_creation_result_requester:
+          "Open the new task or recover the original brief if creation failed",
         task_agent_completed_participant:
           "The Agent finished its run in this conversation",
         task_failed_participant:
