@@ -7,6 +7,7 @@ import {
   Icon,
   Spinner,
   TextInput,
+  dismissOnBackdrop,
   useModalBehavior,
 } from "@openfox/ui";
 
@@ -71,9 +72,7 @@ function SearchPanel({
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center bg-scrim/25 p-6 pt-[33vh]"
-      onPointerDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+      onPointerDown={dismissOnBackdrop(onClose)}
     >
       <div
         ref={panel}

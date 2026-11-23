@@ -4,7 +4,14 @@ import { createPortal } from "react-dom";
 
 import type { Task, TaskAssigneeRef } from "@openfox/api";
 import { useT } from "@openfox/i18n";
-import { Icon, Spinner, cn, useModalBehavior, useToast } from "@openfox/ui";
+import {
+  Icon,
+  Spinner,
+  cn,
+  dismissOnBackdrop,
+  useModalBehavior,
+  useToast,
+} from "@openfox/ui";
 
 import { keys, useApi } from "../context";
 import { useCreateTaskDialog } from "../tasks/create/CreateTaskProvider";
@@ -133,9 +140,7 @@ export function AssignTaskPalette({
   return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-start justify-center bg-scrim/25 p-6 pt-[22vh]"
-      onPointerDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+      onPointerDown={dismissOnBackdrop(onClose)}
     >
       <div
         ref={panel}

@@ -12,6 +12,7 @@ import { cn } from "../cn";
 import { Icon } from "./Icon";
 import { IconButton } from "./IconButton";
 import { useModalBehavior } from "./Dialog";
+import { dismissOnBackdrop, useDrawerOutsideClick } from "./outsideClick";
 import { useT } from "@openfox/i18n";
 
 /** 正在输入或有菜单 / 弹窗打开时，Esc 属于它们，不关闭非模态抽屉。 */
@@ -43,9 +44,11 @@ export interface DrawerProps {
   width?: string;
   /**
    * 是否模态，默认 true：有遮罩、锁定焦点与滚动、点遮罩关闭。
-   * false 时没有遮罩，页面其余部分仍可操作；焦点在抽屉内且不在输入 / 菜单 / 弹窗里时按 Esc 关闭。
+   * false 时页面其余部分仍可操作，点击外部关闭当前抽屉。
    */
   modal?: boolean;
+  /** 原地切换详情时标识当前条目，避免外部点击同时关闭刚打开的详情。 */
+  itemKey?: string;
   children: ReactNode;
 }
 
@@ -60,6 +63,7 @@ export function Drawer({
   actions,
   width = "min(860px, calc(100vw - 378px))",
   modal = true,
+  itemKey,
   children,
 }: DrawerProps) {
   const panel = useRef<HTMLDivElement | null>(null);
@@ -67,6 +71,7 @@ export function Drawer({
   const titleId = useId();
   const [entered, setEntered] = useState(false);
   useModalBehavior(open && modal, panel, onClose);
+  useDrawerOutsideClick(panel, open && !modal, onClose, itemKey);
   useEffect(() => {
     if (!open) {
       setEntered(false);
@@ -95,16 +100,11 @@ export function Drawer({
         // 非模态：外层不拦截指针，只有抽屉本身可点
         modal ? "bg-black/25" : "pointer-events-none",
       )}
-      onPointerDown={
-        modal
-          ? (event) => {
-              if (event.target === event.currentTarget) onClose();
-            }
-          : undefined
-      }
+      onPointerDown={modal ? dismissOnBackdrop(onClose) : undefined}
     >
       <div
         ref={panel}
+        data-openfox-drawer=""
         role="dialog"
         aria-modal={modal ? "true" : undefined}
         aria-labelledby={titleId}

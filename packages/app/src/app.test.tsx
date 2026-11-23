@@ -525,6 +525,27 @@ describe("应用外壳", () => {
     return json(404, {});
   };
 
+  it("点击首登向导外部关闭，下次进入时继续未完成的步骤", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(
+      "openfox:onboarding:o1",
+      JSON.stringify({ step: "work-type" }),
+    );
+    renderAt("/o/o1/inbox", orgHandler);
+    const wizard = await screen.findByRole("dialog");
+    await user.click(within(wizard).getByRole("button", { name: "软件开发" }));
+    expect(
+      within(wizard).getByRole("heading", { name: "设置你的空间" }),
+    ).toBeVisible();
+    await user.click(wizard.parentElement!);
+    expect(wizard).not.toBeInTheDocument();
+    cleanup();
+    renderAt("/o/o1/inbox", orgHandler);
+    expect(
+      await screen.findByRole("heading", { name: "设置你的空间" }),
+    ).toBeVisible();
+  });
+
   it("设置页：全局配置子路由显示对应页面，导入与导出显示导入页（阶段 6c）", async () => {
     localStorage.setItem("openfox:onboarding:o1", JSON.stringify({}));
     renderAt("/o/o1/settings/relation-types", orgHandler);

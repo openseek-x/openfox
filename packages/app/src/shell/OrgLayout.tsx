@@ -249,7 +249,7 @@ export function OrgLayout() {
             {wizard && (
               <OnboardingWizard
                 orgId={orgId}
-                onFinish={() => setWizard(false)}
+                onClose={() => setWizard(false)}
               />
             )}
           </div>

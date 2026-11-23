@@ -48,7 +48,7 @@ import { browserTimezone } from "./ScheduleEditor";
 import { automationErrorMessage, useSaveAutomation } from "./queries";
 
 // 阶段 5a · 新建 / 编辑自动化弹窗（Figma 2.6、2.15；Webhook URL 小窗 2.13）。
-// 960×720，点遮罩不关闭；创建或保存后若返回了 webhook_urls，切换为 400 宽小窗一次性展示。
+// 960×720，创建或保存后若返回了 webhook_urls，切换为 400 宽小窗一次性展示。
 
 interface Assignee {
   kind: "AGENT" | "CREW";
@@ -253,7 +253,6 @@ function AutomationEditorBody({
       <Dialog
         open={!sheetClosesEditor}
         onClose={onClose}
-        closeOnBackdrop={false}
         width={960}
         title={
           automation ? t("automations.editTitle") : t("automations.create")
