@@ -14,6 +14,10 @@ jobs:
   build:
     runs-on: macos-15
     timeout-minutes: 40
+    outputs:
+      version: ${{ steps.inputs.outputs.version }}
+      artifact_id: ${{ steps.upload.outputs.artifact-id }}
+      artifact_digest: ${{ steps.upload.outputs.artifact-digest }}
     env:
       OPENFOX_DESKTOP_DEFAULT_WEB_URL: ${{ vars.OPENFOX_PUBLIC_URL }}
     steps:
@@ -25,10 +29,14 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Check release inputs and install dependencies
+        id: inputs
         run: |
           set -eu
           test "$(uname -m)" = arm64
-          test "$GITHUB_REF_NAME" = "desktop-v$(node -p "require('./apps/desktop/package.json').version")"
+          version=$(node -p "require('./apps/desktop/package.json').version")
+          prefix="desktop-v$version"
+          [[ "$GITHUB_REF_NAME" =~ ^"$prefix"(-r[1-9][0-9]*)?$ ]]
+          echo "version=$version" >> "$GITHUB_OUTPUT"
           node -e 'if(new URL(process.env.OPENFOX_DESKTOP_DEFAULT_WEB_URL).protocol !== "https:") process.exit(1)'
           npm install --global pnpm@11.15.1
           pnpm install --frozen-lockfile
@@ -39,11 +47,13 @@ jobs:
           pnpm typecheck
           python3 deploy/test_publish_static.py
       - name: Build and verify the web and macOS installer
+        env:
+          RELEASE_VERSION: ${{ steps.inputs.outputs.version }}
         run: |
           set -eu
           pnpm --filter @openfox/web build
           pnpm --filter @openfox/desktop dist:mac:release
-          version="${GITHUB_REF_NAME#desktop-v}"
+          version="$RELEASE_VERSION"
           release="$RUNNER_TEMP/payload"
           mkdir -p "$release/desktop"
           cp -R apps/web/dist "$release/web"
@@ -56,6 +66,7 @@ jobs:
           codesign --verify --deep --strict "$app"
           COPYFILE_DISABLE=1 tar -czf "$RUNNER_TEMP/openfox-static.tar.gz" -C "$release" web desktop
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        id: upload
         with:
           name: openfox-static
           path: ${{ runner.temp }}/openfox-static.tar.gz
@@ -68,23 +79,29 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: desktop-production
+    permissions:
+      actions: read
     steps:
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: openfox-static
       - name: Publish and verify the production release
         env:
           DEPLOY_KEY: ${{ secrets.OPENFOX_DEPLOY_KEY }}
           KNOWN_HOSTS: ${{ vars.OPENFOX_KNOWN_HOSTS }}
           DEPLOY_TARGET: ${{ vars.OPENFOX_DEPLOY_TARGET }}
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_ID: ${{ needs.build.outputs.artifact_id }}
+          ARTIFACT_DIGEST: ${{ needs.build.outputs.artifact_digest }}
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
         run: |
           set -eu
           umask 077
           printf '%s\n' "$DEPLOY_KEY" > "$RUNNER_TEMP/deploy.key"
           printf '%s\n' "$KNOWN_HOSTS" > "$RUNNER_TEMP/known_hosts"
           unset DEPLOY_KEY
-          digest=$(sha256sum openfox-static.tar.gz | cut -d' ' -f1)
-          ssh -i "$RUNNER_TEMP/deploy.key" -o BatchMode=yes -o IdentitiesOnly=yes \
+          url=$(curl --fail --silent --show-error --output /dev/null --write-out '%{redirect_url}' \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/artifacts/$ARTIFACT_ID/zip")
+          test -n "$url"
+          printf '%s\n' "$url" | ssh -i "$RUNNER_TEMP/deploy.key" -o BatchMode=yes -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/known_hosts" \
             -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
-            "$DEPLOY_TARGET" "publish ${GITHUB_REF_NAME#desktop-v} $GITHUB_SHA $digest" < openfox-static.tar.gz
+            "$DEPLOY_TARGET" "publish-artifact $RELEASE_VERSION $GITHUB_SHA ${ARTIFACT_DIGEST#sha256:}"

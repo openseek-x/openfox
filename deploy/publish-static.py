@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Forced SSH command for a versioned desktop + web release."""
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 import fcntl
 import hashlib
+from http.client import IncompleteRead
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -13,8 +15,10 @@ import sys
 import tarfile
 import tempfile
 import time
-from urllib.request import Request, urlopen
+from urllib.parse import urlsplit
+from urllib.request import build_opener, HTTPRedirectHandler, Request, urlopen
 from uuid import uuid4
+from zipfile import ZipFile
 
 MAX_BYTES = 768 * 1024 * 1024
 VERSION = r"(?:0|[1-9][0-9]{0,8})(?:\.(?:0|[1-9][0-9]{0,8})){2}"
@@ -31,6 +35,60 @@ def sha(file):
         for block in iter(lambda: src.read(1024 * 1024), b""):
             h.update(block)
     return h.hexdigest()
+
+
+class NoRedirect(HTTPRedirectHandler):
+    def redirect_request(self, *args):
+        return None
+
+
+def download_artifact(url, dest):
+    host = urlsplit(url)
+    require(host.scheme == "https" and re.fullmatch(r"productionresults[a-z0-9]+\.blob\.core\.windows\.net", host.netloc),
+            "unexpected Actions artifact host")
+    def read_range(first, last, total=None, fd=None):
+        for attempt in range(3):
+            try:
+                request = Request(url, headers={"Range": f"bytes={first}-{last}"})
+                with build_opener(NoRedirect).open(request, timeout=30) as response:
+                    content_range = response.headers.get("Content-Range", "")
+                    match = re.fullmatch(rf"bytes {first}-{last}/([0-9]+)", content_range)
+                    require(response.status == 206 and match, "invalid artifact range")
+                    size = int(match[1])
+                    require(0 < size <= MAX_BYTES and (total is None or total == size), "invalid artifact size")
+                    offset = first
+                    while offset <= last:
+                        data = response.read(min(65536, last - offset + 1))
+                        if not data:
+                            raise EOFError("incomplete artifact range")
+                        if fd is not None:
+                            require(os.pwrite(fd, data, offset) == len(data), "incomplete artifact write")
+                        offset += len(data)
+                    return size
+            except (OSError, EOFError, IncompleteRead):
+                if attempt == 2:
+                    raise
+                time.sleep(attempt + 1)
+    size = read_range(0, 0)
+    workers = 32
+    # Start the range requests together while the GitHub redirect is valid.
+    chunk = max(1024 * 1024, (size + workers - 1) // workers)
+    with dest.open("xb") as out:
+        def copy(first):
+            read_range(first, min(first + chunk, size) - 1, size, out.fileno())
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            for _ in pool.map(copy, range(0, size, chunk)):
+                pass
+
+
+def extract_bundle(artifact, archive, digest):
+    require(sha(artifact) == digest, "Actions artifact checksum mismatch")
+    with ZipFile(artifact) as zipped:
+        require(zipped.namelist() == ["openfox-static.tar.gz"], "unexpected Actions artifact content")
+        entry = zipped.infolist()[0]
+        require(0 < entry.file_size <= MAX_BYTES, "invalid bundle size")
+        with zipped.open(entry) as src, archive.open("xb") as dst:
+            shutil.copyfileobj(src, dst)
 
 
 def unpack(archive, stage, filename):
@@ -132,16 +190,16 @@ def main():
     args.add_argument("--origin", required=True)
     config = args.parse_args()
     os.umask(0o022)
-    m = re.fullmatch(r"publish (" + VERSION + r") ([0-9a-f]{40}) ([0-9a-f]{64})", os.environ.get("SSH_ORIGINAL_COMMAND", ""))
+    m = re.fullmatch(r"publish-artifact (" + VERSION + r") ([0-9a-f]{40}) ([0-9a-f]{64})", os.environ.get("SSH_ORIGINAL_COMMAND", ""))
     require(m, "expected a release version, commit and bundle digest")
     version, commit, digest = m.groups()
     with tempfile.TemporaryDirectory(prefix="openfox-publish-") as tmp:
         archive = Path(tmp) / "release.tar.gz"
-        with archive.open("wb") as dst:
-            for block in iter(lambda: sys.stdin.buffer.read(1024 * 1024), b""):
-                require(dst.tell() + len(block) <= MAX_BYTES, "upload too large")
-                dst.write(block)
-        require(sha(archive) == digest, "upload checksum mismatch")
+        url = sys.stdin.buffer.readline(8193)
+        require(len(url) <= 8192 and url.endswith(b"\n"), "invalid artifact URL")
+        artifact = Path(tmp) / "actions.zip"
+        download_artifact(url.decode("ascii").strip(), artifact)
+        extract_bundle(artifact, archive, digest)
         stage = Path(tmp) / "stage"
         unpack(archive, stage, f"OpenFox-{version}-arm64.pkg")
         with config.lock.open("a") as lock:
