@@ -1,12 +1,16 @@
 import io
+import hashlib
 from pathlib import Path
 import tarfile
 import tempfile
 import unittest
+from unittest.mock import Mock, patch
+from zipfile import ZipFile
 
 import runpy
 
-unpack = runpy.run_path(str(Path(__file__).with_name("publish-static.py")))["unpack"]
+release = runpy.run_path(str(Path(__file__).with_name("publish-static.py")))
+unpack = release["unpack"]
 
 class ArchiveTest(unittest.TestCase):
     def unpack_files(self, folder, items):
@@ -34,6 +38,33 @@ class ArchiveTest(unittest.TestCase):
             with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:
                 with self.assertRaisesRegex(ValueError, "unexpected archive"):
                     self.unpack_files(Path(tmp), [(name, kind)])
+
+    def test_download_reassembles_ranges_and_checks_artifact_digest(self):
+        payload = bytes(range(251)) * 10000
+        buffer = io.BytesIO()
+        with ZipFile(buffer, "w") as zipped:
+            zipped.writestr("openfox-static.tar.gz", payload)
+        body = buffer.getvalue()
+        def respond(request, timeout):
+            lo, hi = map(int, request.get_header("Range").removeprefix("bytes=").split("-"))
+            response = io.BytesIO(body[lo:hi + 1])
+            response.status = 206
+            response.headers = {"Content-Range": f"bytes {lo}-{hi}/{len(body)}"}
+            return response
+        download = release["download_artifact"]
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(download.__globals__, {
+            "build_opener": lambda *args: Mock(open=respond),
+        }):
+            artifact, bundle = Path(tmp) / "artifact.zip", Path(tmp) / "bundle"
+            download("https://productionresultssa15.blob.core.windows.net/path", artifact)
+            with self.assertRaisesRegex(ValueError, "checksum mismatch"):
+                release["extract_bundle"](artifact, bundle, "0" * 64)
+            release["extract_bundle"](artifact, bundle, hashlib.sha256(body).hexdigest())
+            self.assertEqual(bundle.read_bytes(), payload)
+
+    def test_rejects_external_artifact_host(self):
+        with self.assertRaisesRegex(ValueError, "unexpected Actions artifact host"):
+            release["download_artifact"]("https://example.com/foo", Path("unused"))
 
 if __name__ == "__main__":
     unittest.main()
