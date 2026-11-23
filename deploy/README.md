@@ -26,36 +26,39 @@ workbench; like HiFox, it loads the web URL served here (set
 `OPENFOX_DESKTOP_WEB_URL` or `web_url` in the desktop settings file). Build the
 assets with `pnpm --filter @openfox/web build` and publish `apps/web/dist`.
 
-## Desktop update manifest (optional)
+## Desktop updates
 
-The desktop app checks `<web origin>/desktop/latest.json` (https only) and
-prompts the user to download; it never downloads or installs by itself because
-the installer is not signed or notarized. Without the file (404) the app simply
-reports "no update". To publish an update:
+A `desktop-vX.Y.Z` tag triggers the GitHub Actions desktop release workflow.
+The tag must match `apps/desktop/package.json`. The macOS arm64 job runs the
+tests, builds the web workbench and bundled CLI, and creates a macOS Installer
+PKG containing OpenFox.app. The app uses ad hoc signing. The PKG has no Developer
+ID signature or notarization ticket. Installation depends on the user's macOS
+security policy. The client opens Installer only after explicit consent.
 
-1. Put the DMG and the manifest under `/srv/openfox/desktop/` (the
-   `location /desktop/` block in `nginx-web.example.conf` serves them; keep it
-   above the SPA fallback so a missing file is a real 404).
-2. Write `/srv/openfox/desktop/latest.json`:
+Configure repository variable `OPENFOX_PUBLIC_URL` with the HTTPS workbench
+origin. The workflow embeds that origin and generates `desktop/latest.json` with
+the version, same-origin PKG URL and SHA-256. Existing manual-update clients can
+use the PKG for the first install. Clients download at most 512 MiB in 20 minutes.
+Older approved installer files are removed when the installed version starts.
 
-   ```json
-   {
-     "version": "0.2.0",
-     "download_url": "https://<same host>/desktop/OpenFox-0.2.0-arm64.dmg",
-     "notes": "What changed (plain text, max 2000 chars).",
-     "sha256": "<64 hex chars of the DMG, from: shasum -a 256 OpenFox-0.2.0-arm64.dmg>",
-     "min_version": "0.1.0"
-   }
-   ```
+The `desktop-production` GitHub environment permits release tags. It contains
+`OPENFOX_DEPLOY_KEY` (secret), `OPENFOX_DEPLOY_TARGET` (user@host) and
+`OPENFOX_KNOWN_HOSTS` (pinned SSH host keys). The build job has no deployment key.
+On the server, install `publish-static.py` in a root-owned location and restrict
+this dedicated SSH public key to the following forced command, supplying the live
+web root, shared release lock and public HTTPS origin for that environment.
 
-   `min_version` is optional; users below it get a prompt that cannot be skipped.
+```text
+restrict,command="/usr/local/libexec/openfox-publish-static --web-root <web-root> --lock <lock> --origin <https-origin>" ssh-ed25519 <public-key>
+```
 
-3. `download_url` must be https and on the same origin as the web URL. To host
-   the DMG elsewhere, list the host in the desktop app's environment variable
-   `OPENFOX_DESKTOP_UPDATE_HOSTS` (comma separated host names). Anything else
-   is ignored by the app.
-4. Rollback: delete `latest.json` (clients treat it as "no update") or restore
-   the previous one. Users who already skipped a version keep skipping it.
+The deployment job streams the build artifact through that command. The server
+checks the version and hashes, keeps old hashed web assets, then atomically
+switches the web root's `current` link. A failed public check restores the prior
+target. The job logs both targets. To roll back manually, take the same lock and
+atomically restore the previous symlink. Users already on the new version need
+a higher-version repair release or a manual reinstall. Database and service
+changes use the separate center deployment procedure.
 
 ## Explicit migrations
 

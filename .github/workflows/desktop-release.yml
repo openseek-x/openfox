@@ -1,0 +1,90 @@
+name: Release OpenFox desktop and web
+on:
+  push:
+    tags: ['desktop-v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: openfox-desktop-production
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 40
+    env:
+      OPENFOX_DESKTOP_DEFAULT_WEB_URL: ${{ vars.OPENFOX_PUBLIC_URL }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22.23.1'
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+      - name: Check release inputs and install dependencies
+        run: |
+          set -eu
+          test "$(uname -m)" = arm64
+          test "$GITHUB_REF_NAME" = "desktop-v$(node -p "require('./apps/desktop/package.json').version")"
+          node -e 'if(new URL(process.env.OPENFOX_DESKTOP_DEFAULT_WEB_URL).protocol !== "https:") process.exit(1)'
+          npm install --global pnpm@11.15.1
+          pnpm install --frozen-lockfile
+      - name: Test desktop and update UI
+        run: |
+          pnpm --filter @openfox/desktop test
+          pnpm exec vitest run packages/app/src/me/me.test.tsx
+          pnpm typecheck
+          python3 deploy/test_publish_static.py
+      - name: Build and verify the web and macOS installer
+        run: |
+          set -eu
+          pnpm --filter @openfox/web build
+          pnpm --filter @openfox/desktop dist:mac:release
+          version="${GITHUB_REF_NAME#desktop-v}"
+          release="$RUNNER_TEMP/payload"
+          mkdir -p "$release/desktop"
+          cp -R apps/web/dist "$release/web"
+          cp apps/desktop/dist/release/{latest.json,OpenFox-"$version"-arm64.pkg} "$release/desktop/"
+          pkgutil --expand-full "$release/desktop/OpenFox-$version-arm64.pkg" "$RUNNER_TEMP/expanded"
+          app=$(find "$RUNNER_TEMP/expanded" -type d -name OpenFox.app -print -quit)
+          test -n "$app"
+          test "$(plutil -extract CFBundleShortVersionString raw "$app/Contents/Info.plist")" = "$version"
+          test "$(plutil -extract CFBundleIdentifier raw "$app/Contents/Info.plist")" = io.openfox.desktop
+          codesign --verify --deep --strict "$app"
+          COPYFILE_DISABLE=1 tar -czf "$RUNNER_TEMP/openfox-static.tar.gz" -C "$release" web desktop
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: openfox-static
+          path: ${{ runner.temp }}/openfox-static.tar.gz
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: desktop-production
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: openfox-static
+      - name: Publish and verify the production release
+        env:
+          DEPLOY_KEY: ${{ secrets.OPENFOX_DEPLOY_KEY }}
+          KNOWN_HOSTS: ${{ vars.OPENFOX_KNOWN_HOSTS }}
+          DEPLOY_TARGET: ${{ vars.OPENFOX_DEPLOY_TARGET }}
+        run: |
+          set -eu
+          umask 077
+          printf '%s\n' "$DEPLOY_KEY" > "$RUNNER_TEMP/deploy.key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$RUNNER_TEMP/known_hosts"
+          unset DEPLOY_KEY
+          digest=$(sha256sum openfox-static.tar.gz | cut -d' ' -f1)
+          ssh -i "$RUNNER_TEMP/deploy.key" -o BatchMode=yes -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/known_hosts" \
+            -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
+            "$DEPLOY_TARGET" "publish ${GITHUB_REF_NAME#desktop-v} $GITHUB_SHA $digest" < openfox-static.tar.gz

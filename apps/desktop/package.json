@@ -7,11 +7,12 @@
     "start": "electron .",
     "build:web": "pnpm --filter @openfox/web build",
     "build:cli": "cd ../.. && go build -trimpath -ldflags \"-X main.version=$(node -p \"require('./apps/desktop/package.json').version\")\" -o apps/desktop/resources/bin/openfox ./cmd/openfox",
-    "test": "node --test security.test.cjs cli.test.cjs accounts.test.cjs proxy.test.cjs work-directory.test.cjs local-service.test.cjs machine-proxy.test.cjs local-prefs.test.cjs login-item.test.cjs update-check.test.cjs tray.test.cjs restart-policy.test.cjs quit-flow.test.cjs browser/policy.test.cjs browser/public-dns.test.cjs browser/network.test.cjs browser/upstream.test.cjs browser/broker-client.test.cjs browser/tool-contract.test.cjs browser/files.test.cjs",
+    "test": "node --test security.test.cjs cli.test.cjs accounts.test.cjs proxy.test.cjs work-directory.test.cjs local-service.test.cjs machine-proxy.test.cjs local-prefs.test.cjs login-item.test.cjs update-check.test.cjs update-install.test.cjs tray.test.cjs restart-policy.test.cjs quit-flow.test.cjs browser/policy.test.cjs browser/public-dns.test.cjs browser/network.test.cjs browser/upstream.test.cjs browser/broker-client.test.cjs browser/tool-contract.test.cjs browser/files.test.cjs",
     "test:accounts:electron": "node --test accounts.electron.test.cjs",
     "test:work-directory:electron": "node --test work-directory.electron.test.cjs",
     "test:local-service:electron": "node --test local-service.electron.test.cjs",
     "dist:mac": "node build-defaults.cjs && pnpm build:cli && electron-builder --mac --arm64",
+    "dist:mac:release": "node build-defaults.cjs && pnpm build:cli && electron-builder --config release-config.cjs --mac --arm64 --publish never",
     "test:machine-proxy:electron": "node --test machine-proxy.electron.test.cjs",
     "test:browser:electron": "node --test --test-concurrency=1 browser/surface.electron.test.cjs browser/host.electron.test.cjs browser/input-shield.electron.test.cjs browser/page-control.electron.test.cjs browser/agent-control.electron.test.cjs browser/annotations.electron.test.cjs",
     "test:browser:model": "node browser/model-image.smoke.cjs"
@@ -20,7 +21,7 @@
     "electron": "45.0.0",
     "electron-builder": "26.18.0"
   },
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "OpenFox desktop",
   "build": {
     "appId": "io.openfox.desktop",
@@ -43,6 +44,7 @@
       "local-prefs.cjs",
       "login-item.cjs",
       "update-check.cjs",
+      "update-install.cjs",
       "tray.cjs",
       "restart-policy.cjs",
       "quit-flow.cjs",

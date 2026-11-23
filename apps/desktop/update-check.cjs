@@ -1,8 +1,8 @@
-// 桌面端「检查更新并提示下载」（不做静默升级：安装包未签名未公证）。
+// 桌面端更新清单校验。发行包的下载与安装在 update-install.cjs。
 // 清单来自当前连接的中心服务：<origin>/desktop/latest.json。
 // 纯 Node 实现，请求函数由调用方注入，便于单测各项安全校验。
 //
-// 清单格式：{ "version": "0.2.0", "download_url": "https://…/OpenFox-0.2.0-arm64.dmg",
+// 清单格式：{ "version": "0.2.0", "download_url": "https://…/OpenFox-0.2.0-arm64.pkg",
 //     "notes": "更新说明", "sha256": "64 位十六进制", "min_version": "0.1.0"(可选) }
 
 const MANIFEST_PATH = "/desktop/latest.json";

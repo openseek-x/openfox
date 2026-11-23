@@ -17,7 +17,7 @@ import {
 } from "../spaces/settings/parts";
 
 // 阶段 12h · 关于（仅桌面端）：当前版本、上次检查结果、手动检查更新。
-// 安装包未签名，只做「检查并提示下载」：下载地址只存在于主进程，页面只能请求「打开下载」。
+// 主进程管理下载和安装，网页只能读取状态或请求弹出原生更新对话框。
 
 const aboutKey = ["desktop", "about"] as const;
 
@@ -33,6 +33,7 @@ export function AboutPage() {
     queryKey: aboutKey,
     queryFn: () => bridge!.getAbout!(),
     enabled: Boolean(bridge?.getAbout),
+    refetchInterval: 4000,
   });
   const setAbout = (next: DesktopAbout) =>
     queryClient.setQueryData(aboutKey, next);
@@ -63,6 +64,7 @@ export function AboutPage() {
   if (!bridge?.getAbout || !about.data) return null;
   const data = about.data;
   const last = data.last_check;
+  const phase = data.update?.phase ?? "manual";
   const statusText = (status: DesktopUpdateStatus, version: string | null) =>
     t(`me.about.status.${status}`, { version: version ?? "" });
   const lastText = last
@@ -102,7 +104,11 @@ export function AboutPage() {
               <Button
                 variant="outline"
                 size="28"
-                disabled={check.isPending}
+                disabled={
+                  check.isPending ||
+                  phase === "downloading" ||
+                  phase === "installing"
+                }
                 onClick={() => check.mutate()}
               >
                 {check.isPending ? t("me.about.checking") : t("me.about.check")}
@@ -114,25 +120,37 @@ export function AboutPage() {
           <SettingsCard>
             <SettingRow
               title={t("me.about.available", { version: data.update.version })}
-              description={t("me.about.unsigned")}
+              description={t(`me.about.phase.${phase}`)}
               control={
-                <div className="flex gap-2">
+                phase === "ready" ? (
                   <Button
                     size="28"
-                    disabled={download.isPending}
-                    onClick={() => download.mutate()}
+                    disabled={check.isPending}
+                    onClick={() => check.mutate()}
                   >
-                    {t("me.about.download")}
+                    {t("me.about.restart")}
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="28"
-                    disabled={skip.isPending}
-                    onClick={() => skip.mutate()}
-                  >
-                    {t("me.about.skip")}
-                  </Button>
-                </div>
+                ) : phase === "manual" ? (
+                  <div className="flex gap-2">
+                    <Button
+                      size="28"
+                      disabled={download.isPending}
+                      onClick={() => download.mutate()}
+                    >
+                      {t("me.about.download")}
+                    </Button>
+                    {!data.update.mandatory && (
+                      <Button
+                        variant="outline"
+                        size="28"
+                        disabled={skip.isPending}
+                        onClick={() => skip.mutate()}
+                      >
+                        {t("me.about.skip")}
+                      </Button>
+                    )}
+                  </div>
+                ) : undefined
               }
             />
             <SettingRow
