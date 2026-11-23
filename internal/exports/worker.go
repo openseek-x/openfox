@@ -188,25 +188,26 @@ func (w *Worker) RunOrganization(ctx context.Context, organizationID string) err
 
 // expire 把过期的导出置为 EXPIRED 并删除文件（先改状态再删文件：删除失败只会残留文件，不会让下载指向已删文件）。
 func (w *Worker) expire(ctx context.Context, organizationID string) error {
-	var keys []string
+	type expiredFile struct{ id, key string }
+	var files []expiredFile
 	if err := w.inOrganization(ctx, organizationID, func(ctx context.Context, tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			UPDATE openfox.export_jobs SET status = 'EXPIRED', updated_at = clock_timestamp(), version = version + 1
+			UPDATE openfox.export_jobs SET status = 'EXPIRED', updated_at = clock_timestamp(), version = version + CASE WHEN status = 'SUCCEEDED' THEN 1 ELSE 0 END
 			 WHERE organization_id = openfox_private.current_organization_id() AND id IN (
 			       SELECT id FROM openfox.export_jobs
-			        WHERE organization_id = openfox_private.current_organization_id() AND status = 'SUCCEEDED' AND expires_at <= clock_timestamp()
-			        ORDER BY expires_at LIMIT $1 FOR UPDATE SKIP LOCKED)
-			RETURNING file_key`, cleanupBatch)
+			        WHERE organization_id = openfox_private.current_organization_id() AND ((status = 'SUCCEEDED' AND expires_at <= clock_timestamp()) OR (status = 'EXPIRED' AND file_key <> ''))
+			        ORDER BY updated_at, id LIMIT $1 FOR UPDATE SKIP LOCKED)
+			RETURNING id::text, file_key`, cleanupBatch)
 		if err != nil {
 			return err
 		}
 		defer rows.Close()
 		for rows.Next() {
-			var key string
-			if err := rows.Scan(&key); err != nil {
+			var file expiredFile
+			if err := rows.Scan(&file.id, &file.key); err != nil {
 				return err
 			}
-			keys = append(keys, key)
+			files = append(files, file)
 		}
 		return rows.Err()
 	}); err != nil {
@@ -215,15 +216,23 @@ func (w *Worker) expire(ctx context.Context, organizationID string) error {
 	if w.Storage == nil {
 		return nil
 	}
-	for _, key := range keys {
-		if key == "" {
+	var deleted []string
+	for _, file := range files {
+		if err := w.Storage.Delete(ctx, file.key); err != nil {
+			w.logger().Warn("export_file_delete_failed", "organization_id", organizationID, "job_id", file.id, "error", err.Error())
 			continue
 		}
-		if err := w.Storage.Delete(ctx, key); err != nil {
-			w.logger().Warn("export_file_delete_failed", "organization_id", organizationID, "error", err.Error())
-		}
+		deleted = append(deleted, file.id)
 	}
-	return nil
+	if len(deleted) == 0 {
+		return nil
+	}
+	return w.inOrganization(ctx, organizationID, func(ctx context.Context, tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE openfox.export_jobs SET file_key=''
+			WHERE organization_id=openfox_private.current_organization_id() AND status='EXPIRED'
+			AND id=ANY($1::uuid[]) AND file_key<>'' `, deleted)
+		return err
+	})
 }
 
 type claimedJob struct {

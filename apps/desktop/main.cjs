@@ -59,7 +59,6 @@ const { message, pickLocale } = require("./messages.cjs");
 const { createQuitFlow } = require("./quit-flow.cjs");
 const { decideRestart } = require("./restart-policy.cjs");
 const { buildTrayMenu, serviceStatus } = require("./tray.cjs");
-const { trayIconPngs } = require("./tray-icon.cjs");
 const { checkForUpdate, parseHostList } = require("./update-check.cjs");
 
 const MAX_OUTPUT_BYTES = 64 * 1024;
@@ -504,8 +503,23 @@ function showOffline(window, reason, url) {
 
 /** 加载网页；每次都重新读设置文件，用户改完地址点「重试」即可生效。 */
 async function loadRemote(window) {
-  settings = await loadSettings(settingsFile());
+  const nextSettings = await loadSettings(settingsFile());
+  if (window !== mainWindow || window.isDestroyed()) return;
+  settings = nextSettings;
   const target = webTarget();
+  if (target.url && new URL(target.url).origin !== accountOrigin) {
+    const origin = new URL(target.url).origin;
+    const registry = await require("./accounts.cjs").openAccounts(
+      app.getPath("userData"),
+      origin,
+    );
+    if (window !== mainWindow || window.isDestroyed()) return;
+    accounts = registry;
+    accountOrigin = origin;
+    currentWebURL = target.url;
+    replaceWindow(window);
+    return;
+  }
   currentWebURL = target.url;
   if (!target.url) {
     showOffline(window, target.reason, "");
@@ -513,6 +527,12 @@ async function loadRemote(window) {
   }
   // 加载失败由 did-fail-load 处理
   window.loadURL(target.url).catch(() => {});
+}
+
+function replaceWindow(previous) {
+  const bounds = previous.getBounds();
+  createWindow().setBounds(bounds);
+  previous.destroy();
 }
 
 function createWindow() {
@@ -1028,11 +1048,7 @@ handle("openfox:select-account", async (event, id) => {
   switchingAccount = true;
   try {
     await registry.select(id);
-    const old = mainWindow;
-    const bounds = old.getBounds();
-    const next = createWindow();
-    next.setBounds(bounds);
-    old.destroy();
+    replaceWindow(mainWindow);
   } finally {
     switchingAccount = false;
   }
@@ -1436,9 +1452,9 @@ function rebuildTrayMenu() {
 
 function createTray() {
   if (process.platform !== "darwin" || tray) return;
-  const pngs = trayIconPngs();
-  const image = nativeImage.createFromBuffer(pngs.x1, { scaleFactor: 1 });
-  image.addRepresentation({ scaleFactor: 2, buffer: pngs.x2 });
+  const image = nativeImage.createFromPath(
+    path.join(__dirname, "renderer", "openfoxTemplate.png"),
+  );
   // 模板图：由系统按明暗菜单栏着色
   image.setTemplateImage(true);
   tray = new Tray(image);
@@ -1763,6 +1779,9 @@ handle("openfox:skip-update", async () => {
 });
 
 app.whenReady().then(async () => {
+  if (process.platform === "darwin" && !app.isPackaged) {
+    app.dock.setIcon(path.join(__dirname, "build", "icon.png"));
+  }
   // 不阻塞窗口：本机状态与注册请求会等它完成
   networkProxy = createProxy(proxyFile(), safeStorage);
   try {

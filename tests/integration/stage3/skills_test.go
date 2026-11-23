@@ -1460,3 +1460,27 @@ func TestSkillStorageKeysAreIndependent(t *testing.T) {
 	}
 	assertStoredFiles(t, env, root)
 }
+
+func TestExportCommandCanBeClaimedBehindDrafts(t *testing.T) {
+	env := newS3Env(t)
+	ensureDirectory(env)
+	device := env.registerSkillDevice(env.manager(), env.org, "PERSONAL")
+	env.exec(`INSERT INTO openfox.device_commands(organization_id,device_id,requested_by_user_id,kind,created_at,expires_at)
+	SELECT $1,$2,$3,'task_draft',now()-interval '1 minute',now()+interval '5 minutes' FROM generate_series(1,25)`, env.org, device.ID, s3ManagerID)
+	id := s3NewID(t)
+	env.exec(`INSERT INTO openfox.device_commands(id,organization_id,device_id,requested_by_user_id,kind,expires_at)
+	VALUES ($1,$2,$3,$4,'runtime_session_export',now()+interval '5 minutes')`, id, env.org, device.ID, s3ManagerID)
+	response := env.deviceCall(device, http.MethodGet, "/v1/device/organizations/"+env.org+"/commands?status=PENDING&limit=2", nil)
+	response.expectStatus(t, http.StatusOK)
+	var batch struct{ Commands []struct{ ID, Kind string } }
+	response.decode(t, &batch)
+	if len(batch.Commands) != 2 || batch.Commands[1].ID != id {
+		t.Fatalf("pending = %+v", batch)
+	}
+	env.claim(device, id)
+	var seconds float64
+	env.scalar(&seconds, `SELECT extract(epoch FROM expires_at-delivered_at)::float8 FROM openfox.device_commands WHERE id=$1`, id)
+	if seconds != 210 {
+		t.Fatalf("export window = %v seconds", seconds)
+	}
+}

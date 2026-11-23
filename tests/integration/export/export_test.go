@@ -194,6 +194,12 @@ func nextKey() map[string]string {
 	return map[string]string{"Idempotency-Key": fmt.Sprintf("export-key-%04d", keySeq)}
 }
 
+type failingDelete struct{ artifacts.Storage }
+
+func (failingDelete) Delete(context.Context, string) error {
+	return fmt.Errorf("temporary storage failure")
+}
+
 func TestTaskExport(t *testing.T) {
 	url := os.Getenv("OPENFOX_TEST_DATABASE_URL")
 	if url == "" {
@@ -556,8 +562,10 @@ func TestTaskExport(t *testing.T) {
 	t.Run("expiry removes the file and refuses the download", func(t *testing.T) {
 		job := start(owner, "csv", beta.ID)
 		key := e.str(`SELECT file_key FROM openfox.export_jobs WHERE organization_id = $1::uuid AND id = $2::uuid`, orgX, job.ID)
-		if _, err := storage.Open(ctx, key); err != nil {
+		if file, err := storage.Open(ctx, key); err != nil {
 			t.Fatalf("file missing before expiry: %v", err)
+		} else {
+			file.Close()
 		}
 		if exp := e.str(`SELECT (expires_at - finished_at >= interval '6 days 23 hours' AND expires_at - finished_at <= interval '7 days 1 hour')::text FROM openfox.export_jobs WHERE id = $1::uuid`, job.ID); exp != "true" {
 			t.Fatalf("retention is not 7 days")
@@ -567,7 +575,19 @@ func TestTaskExport(t *testing.T) {
 		if status, _, _ := download(owner, job.ID); status != http.StatusGone {
 			t.Fatalf("download after expiry (before cleanup) = %d", status)
 		}
+		worker.Storage = failingDelete{storage}
 		runWorker()
+		worker.Storage = storage
+		if pending := e.str(`SELECT file_key FROM openfox.export_jobs WHERE id=$1 AND status='EXPIRED' `, job.ID); pending != key {
+			t.Fatal("lost cleanup marker")
+		}
+		restarted := &exports.Worker{Pool: database, Instance: "export-restart", Storage: storage}
+		if err := restarted.RunOnce(ctx); err != nil {
+			t.Fatal(err)
+		}
+		if pending := e.str(`SELECT file_key FROM openfox.export_jobs WHERE id=$1`, job.ID); pending != "" {
+			t.Fatal("cleanup marker not acknowledged")
+		}
 		if st := e.str(`SELECT status FROM openfox.export_jobs WHERE id = $1::uuid`, job.ID); st != "EXPIRED" {
 			t.Fatalf("status = %s", st)
 		}

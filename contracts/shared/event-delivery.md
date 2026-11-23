@@ -88,8 +88,8 @@ prepare-failed 时当前子步骤与整体都是 failed；启动前取消或租�
 ## 结果
 
 一个 Run 最多一个最终结果，status 为 `SUCCEEDED`、`FAILED`、`CANCELED` 或 `TIMED_OUT`。同一结果 ID
-与相同载荷是幂等的；不同载荷 409。中心在同一事务中写结果、置 Run 终态、生成 `run.result` 并回写会话。
-`reconciliation_required` 为真时拒绝结果（409）。
+与相同载荷重放时返回已存结果。已有其他结果或运行已终结时返回 409 `RESULT_FINALIZED`。设备将此拒绝原因记入本地运行日志，停止补传该结果。
+中心在同一事务中写入结果、设置 Run 终态、生成 `run.result` 并回写会话。运行要求核对且找不到对应开放核对案时返回 409 `RECONCILIATION_REQUIRED`，设备保留结果等待重试。
 
 `usage`（可选）= `{input, cached_input, cache_write_input, output, reasoning_output}`，均为非负整数，
 写入 `run_results.usage`。旧 daemon 不上报时为 NULL，统计按 0 计。usage 参与规范化哈希；省略时哈希

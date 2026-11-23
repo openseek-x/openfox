@@ -650,6 +650,7 @@ export const enUS: Messages = {
       briefExample:
         "Describe the work, e.g. summarize this week’s customer feedback and list the three most common issues",
       creator: "Created by",
+      selectCreator: "Choose an agent or squad",
       noCreators: "No eligible agents or squads in this space",
       queued: "Request submitted. The result will appear in your inbox.",
       recoverBrief: "Creation failed. Open to create manually.",

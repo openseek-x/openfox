@@ -1,6 +1,7 @@
 package automations
 
 import (
+	"math/bits"
 	"strconv"
 	"strings"
 	"time"
@@ -99,28 +100,22 @@ func NextRunAfter(s Schedule, after time.Time) (time.Time, error) {
 	return c.next(after)
 }
 
-// next 逐分钟前进：先按月、再按日、再按小时跳过不匹配的段，避免逐分钟扫描整年。
+// Compare local clock fields while advancing in elapsed time across offset transitions.
 func (c compiledSchedule) next(after time.Time) (time.Time, error) {
 	t := after.In(c.location).Truncate(time.Minute).Add(time.Minute)
 	limit := t.AddDate(0, 0, maxScheduleSearchDays)
+	minute := bits.TrailingZeros64(uint64(c.minutes))
 	for t.Before(limit) {
-		if !c.months.has(int(t.Month())) {
-			t = time.Date(t.Year(), t.Month()+1, 1, 0, 0, 0, 0, c.location)
-			continue
+		if c.months.has(int(t.Month())) && c.dayMatches(t) && c.hours.has(t.Hour()) && c.minutes.has(t.Minute()) {
+			return t, nil
 		}
-		if !c.dayMatches(t) {
-			t = time.Date(t.Year(), t.Month(), t.Day()+1, 0, 0, 0, 0, c.location)
-			continue
+		// Every schedule has one minute field. Never step past an offset change.
+		minutesAhead := (minute-t.Minute()+59)%60 + 1
+		next := t.Add(time.Duration(minutesAhead) * time.Minute)
+		if _, end := t.ZoneBounds(); !end.IsZero() && end.After(t) && end.Before(next) {
+			next = end
 		}
-		if !c.hours.has(t.Hour()) {
-			t = time.Date(t.Year(), t.Month(), t.Day(), t.Hour()+1, 0, 0, 0, c.location)
-			continue
-		}
-		if !c.minutes.has(t.Minute()) {
-			t = t.Add(time.Minute)
-			continue
-		}
-		return t, nil
+		t = next
 	}
 	return time.Time{}, invalidf("找不到下一次运行时刻")
 }

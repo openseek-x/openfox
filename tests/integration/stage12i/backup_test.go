@@ -141,8 +141,20 @@ func TestBackupRestoreDrill(t *testing.T) {
 	centerStoppedAt := time.Now()
 	before := s.text(counts)
 	backupDir := filepath.Join(s.dir, "backup")
-	output, backupTook := s.runTool(os.Environ(), deployScript(t, "backup.sh"), s.urlFile, s.storage, backupDir)
-	t.Logf("backup.sh 用时 %s：%s", backupTook.Round(10*time.Millisecond), strings.TrimSpace(output))
+	script := deployScript(t, "backup.sh")
+	first := exec.CommandContext(t.Context(), script, s.urlFile, s.storage+"/", backupDir)
+	second := exec.CommandContext(t.Context(), script, s.urlFile, s.storage+"/", backupDir)
+	if err := first.Start(); err != nil {
+		t.Fatal(err)
+	}
+	if err := second.Start(); err != nil {
+		_ = first.Wait()
+		t.Fatal(err)
+	}
+	err1, err2 := first.Wait(), second.Wait()
+	if (err1 == nil) == (err2 == nil) {
+		t.Fatalf("expected one completed backup: %v, %v", err1, err2)
+	}
 	output, verifyTook := s.runTool(os.Environ(), deployScript(t, "verify-backup.sh"), backupDir)
 	t.Logf("verify-backup.sh 用时 %s：%s", verifyTook.Round(10*time.Millisecond), strings.TrimSpace(output))
 	metadata, _ := os.ReadFile(filepath.Join(backupDir, "metadata.txt"))

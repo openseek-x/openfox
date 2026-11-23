@@ -2,7 +2,8 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { buildTrayMenu, serviceStatus } = require("./tray.cjs");
 const { message, MESSAGES, pickLocale } = require("./messages.cjs");
-const { trayIconPngs } = require("./tray-icon.cjs");
+const { readFileSync } = require("node:fs");
+const path = require("node:path");
 
 test("本地服务状态映射：未安装优先，其次按 daemon 状态", () => {
   assert.equal(
@@ -82,12 +83,12 @@ test("文案：中英文键一致，占位符替换，缺失键原样返回", ()
   assert.equal(pickLocale(undefined), "en-US");
 });
 
-test("占位托盘图标是合法 PNG（16px 与 32px，含透明度）", () => {
-  const { x1, x2 } = trayIconPngs();
-  for (const [png, size] of [
-    [x1, 16],
-    [x2, 32],
+test("卷尾狐菜单栏图标包含普通和 Retina 两种透明 PNG", () => {
+  for (const [filename, size] of [
+    ["openfoxTemplate.png", 16],
+    ["openfoxTemplate@2x.png", 32],
   ]) {
+    const png = readFileSync(path.join(__dirname, "renderer", filename));
     assert.deepEqual(
       [...png.subarray(0, 8)],
       [137, 80, 78, 71, 13, 10, 26, 10],

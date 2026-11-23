@@ -41,7 +41,7 @@ function scoped(call: Call) {
   return null;
 }
 
-function renderAt(path: string) {
+function renderAt(path: string, otherCreator = false) {
   const newTasks: ReturnType<typeof makeTask>[] = [];
   const server = backend((call) => {
     if (call.path === `${sp}/tasks` && call.method === "POST") {
@@ -70,7 +70,12 @@ function renderAt(path: string) {
       });
     if (call.path === `${o}/agent-directory`)
       return json(200, {
-        entries: [entry("a1", { name: "熊孩子" })],
+        entries: [
+          entry("a1", { name: "熊孩子", allow_direct_chat: !otherCreator }),
+          ...(otherCreator
+            ? [entry("a2", { name: "备选", space_id: SPACE })]
+            : []),
+        ],
         archived_count: 0,
         truncated: false,
       });
@@ -278,6 +283,34 @@ describe("Agent 任务工作台", () => {
       status_id: "st1",
       assignees: [{ kind: "AGENT", id: "a1" }],
     });
+  });
+
+  it("预填智能体不可起草时，需显式选择创建者", async () => {
+    localStorage.setItem("openfox:task-create-mode:" + ORG, "agent");
+    const user = userEvent.setup();
+    const server = renderAt("/o/" + ORG + "/agents?agentSettings=a1", true);
+    const panel = await drawer();
+    await user.click(
+      await within(panel).findByRole("button", { name: "新建或指派任务" }),
+    );
+    const palette = await screen.findByRole("dialog", {
+      name: "指派任务给 熊孩子",
+    });
+    await user.click(within(palette).getByRole("button", { name: "新建任务" }));
+    const dialog = await screen.findByRole("dialog", {
+      name: "通过智能体创建",
+    });
+    await user.type(
+      within(dialog).getByRole("textbox", { name: "需求描述" }),
+      "整理需求",
+    );
+    expect(within(dialog).getByRole("button", { name: "创建" })).toBeDisabled();
+    await user.click(
+      within(dialog).getByRole("button", { name: /选择智能体或小队/ }),
+    );
+    await user.click(await screen.findByRole("option", { name: /备选/ }));
+    expect(within(dialog).getByRole("button", { name: "创建" })).toBeEnabled();
+    expect(server.find("POST", "/agent-requests")).toHaveLength(0);
   });
 
   it.each([

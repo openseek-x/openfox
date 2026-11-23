@@ -180,7 +180,7 @@ func (h *harness) testEndpointRules(t *testing.T) {
 	expectErr(t, h.try(alice, orgA, conv, conversations.OverridesPatch{ApprovalMode: set("FULL_ACCESS")}), conversations.ErrInvalidRequest)
 	expectErr(t, h.try(alice, orgA, conv, conversations.OverridesPatch{ExpectedVersion: ver(2)}), conversations.ErrInvalidRequest)
 	// 非法取值：Runtime / 档位 / 模型格式。
-	expectErr(t, h.try(alice, orgA, conv, conversations.OverridesPatch{Runtime: set("gemini"), ExpectedVersion: ver(2)}), conversations.ErrInvalidRequest)
+	expectErr(t, h.try(alice, orgA, conv, conversations.OverridesPatch{Runtime: set("unknown-runtime"), ExpectedVersion: ver(2)}), conversations.ErrInvalidRequest)
 	expectErr(t, h.try(alice, orgA, conv, conversations.OverridesPatch{ApprovalMode: set("YOLO"), ExpectedVersion: ver(2)}), conversations.ErrInvalidRequest)
 	expectErr(t, h.try(alice, orgA, conv, conversations.OverridesPatch{Model: set("bad\nmodel"), ExpectedVersion: ver(2)}), conversations.ErrInvalidRequest)
 	expectErr(t, h.try(alice, orgA, conv, conversations.OverridesPatch{Model: set(strings.Repeat("m", 129)), ExpectedVersion: ver(2)}), conversations.ErrInvalidRequest)
@@ -210,7 +210,7 @@ func (h *harness) testEndpointRules(t *testing.T) {
 	if err := h.tryExec(`UPDATE openfox.conversations SET approval_mode_override = 'READ_ONLY' WHERE id = $1::uuid`, crewConv); err == nil {
 		t.Fatal("crew conversation accepted an override at the database level")
 	}
-	if err := h.tryExec(`UPDATE openfox.conversations SET runtime_override = 'gemini' WHERE id = $1::uuid`, conv); err == nil {
+	if err := h.tryExec(`UPDATE openfox.conversations SET runtime_override = 'unknown-runtime' WHERE id = $1::uuid`, conv); err == nil {
 		t.Fatal("invalid runtime_override accepted at the database level")
 	}
 	// 事件：覆盖修改写 conversation.updated；时间线有系统消息。

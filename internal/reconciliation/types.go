@@ -198,6 +198,7 @@ type Evidence struct {
 	ExitCode         *int           `json:"exit_code,omitempty"`
 	EventSequence    int64          `json:"event_sequence"`
 	ResultID         string         `json:"result_id,omitempty"`
+	StoredResult     bool           `json:"-"`
 	PayloadHash      string         `json:"payload_hash"`
 	SafeDetail       string         `json:"safe_detail"`
 	AcceptedState    string         `json:"accepted_state"`
@@ -344,6 +345,10 @@ func CanRelease(e Evidence) bool {
 		(e.Kind == EvidenceProcessExited || e.Kind == EvidenceProcessNotFound || e.Kind == EvidenceResultConfirmed)
 }
 
+func (e Evidence) AcceptsResult() bool {
+	return e.AcceptedState == "ACCEPTED" && (e.Kind == EvidenceResultConfirmed || e.Kind == EvidenceProcessExited) && e.ProcessExited && e.ResultID != ""
+}
+
 func ResolveWithEvidence(request ResolveRequest, evidence Evidence) error {
 	if err := request.Validate(); err != nil {
 		return err
@@ -360,7 +365,7 @@ func ResolveWithEvidence(request ResolveRequest, evidence Evidence) error {
 			return ErrEvidenceNotAccepted
 		}
 	case ResolutionResultAccepted:
-		if (evidence.Kind != EvidenceResultConfirmed && evidence.Kind != EvidenceProcessExited) || !evidence.ProcessExited || evidence.ResultID == "" {
+		if !evidence.AcceptsResult() {
 			return ErrEvidenceNotAccepted
 		}
 	case ResolutionManualReview, ResolutionRejected:

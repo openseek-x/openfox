@@ -6,11 +6,18 @@ package stage3
 
 import (
 	"bytes"
+	"context"
+	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
+	"openfox/internal/attachments"
+	"openfox/internal/collaboration"
 )
 
 var (
@@ -305,9 +312,43 @@ func TestConversationAttachmentsAndRunDelivery(t *testing.T) {
 		Body        string           `json:"body"`
 		Attachments []attachmentView `json:"attachments"`
 	}
-	owner.must(http.StatusCreated, http.MethodPost, messagesPath, map[string]any{
-		"body": "", "client_message_id": "with-files", "mentions": mentions, "attachment_ids": []string{note.ID, picture.ID},
-	}, &posted)
+	input := map[string]any{"body": "", "client_message_id": "with-files", "mentions": mentions, "attachment_ids": []string{note.ID, picture.ID}}
+	// Hold the deletion transaction open after its eligibility check. Send and
+	// commit through HTTP before the same deletion transaction issues its DELETE.
+	err := completionTx(env, func(ctx context.Context, tx pgx.Tx, _ collaboration.Actor) error {
+		a, err := attachments.Load(ctx, tx, note.ID)
+		if err != nil {
+			return err
+		}
+		if a.MessageID != "" {
+			return fmt.Errorf("expected pending attachment %s", note.ID)
+		}
+		owner.must(http.StatusCreated, http.MethodPost, messagesPath, input, &posted)
+		_, err = attachments.Delete(ctx, tx, note.ID)
+		if !errors.Is(err, attachments.ErrNotFound) {
+			return fmt.Errorf("delete after send returned %v", err)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res := owner.must(http.StatusOK, http.MethodGet, "attachments/"+note.ID, nil, nil); string(res.Body) != "remember the milk" {
+		t.Fatal("sent file changed")
+	}
+	t.Run("replay checks attachment identities", func(t *testing.T) {
+		input["attachment_ids"] = []string{picture.ID, note.ID}
+		var replay struct {
+			ID          string
+			Attachments []attachmentView
+		}
+		owner.must(http.StatusCreated, http.MethodPost, messagesPath, input, &replay)
+		if replay.ID != posted.ID || len(replay.Attachments) != 2 {
+			t.Fatalf("replay = %+v", replay)
+		}
+		input["attachment_ids"] = []string{note.ID}
+		owner.expectError(http.StatusConflict, "", http.MethodPost, messagesPath, input)
+	})
 	t.Run("message carries attachments", func(t *testing.T) {
 		if posted.Body != "请查看附件。" || len(posted.Attachments) != 2 || posted.Attachments[0].ID != note.ID || posted.Attachments[0].MessageID != posted.ID {
 			t.Fatalf("posted = %+v", posted)

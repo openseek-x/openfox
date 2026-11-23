@@ -2,8 +2,11 @@ package supervisor
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
+	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -112,5 +115,38 @@ func TestRuntimeRequiresDurableLaunchMarker(t *testing.T) {
 	defer adapter.mu.Unlock()
 	if adapter.starts != 0 || center.snapshot().results[0].Status != "FAILED" {
 		t.Fatal("runtime started or failure result was lost")
+	}
+}
+
+func TestFinalResultRejectionLeavesDiagnosticAndStopsRetries(t *testing.T) {
+	ctx := t.Context()
+	journal, err := OpenJournal(ctx, filepath.Join(t.TempDir(), "journal.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer journal.Close()
+	if _, err = journal.Begin(ctx, testOrg, testRun, 1, testOffer); err != nil {
+		t.Fatal(err)
+	}
+	in := ResultInput{ID: newUUID(), Generation: 1, Status: "SUCCEEDED"}
+	if err = journal.SaveResult(ctx, testOrg, testRun, in); err != nil {
+		t.Fatal(err)
+	}
+	calls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		w.WriteHeader(http.StatusConflict)
+		_, _ = w.Write([]byte(`{"error":{"code":"RESULT_FINALIZED"}}`))
+	}))
+	defer server.Close()
+	s := Supervisor{config: Config{Client: &Client{BaseURL: server.URL, Token: func(context.Context) (string, error) { return "fixture", nil }}, Journal: journal, Logger: slog.Default()}}
+	s.flushResults(ctx)
+	s.flushResults(ctx)
+	var detail string
+	if err := journal.db.QueryRowContext(ctx, "SELECT detail FROM run_journal WHERE run_id=?", testRun).Scan(&detail); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 1 || !strings.Contains(detail, in.ID) || !strings.Contains(detail, "RESULT_FINALIZED") {
+		t.Fatalf("requests %d, diagnostic %q", calls, detail)
 	}
 }

@@ -15,6 +15,31 @@ import tempfile
 import time
 
 
+OPTIONAL_FIXTURES = {
+    'TestAsanaBrowserHarness': 'OPENFOX_ASANA_BROWSER_FILE',
+    'TestAzureBrowserHarness': 'OPENFOX_AZURE_BROWSER_FILE',
+    'TestBitbucketBrowserHarness': 'OPENFOX_BITBUCKET_BROWSER_FILE',
+    'TestBuglyBrowserHarness': 'OPENFOX_BUGLY_BROWSER_FILE',
+    'TestCNBBrowserHarness': 'OPENFOX_CNB_BROWSER_FILE',
+    'TestCodeBuddyNativeContextToProcess': 'OPENFOX_TEST_CODEBUDDY_SANDBOX_WRAPPER',
+    'TestCodeCommitBrowserHarness': 'OPENFOX_I13_BROWSER_FILE',
+    'TestCodeupBrowserHarness': 'OPENFOX_CODEUP_BROWSER_FILE',
+    'TestDiscordBrowserHarness': 'OPENFOX_I17_BROWSER_FILE',
+    'TestGitCodeBrowserHarness': 'OPENFOX_GITCODE_BROWSER_FILE',
+    'TestGongfengBrowserHarness': 'OPENFOX_GONGFENG_BROWSER_FILE',
+    'TestQQBrowserHarness': 'OPENFOX_I14_BROWSER_FILE',
+    'TestShortcutPersonalBrowserHarness': 'OPENFOX_SHORTCUT_BROWSER_FILE',
+    'TestSiteBrowserHarness': 'OPENFOX_SITE_BROWSER_FILE',
+    'TestSlackBrowserHarness': 'OPENFOX_I15_BROWSER_FILE',
+    'TestTAPDPersonalBrowserHarness': 'OPENFOX_TAPD_BROWSER_FILE',
+    'TestTeambitionBrowserHarness': 'OPENFOX_P02_BROWSER_FILE',
+    'TestTeamsBrowserHarness': 'OPENFOX_I16_BROWSER_FILE',
+    'TestTelegramBrowserHarness': 'OPENFOX_I18_BROWSER_FILE',
+    'TestYunxiaoBrowserHarness': 'OPENFOX_YUNXIAO_BROWSER_FILE',
+    'TestZohoBrowserHarness': 'OPENFOX_I06_BROWSER_FILE',
+}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path)
@@ -43,20 +68,24 @@ def main():
         return f'user=postgres host={socket} port=55476 dbname={database} sslmode=disable'
 
     def test_package(item):
-        index, package = item
+        index, package, suffix, flags = item
         name = package.rsplit('/', 1)[-1]
         database = f'functional_{index:02d}_{name}'
+        if suffix:
+            database = ('openfox_i07_' if suffix == 'bugly' else 'i13_') + database
+            name += '-' + suffix
         begin = time.monotonic()
         with (output / f'{name}-setup.log').open('w') as log:
             run(['createdb', '-T', 'functional_template', database], log)
             fixture = 'wp02_wp03' if name in ('wp02_wp03', 'wp16') else 'db'
             run(['psql', '-X', '-v', 'ON_ERROR_STOP=1', '-d', database,
                  '-f', str(repo / 'tests/integration' / fixture / 'fixture.sql')], log)
-        test_env = dict(env, OPENFOX_TEST_DATABASE_URL=dsn(database),
+        url = f'postgresql:///{database}?user=postgres&host={socket}&port=55476&sslmode=disable' if suffix else dsn(database)
+        test_env = dict(env, OPENFOX_TEST_DATABASE_URL=url, OPENFOX_TEST_DATABASE_ADMIN_URL=dsn('postgres'),
                         OPENFOX_WP02_WP03_REQUIRE_HTTP='1',
                         OFD_REAL_CODEX='1' if args.real_codex else '0')
         with (output / f'{name}.jsonl').open('w') as log:
-            result = subprocess.run(['go', 'test', package, '-count=1', '-json', '-timeout=20m'],
+            result = subprocess.run(['go', 'test', package, '-count=1', '-json', '-timeout=20m', *flags],
                                     cwd=repo, env=test_env, stdout=log, stderr=subprocess.STDOUT)
         summary = {'package': package, 'database': database, 'exit_code': result.returncode,
                    'seconds': round(time.monotonic() - begin, 2), 'pass': [], 'fail': [], 'skip': []}
@@ -68,6 +97,11 @@ def main():
             if event.get('Test') and event.get('Action') in ('pass', 'fail', 'skip'):
                 summary[event['Action']].append(event['Test'])
         permitted_skips = set() if args.real_codex else {'TestDaemonExecutesDispatchedRunWithRealCodex'}
+        if not args.real_codex:
+            permitted_skips.add('TestRealCodexArtifactReview')
+        if test_env.get('OFD_REAL_OFFICE_STAGE8') != '1':
+            permitted_skips.add('TestRealOfficeStage8')
+        permitted_skips.update(test for test, variable in OPTIONAL_FIXTURES.items() if not test_env.get(variable))
         summary['unexpected_skips'] = sorted(set(summary['skip']) - permitted_skips)
         print(json.dumps({k: len(v) if isinstance(v, list) else v for k, v in summary.items()}), flush=True)
         return summary
@@ -88,8 +122,18 @@ def main():
             run([str(root / 'server'), 'migrate', '--apply', '--database-url-file', str(url_file),
                  '--dir', str(repo / 'db/migrations')], log)
         packages = subprocess.check_output(['go', 'list', './tests/integration/...'], cwd=repo, text=True).splitlines()
+        suites = []
+        for index, package in enumerate(packages):
+            flags = []
+            if package.endswith('/stage3'):
+                bugly = 'TestBuglyHTTP(CreateAuthorizationAndDuplicate|BoundsAndPrivateSpace)'
+                codecommit = 'TestCodeCommitAuthenticatedHTTPControl'
+                suites.extend([(index, package, 'bugly', ['-run', f'^{bugly}$']),
+                               (index, package, 'codecommit', ['-run', f'^{codecommit}$'])])
+                flags = ['-skip', f'^({bugly}|{codecommit})$']
+            suites.append((index, package, '', flags))
         with concurrent.futures.ThreadPoolExecutor(max_workers=args.jobs) as pool:
-            futures = {pool.submit(test_package, item): item[1] for item in enumerate(packages)}
+            futures = {pool.submit(test_package, item): item[1] for item in suites}
             for future in concurrent.futures.as_completed(futures):
                 try:
                     results.append(future.result())

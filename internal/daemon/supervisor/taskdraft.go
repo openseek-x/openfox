@@ -20,7 +20,10 @@ func (s *Supervisor) DraftTask(ctx context.Context, raw json.RawMessage) (any, e
 		return nil, err
 	}
 	adapter := s.adapterFor(rc.Runtime)
-	if adapter == nil {
+	draftAdapter, ok := adapter.(interface {
+		StartToolFree(context.Context, runtime.RunRequest) (runtime.Execution, error)
+	})
+	if !ok {
 		return nil, runtime.ErrUnsupported
 	}
 	select {
@@ -57,7 +60,7 @@ func (s *Supervisor) DraftTask(ctx context.Context, raw json.RawMessage) (any, e
 			applyMachineProxy(&settings, env)
 		}
 	}
-	run, err := adapter.Start(ctx, runtime.RunRequest{
+	run, err := draftAdapter.StartToolFree(ctx, runtime.RunRequest{
 		WorkingDirectory: dir, ApprovalMode: mode, Prompt: "Return only one JSON object with a title (1–200 characters) and description (1–10000 characters) for the requested task. Use the language of the brief. Include assignee_email or assignee_name only if explicitly specified in the brief. Use no tools.\n\n" + rc.Prompt,
 		Instructions: rc.Instructions, Model: rc.Model, ReasoningEffort: rc.ReasoningEffort, Environment: settings.environment, EnvironmentAllowlist: settings.allowlist, Args: settings.args, Timeout: 5 * time.Minute,
 	})

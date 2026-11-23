@@ -211,4 +211,32 @@ func TestAgentTaskCreation(t *testing.T) {
 			}
 		}
 	}
+
+	t.Run("triage moves both activity and notification to the destination", func(t *testing.T) {
+		b.exec(`UPDATE openfox.spaces SET triage_enabled=true WHERE id=$1`, b.foxSpace)
+		b.owner.json(201, "POST", b.path("/spaces/"+b.foxSpace+"/triage-rules"), map[string]any{
+			"name": "Route incoming tasks", "conditions": []any{}, "actions": []any{map[string]string{"type": "move_space", "value": b.secSpace}},
+		}, nil)
+		var statusID string
+		b.scan(&statusID, `SELECT id::text FROM openfox.task_statuses WHERE organization_id=$1 AND category='TRIAGE' LIMIT 1`, b.org)
+		id := post(b.owner, map[string]string{"brief": "Route this draft", "agent_id": agent, "status_id": statusID}, b.newUUID(), 201)
+		if _, err := cmds.ClaimCommand(b.ctx, sel, id); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := cmds.CompleteCommand(b.ctx, sel, id, devices.CommandResultInput{Status: "SUCCEEDED", Result: json.RawMessage(`{"title":"Routed","description":"Route this draft"}`)}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := dw.RunOnce(b.ctx); err != nil {
+			t.Fatal(err)
+		}
+		var correct bool
+		b.scan(&correct, `SELECT EXISTS (SELECT 1 FROM openfox.tasks t
+			JOIN openfox.spaces s ON s.organization_id=t.organization_id AND s.id=t.space_id
+			JOIN openfox.task_activities a ON a.organization_id=t.organization_id AND a.task_id=t.id AND a.space_id=t.space_id AND a.kind='task.via_agent'
+			JOIN openfox.notifications n ON n.organization_id=t.organization_id AND n.task_id=t.id AND n.task_draft_id=$1
+			WHERE t.id=$1 AND s.id=$2 AND n.safe_summary='已创建任务 ' || s.prefix || '-' || t.sequence::text)`, id, b.secSpace)
+		if !correct {
+			t.Fatal("routed draft has incorrect activity or notification")
+		}
+	})
 }

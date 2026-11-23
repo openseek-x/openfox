@@ -5,6 +5,7 @@ package executiondelivery
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"openfox/internal/execution"
@@ -26,6 +27,7 @@ var (
 	ErrForbidden              = errors.New("executiondelivery: action forbidden")
 	ErrEventConflict          = errors.New("executiondelivery: event conflict")
 	ErrResultConflict         = errors.New("executiondelivery: result conflict")
+	ErrResultFinalized        = fmt.Errorf("%w: run result is final", ErrResultConflict)
 	ErrGenerationConflict     = errors.New("executiondelivery: stale generation")
 	ErrReconciliationRequired = errors.New("executiondelivery: reconciliation is required before result acceptance")
 	ErrCursorExpired          = errors.New("executiondelivery: event cursor expired")

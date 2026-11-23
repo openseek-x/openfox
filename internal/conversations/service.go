@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -274,7 +275,7 @@ func (s Service) PostMessage(ctx context.Context, tx pgx.Tx, organizationID, con
 		if existing, found, err := s.findMessageByClientID(ctx, tx, organizationID, conversationID, input.ClientMessageID); err != nil {
 			return Message{}, err
 		} else if found {
-			if existing.Kind != "TEXT" || existing.AuthorUserID != actor.UserID || existing.AssistantAction != input.AssistantAction || existing.Body != input.Body || existing.ReplyToID != input.ReplyToID || !sameMentions(existing.Mentions, input.Mentions) || !bytes.Equal(browserContextJSON(existing.BrowserContexts), browserContextJSON(input.BrowserContexts)) {
+			if existing.Kind != "TEXT" || existing.AuthorUserID != actor.UserID || existing.AssistantAction != input.AssistantAction || existing.Body != input.Body || existing.ReplyToID != input.ReplyToID || !sameMentions(existing.Mentions, input.Mentions) || !sameAttachmentIDs(existing.Attachments, input.AttachmentIDs) || !bytes.Equal(browserContextJSON(existing.BrowserContexts), browserContextJSON(input.BrowserContexts)) {
 				return Message{}, ErrDuplicateMessage
 			}
 			if err := replayTelegramInput(ctx, tx, conversationID, actor.UserID, input, existing.ID); err != nil {
@@ -1184,6 +1185,23 @@ func insertCommentMentions(ctx context.Context, tx pgx.Tx, organizationID, comme
 	return nil
 }
 
+func sameAttachmentIDs(stored []attachments.Attachment, requested []string) bool {
+	if len(stored) != len(requested) {
+		return false
+	}
+	ids := make([]string, len(stored))
+	for i, item := range stored {
+		ids[i] = item.ID
+	}
+	want := slices.Clone(requested)
+	for i := range want {
+		want[i] = strings.ToLower(want[i])
+	}
+	slices.Sort(ids)
+	slices.Sort(want)
+	return slices.Equal(ids, want)
+}
+
 func (s Service) findMessageByClientID(ctx context.Context, tx pgx.Tx, organizationID, conversationID, clientID string) (Message, bool, error) {
 	if clientID == "" {
 		return Message{}, false, nil
@@ -1211,6 +1229,9 @@ func (s Service) findMessageByClientID(ctx context.Context, tx pgx.Tx, organizat
 		return Message{}, false, err
 	}
 	if err := LoadBrowserContexts(ctx, tx, one); err != nil {
+		return Message{}, false, err
+	}
+	if err := loadMessageAttachments(ctx, tx, one); err != nil {
 		return Message{}, false, err
 	}
 	return one[0], true, nil

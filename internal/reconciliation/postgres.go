@@ -603,7 +603,12 @@ func (PGStore) CloseCaseProcessAlive(ctx context.Context, tx pgx.Tx, item Case, 
 
 // ListEvidence 列出案的证据（时间升序，上限 100）。
 func (PGStore) ListEvidence(ctx context.Context, tx pgx.Tx, runID string) ([]Evidence, error) {
-	rows, err := tx.Query(ctx, evidenceQuery+` WHERE organization_id = openfox_private.current_organization_id() AND run_id = $1::uuid ORDER BY created_at DESC, id LIMIT 100`, runID)
+	rows, err := tx.Query(ctx, `SELECT `+evidenceReturning+`, EXISTS(
+		SELECT 1 FROM openfox.run_results r JOIN openfox.run_reconciliation_cases c
+		  ON c.organization_id=r.organization_id AND c.run_id=r.run_id AND c.generation=r.generation
+		WHERE c.id=e.case_id AND r.organization_id=e.organization_id AND r.id=e.result_id AND r.run_id=e.run_id)
+		FROM openfox.run_reconciliation_evidence e
+		WHERE e.organization_id = openfox_private.current_organization_id() AND e.run_id = $1::uuid ORDER BY e.created_at DESC, e.id LIMIT 100`, runID)
 	if err != nil {
 		return nil, err
 	}
@@ -611,7 +616,7 @@ func (PGStore) ListEvidence(ctx context.Context, tx pgx.Tx, runID string) ([]Evi
 	items := make([]Evidence, 0)
 	for rows.Next() {
 		var item Evidence
-		if err := rows.Scan(evidenceArgs(&item)...); err != nil {
+		if err := rows.Scan(append(evidenceArgs(&item), &item.StoredResult)...); err != nil {
 			return nil, err
 		}
 		items = append(items, item)

@@ -131,7 +131,7 @@ export const slackZh = {
   centralReplies:
     "中央应用负责通知和获准的任务预览。回复通知不会写回任务或接续 Agent；请打开任务链接或使用对应的 Agent App。",
   notificationHelp:
-    "Slack 通知使用独立的 42 项事件选择和分组静音。首次默认关闭，私聊通知默认关闭。",
+    "Slack 通知使用独立的事件选择和分组静音。首次默认关闭，私聊通知默认关闭。",
   manageIdentity: "管理 Slack 身份",
   reasonGeneric: "需要处理，请核对授权或应用配置。",
   errorGeneric: "操作失败，请刷新状态后检查配置。",

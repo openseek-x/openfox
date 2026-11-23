@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"openfox/internal/api"
+	"openfox/internal/automations"
 	"openfox/internal/collaboration"
 	"openfox/internal/dispatch"
 	"openfox/internal/secrets"
@@ -1012,5 +1013,37 @@ func TestAutomationResultNotification(t *testing.T) {
 	env.other().must(http.StatusOK, http.MethodGet, "inbox", nil, &otherInbox)
 	if strings.Contains(string(otherInbox), "AUTOMATION_RESULT") {
 		t.Fatalf("non-notified user has AUTOMATION_RESULT: %s", otherInbox)
+	}
+}
+
+func TestScheduleScanDoesNotOverwriteEditedTrigger(t *testing.T) {
+	env := newS3Env(t)
+	ensureDirectory(env)
+	created := env.createAutomation(env.insertAgent(env.space.ID), scheduleTrigger("hourly", map[string]any{"minute": 0}))
+	id := created.Automation.ID
+	env.exec(`UPDATE openfox.automation_triggers SET next_run_at=now()-interval '1 hour' WHERE automation_id=$1`, id)
+	svc := automations.Service{}
+	var pending []automations.PendingRun
+	if err := completionTx(env, func(ctx context.Context, tx pgx.Tx, _ collaboration.Actor) error {
+		work, _, err := svc.PendingWork(ctx, tx)
+		pending = work
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(pending) != 1 || pending[0].AutomationID != id {
+		t.Fatalf("pending = %+v", pending)
+	}
+	saved := time.Now().UTC().Add(24 * time.Hour).Truncate(time.Microsecond)
+	env.exec(`UPDATE openfox.automation_triggers SET next_run_at=$2,version=version+1 WHERE automation_id=$1`, id, saved)
+	if err := completionTx(env, func(ctx context.Context, tx pgx.Tx, _ collaboration.Actor) error {
+		return svc.ApplyPending(ctx, tx, env.org, pending[0])
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var next time.Time
+	env.scalar(&next, `SELECT next_run_at FROM openfox.automation_triggers WHERE automation_id=$1`, id)
+	if !next.Equal(saved) || env.runCount(id, "schedule") != 0 {
+		t.Fatal("stale work ran or overwrote the new plan")
 	}
 }

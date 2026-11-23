@@ -176,7 +176,7 @@ func Delete(ctx context.Context, tx pgx.Tx, id string) (string, error) {
 	var key string
 	err := tx.QueryRow(ctx, `
 		DELETE FROM openfox.attachments
-		 WHERE organization_id = openfox_private.current_organization_id() AND id = $1::uuid AND comment_thread_id IS NULL
+		 WHERE organization_id = openfox_private.current_organization_id() AND id = $1::uuid AND comment_thread_id IS NULL AND message_id IS NULL
 		RETURNING file_key`, id).Scan(&key)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", ErrNotFound
