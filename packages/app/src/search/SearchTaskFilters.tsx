@@ -416,6 +416,7 @@ function ValueEditor({
     { field, op, values } = condition;
   const [opOpen, setOpOpen] = useState(false),
     [search, setSearch] = useState("");
+  const operatorButton = useRef<HTMLButtonElement>(null);
   const [customDate, setCustomDate] = useState(
     () => field === "createdAt" && !!values[0]?.includes(":"),
   );
@@ -464,8 +465,9 @@ function ValueEditor({
   return (
     <div onKeyDown={(e) => e.stopPropagation()}>
       {ops.length > 1 && (
-        <div className="relative border-b border-line-default px-2 py-1">
+        <div className="border-b border-line-default px-2 py-1">
           <button
+            ref={operatorButton}
             type="button"
             aria-label={t("tasks.filters.operator")}
             aria-expanded={opOpen}
@@ -475,36 +477,38 @@ function ValueEditor({
             {t(`searchTaskFilters.operators.${op}`)}
             <Icon name="chevron-down" size={12} />
           </button>
-          {opOpen && (
-            <div
-              role="menu"
-              className="absolute left-2 top-full z-10 max-h-64 min-w-36 overflow-auto rounded-lg border border-line-default bg-surface-card p-1 shadow-popover"
-            >
-              {ops.map((next) => (
-                <button
-                  type="button"
-                  role="menuitemradio"
-                  aria-checked={op === next}
-                  key={next}
-                  onClick={() => {
-                    setCondition({
-                      ...condition,
-                      op: next,
-                      values:
-                        noOperand(next) || twoOperands(next) !== twoOperands(op)
-                          ? []
-                          : values,
-                    });
-                    setOpOpen(false);
-                  }}
-                  className="flex w-full items-center justify-between gap-2 rounded px-2 py-1 text-left text-caption hover:bg-surface-hover"
-                >
-                  {t(`searchTaskFilters.operators.${next}`)}
-                  {op === next && <Icon name="check" size={12} />}
-                </button>
-              ))}
-            </div>
-          )}
+          <Popover
+            open={opOpen}
+            anchorRef={operatorButton}
+            onOpenChange={setOpOpen}
+            role="menu"
+            aria-label={t("tasks.filters.operator")}
+            className="max-h-64 min-w-36 overflow-auto rounded-lg border-line-default"
+          >
+            {ops.map((next) => (
+              <button
+                type="button"
+                role="menuitemradio"
+                aria-checked={op === next}
+                key={next}
+                onClick={() => {
+                  setCondition({
+                    ...condition,
+                    op: next,
+                    values:
+                      noOperand(next) || twoOperands(next) !== twoOperands(op)
+                        ? []
+                        : values,
+                  });
+                  setOpOpen(false);
+                }}
+                className="flex w-full items-center justify-between gap-2 rounded px-2 py-1 text-left text-caption hover:bg-surface-hover"
+              >
+                {t(`searchTaskFilters.operators.${next}`)}
+                {op === next && <Icon name="check" size={12} />}
+              </button>
+            ))}
+          </Popover>
         </div>
       )}
       {noOperand(op) ? null : freeText ? (

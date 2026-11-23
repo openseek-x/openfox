@@ -20,6 +20,7 @@ import {
   Switch,
   TextInput,
   Tooltip,
+  useDrawerOutsideClick,
   cn,
   useToast,
 } from "@openfox/ui";
@@ -90,6 +91,8 @@ export function CrewSettingsDrawer({
     if (dirty.current) setPending(() => action);
     else action();
   };
+  const panel = useRef<HTMLElement>(null);
+  useDrawerOutsideClick(panel, true, () => guard(onClose));
   useEffect(() => {
     const frame = requestAnimationFrame(() => setEntered(true));
     return () => cancelAnimationFrame(frame);
@@ -115,6 +118,8 @@ export function CrewSettingsDrawer({
 
   return createPortal(
     <aside
+      ref={panel}
+      data-openfox-settings-drawer=""
       role="complementary"
       aria-label={t("agents.crew.drawerLabel", { name: crew?.name ?? "" })}
       className={cn(

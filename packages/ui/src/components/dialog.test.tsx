@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { Dialog } from "./Dialog";
+import { Drawer } from "./Drawer";
 
 function NestedDialogs() {
   const [open, setOpen] = useState(false);
@@ -57,4 +58,36 @@ it("restores scrolling when a parent and child unmount together", async () => {
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(document.body.style.overflow).toBe("auto");
   document.body.style.overflow = "";
+});
+
+it("keeps the task selected by an outside click while its drawer is still rendering", () => {
+  const state = history.state;
+  const href = location.href;
+  const close = vi.fn();
+  vi.useFakeTimers();
+  try {
+    render(
+      <>
+        <button
+          onClick={() => history.replaceState({ task: 2 }, "", "?task=2")}
+        >
+          Select task 2
+        </button>
+        <Drawer open modal={false} title="Task 1" onClose={close}>
+          Task detail
+        </Drawer>
+      </>,
+    );
+    const row = screen.getByRole("button", { name: "Select task 2" });
+    // A second selection can replace the history entry at the same URL.
+    for (let i = 0; i < 2; i++) {
+      fireEvent.pointerDown(row, { button: 0 });
+      fireEvent.click(row);
+      vi.runOnlyPendingTimers();
+      expect(close).not.toHaveBeenCalled();
+    }
+  } finally {
+    history.replaceState(state, "", href);
+    vi.useRealTimers();
+  }
 });

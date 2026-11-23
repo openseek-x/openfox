@@ -200,15 +200,25 @@ describe("搜索结果打开任务：在当前页打开抽屉", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("Agent 目录且 Agent 设置抽屉开着：任务抽屉叠在上面，Esc 先关任务抽屉，Agent 抽屉还在", async () => {
+  it("从 Agent 设置抽屉外点击搜索，关闭设置并打开选中的任务", async () => {
     const user = userEvent.setup();
-    const path = "/o/o1/agents?agentSettings=a1&agentPanel=full&agentTab=tasks";
-    setup(path, { agentDrawer: true });
+    setup("/o/o1/agents?agentSettings=a1", { agentDrawer: true });
     const agentDrawer = await screen.findByRole("complementary", {
       name: "熊孩子 的设置",
     });
     await openFromSearch(user, "登录", "修复登录");
-    expect(where()).toBe(`${path}&task=PRD-12`);
+    expect(where()).toBe("/o/o1/agents?task=PRD-12");
+    expect(agentDrawer).not.toBeInTheDocument();
+    expect(await taskDrawer()).toBeInTheDocument();
+  });
+
+  it("Agent 目录且 Agent 设置抽屉开着：任务抽屉叠在上面，Esc 先关任务抽屉，Agent 抽屉还在", async () => {
+    const user = userEvent.setup();
+    const path = "/o/o1/agents?agentSettings=a1&agentPanel=full&agentTab=tasks";
+    setup(`${path}&task=PRD-12`, { agentDrawer: true });
+    const agentDrawer = await screen.findByRole("complementary", {
+      name: "熊孩子 的设置",
+    });
     const drawer = await taskDrawer();
     // 任务抽屉在 Agent 抽屉之上（z-40 > z-30）
     expect(drawer.parentElement).toHaveClass("z-40");
@@ -226,12 +236,31 @@ describe("搜索结果打开任务：在当前页打开抽屉", () => {
     await waitFor(() => expect(where()).toBe("/o/o1/agents"));
   });
 
+  it("叠加抽屉时点内部保持，点外部依次关闭任务和 Agent 设置", async () => {
+    const user = userEvent.setup();
+    const path = "/o/o1/agents?agentSettings=a1";
+    setup(`${path}&task=PRD-12`, { agentDrawer: true });
+    const drawer = await taskDrawer();
+    const agentDrawer = await screen.findByRole("complementary", {
+      name: "熊孩子 的设置",
+    });
+    await user.click(within(drawer).getByRole("heading"));
+    expect(where()).toBe(`${path}&task=PRD-12`);
+    const outside = screen.getByLabelText("路径");
+    await user.click(outside);
+    await waitFor(() => expect(where()).toBe(path));
+    expect(drawer).not.toBeInTheDocument();
+    expect(agentDrawer).toBeInTheDocument();
+    await user.click(outside);
+    await waitFor(() => expect(where()).toBe("/o/o1/agents"));
+    expect(agentDrawer).not.toBeInTheDocument();
+  });
+
   it("Agent 抽屉开着、焦点不在任务抽屉里时，Esc 不越过任务抽屉去关 Agent 抽屉", async () => {
     const user = userEvent.setup();
     const path = "/o/o1/agents?agentSettings=a1";
-    setup(path, { agentDrawer: true });
+    setup(`${path}&task=PRD-12`, { agentDrawer: true });
     await screen.findByRole("complementary", { name: "熊孩子 的设置" });
-    await openFromSearch(user, "登录", "修复登录");
     await taskDrawer();
     (document.activeElement as HTMLElement | null)?.blur();
     await user.keyboard("{Escape}");

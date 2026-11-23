@@ -61,6 +61,11 @@ export {
 } from "./components/Dialog";
 export { Drawer, type DrawerProps } from "./components/Drawer";
 export {
+  dismissOnBackdrop,
+  isOutsidePress,
+  useDrawerOutsideClick,
+} from "./components/outsideClick";
+export {
   ToastProvider,
   useToast,
   type ToastOptions,

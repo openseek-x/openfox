@@ -270,6 +270,22 @@ describe("抽屉历史栈", () => {
 });
 
 describe("非模态抽屉", () => {
+  it("任务菜单可以打开确认弹窗，点击弹窗外只关闭确认弹窗", async () => {
+    const user = userEvent.setup();
+    renderAt([`${list}?task=OPEN-1`]);
+    const drawer = await screen.findByRole("dialog");
+    await user.click(
+      await within(drawer).findByRole("button", { name: "更多操作" }),
+    );
+    const menu = await screen.findByRole("menu", { name: "更多操作" });
+    await user.click(within(menu).getByRole("menuitem", { name: "删除任务" }));
+    const confirm = await screen.findByRole("dialog", { name: "删除任务？" });
+    await user.click(confirm.parentElement!);
+    expect(confirm).not.toBeInTheDocument();
+    expect(drawer).toBeInTheDocument();
+    expect(where()).toBe(`${list}?task=OPEN-1`);
+  });
+
   it("没有 aria-modal，主导航仍可点击", async () => {
     const user = userEvent.setup();
     renderAt([`${list}?task=OPEN-1`]);

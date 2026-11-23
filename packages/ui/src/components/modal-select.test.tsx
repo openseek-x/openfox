@@ -6,7 +6,7 @@ import { expect, it, vi } from "vitest";
 import { Dialog } from "./Dialog";
 import { Select } from "./Select";
 
-it("keeps modal select options accessible and Escape closes only the list", async () => {
+it("keeps modal select options accessible and dismisses only the top layer", async () => {
   const onClose = vi.fn();
   function Harness() {
     const [value, setValue] = useState<string | null>(null);
@@ -34,4 +34,12 @@ it("keeps modal select options accessible and Escape closes only the list", asyn
   expect(modal.queryByRole("listbox")).not.toBeInTheDocument();
   expect(onClose).not.toHaveBeenCalled();
   expect(trigger).toHaveFocus();
+
+  await userEvent.click(trigger);
+  const backdrop = screen.getByRole("dialog", { name: "同步" }).parentElement!;
+  await userEvent.click(backdrop);
+  expect(modal.queryByRole("listbox")).not.toBeInTheDocument();
+  expect(onClose).not.toHaveBeenCalled();
+  await userEvent.click(backdrop);
+  expect(onClose).toHaveBeenCalledOnce();
 });

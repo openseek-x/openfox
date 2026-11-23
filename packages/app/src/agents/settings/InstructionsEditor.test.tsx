@@ -50,40 +50,46 @@ describe("instruction editing", () => {
     editor.destroy();
   });
 
-  it("preserves DOM, text and caret across expansion/Escape, then keeps the draft after a failed save", async () => {
-    const user = userEvent.setup();
-    const dirty = vi.fn();
-    render(
-      <InstructionsEditor
-        saved="old"
-        label="指令"
-        editable
-        onSave={async () => undefined}
-        onDirty={dirty}
-      />,
-    );
-    const input = screen.getByRole("textbox", {
-      name: "指令",
-    }) as HTMLTextAreaElement;
-    fireEvent.change(input, { target: { value: "unsaved 中文" } });
-    input.setSelectionRange(3, 5);
-    await user.click(screen.getByRole("button", { name: "展开编辑器" }));
-    expect(screen.getByRole("dialog", { name: "指令" })).toBeVisible();
-    expect(screen.getByRole("textbox", { name: "指令" })).toBe(input);
-    expect([input.selectionStart, input.selectionEnd]).toEqual([3, 5]);
-    fireEvent.change(input, { target: { value: "unsaved 中文 updated" } });
-    input.setSelectionRange(8, 10);
-    await user.keyboard("{Escape}");
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(input).toHaveValue("unsaved 中文 updated");
-    expect([input.selectionStart, input.selectionEnd]).toEqual([8, 10]);
-    await user.click(screen.getByRole("button", { name: "保存" }));
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: "保存" })).toBeEnabled(),
-    );
-    expect(input).toHaveValue("unsaved 中文 updated");
-    expect(dirty).toHaveBeenLastCalledWith(true);
-  });
+  it.each(["Escape", "backdrop"])(
+    "preserves DOM, text and caret when collapsed via %s, then keeps the draft after a failed save",
+    async (dismiss) => {
+      const user = userEvent.setup();
+      const dirty = vi.fn();
+      render(
+        <InstructionsEditor
+          saved="old"
+          label="指令"
+          editable
+          onSave={async () => undefined}
+          onDirty={dirty}
+        />,
+      );
+      const input = screen.getByRole("textbox", {
+        name: "指令",
+      }) as HTMLTextAreaElement;
+      fireEvent.change(input, { target: { value: "unsaved 中文" } });
+      input.setSelectionRange(3, 5);
+      await user.click(screen.getByRole("button", { name: "展开编辑器" }));
+      const dialog = screen.getByRole("dialog", { name: "指令" });
+      expect(dialog).toBeVisible();
+      expect(screen.getByRole("textbox", { name: "指令" })).toBe(input);
+      expect([input.selectionStart, input.selectionEnd]).toEqual([3, 5]);
+      fireEvent.change(input, { target: { value: "unsaved 中文 updated" } });
+      input.setSelectionRange(8, 10);
+      if (dismiss === "Escape") await user.keyboard("{Escape}");
+      else await user.click(dialog.parentElement!);
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(input).toHaveValue("unsaved 中文 updated");
+      expect(input).toHaveFocus();
+      expect([input.selectionStart, input.selectionEnd]).toEqual([8, 10]);
+      await user.click(screen.getByRole("button", { name: "保存" }));
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: "保存" })).toBeEnabled(),
+      );
+      expect(input).toHaveValue("unsaved 中文 updated");
+      expect(dirty).toHaveBeenLastCalledWith(true);
+    },
+  );
 
   it("keeps the rich editor instance and its cursor while expanded, and exports actual rich edits", async () => {
     const user = userEvent.setup();

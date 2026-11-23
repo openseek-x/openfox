@@ -102,6 +102,21 @@ describe("正文编辑器", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("点击斜杠菜单外部会关闭菜单并保留已输入的文字", async () => {
+    renderBody({ editable: true });
+    await waitFor(() =>
+      expect(editorArea()).toHaveAttribute("contenteditable", "true"),
+    );
+    await userEvent.click(editorArea());
+    await userEvent.keyboard("/标题");
+    const menu = await screen.findByRole("listbox", { name: "斜杠菜单" });
+    await userEvent.click(menu);
+    expect(menu).toBeInTheDocument();
+    await userEvent.click(document.body);
+    expect(menu).not.toBeInTheDocument();
+    expect(editorArea()).toHaveTextContent("/标题");
+  });
+
   it("附件超过 20 MB 时提示且不发出上传请求", async () => {
     const { server } = renderBody({ editable: true });
     await waitFor(() =>

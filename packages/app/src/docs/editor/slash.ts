@@ -1,5 +1,6 @@
 import { Extension, type Editor, type Range } from "@tiptap/core";
 import Suggestion, {
+  exitSuggestion,
   type SuggestionKeyDownProps,
   type SuggestionProps,
 } from "@tiptap/suggestion";
@@ -152,6 +153,7 @@ export interface SlashState {
   index: number;
   rect: DOMRect;
   select: (item: SlashItem) => void;
+  dismiss: () => void;
   /** 鼠标悬停时同步高亮项 */
   highlight: (index: number) => void;
 }
@@ -189,6 +191,7 @@ export const SlashCommand = Extension.create<SlashOptions>({
           props.run(editor);
         },
         render: () => {
+          const dismiss = () => exitSuggestion(this.editor.view);
           let list: SlashItem[] = [];
           let index = 0;
           let command: ((item: SlashItem) => void) | null = null;
@@ -202,6 +205,7 @@ export const SlashCommand = Extension.create<SlashOptions>({
               index,
               rect,
               select: (item) => run(item),
+              dismiss,
               highlight: (next) => {
                 index = next;
                 publish();

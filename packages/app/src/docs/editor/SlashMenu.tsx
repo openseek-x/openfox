@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 
 import { useT } from "@openfox/i18n";
-import { Icon, cn } from "@openfox/ui";
+import { Icon, cn, isOutsidePress } from "@openfox/ui";
 
 import type { SlashState } from "./slash";
 
@@ -10,6 +10,15 @@ import type { SlashState } from "./slash";
 export function SlashMenu({ state }: { state: SlashState }) {
   const t = useT();
   const list = useRef<HTMLDivElement | null>(null);
+  const { dismiss } = state;
+  useEffect(() => {
+    const onPointerDown = (event: PointerEvent) => {
+      if (isOutsidePress(event, list.current)) dismiss();
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () =>
+      document.removeEventListener("pointerdown", onPointerDown, true);
+  }, [dismiss]);
   // 键盘移动高亮时保持激活项可见
   useEffect(() => {
     list.current
@@ -20,6 +29,7 @@ export function SlashMenu({ state }: { state: SlashState }) {
   return (
     <div
       ref={list}
+      data-openfox-popover=""
       role="listbox"
       aria-label={t("docs.editor.slash.label")}
       // 不抢走编辑器焦点：点击菜单项时光标留在正文里

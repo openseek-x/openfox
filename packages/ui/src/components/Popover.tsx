@@ -10,6 +10,7 @@ import {
 import { createPortal } from "react-dom";
 
 import { cn } from "../cn";
+import { isOutsidePress } from "./outsideClick";
 
 export type Placement =
   | "bottom-start"
@@ -150,13 +151,11 @@ export function Popover({
   useEffect(() => {
     if (!open) return;
     const onPointer = (event: PointerEvent) => {
-      const target = event.target as Node;
       if (
-        panelRef.current?.contains(target) ||
-        anchorRef.current?.contains(target)
+        isOutsidePress(event, panelRef.current) &&
+        !anchorRef.current?.contains(event.target as Node)
       )
-        return;
-      onOpenChange(false);
+        onOpenChange(false);
     };
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
