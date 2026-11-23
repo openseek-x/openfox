@@ -282,6 +282,19 @@ describe("global task search filters", () => {
       ],
     });
   });
+  it("点击运算符菜单外的筛选框时保留筛选浮层", async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: "处理人" }));
+    await user.click(await screen.findByRole("button", { name: "切换运算符" }));
+    const operators = screen.getByRole("menu");
+    await user.click(operators);
+    expect(operators).toBeInTheDocument();
+    const search = screen.getByRole("textbox");
+    await user.click(search);
+    expect(operators).not.toBeInTheDocument();
+    expect(search).toHaveFocus();
+  });
+
   it("keeps checkboxes open, collapses row selections and combines both date tabs", async () => {
     const { user, wire } = setup();
     await user.click(screen.getByRole("button", { name: "状态" }));

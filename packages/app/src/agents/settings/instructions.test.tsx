@@ -163,6 +163,10 @@ describe("instruction history integration with existing client writes", () => {
     expect(await screen.findByRole("dialog", { name: /未保存/ })).toBeVisible();
     await user.click(screen.getByRole("button", { name: "继续编辑" }));
     expect(input).toHaveValue("keep this draft");
+    await user.click(screen.getByRole("main"));
+    expect(await screen.findByRole("dialog", { name: /未保存/ })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "继续编辑" }));
+    expect(input).toHaveValue("keep this draft");
   });
 
   it("a readonly member can browse visible history but cannot edit or restore", async () => {
@@ -179,7 +183,7 @@ describe("instruction history integration with existing client writes", () => {
     expect(screen.getByRole("button", { name: "恢复此版本" })).toBeDisabled();
   });
 
-  it("crew save failure retains its draft and Escape from the drawer requires confirmation", async () => {
+  it("crew save failure retains its draft until discarding after Escape or an outside click", async () => {
     const user = userEvent.setup();
     const value = crew("c1");
     renderSettings("/o/o1/agents?crewSettings=c1", (call) => {
@@ -220,5 +224,11 @@ describe("instruction history integration with existing client writes", () => {
     expect(input).toHaveValue("crew draft");
     await user.keyboard("{Escape}");
     expect(await screen.findByRole("dialog", { name: /未保存/ })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "继续编辑" }));
+    await user.click(screen.getByRole("main"));
+    expect(await screen.findByRole("dialog", { name: /未保存/ })).toBeVisible();
+    expect(input).toHaveValue("crew draft");
+    await user.click(screen.getByRole("button", { name: "放弃修改" }));
+    await waitFor(() => expect(drawer).not.toBeInTheDocument());
   });
 });

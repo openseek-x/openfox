@@ -696,6 +696,17 @@ describe("Agent 内嵌自动化", () => {
 });
 
 describe("创建与编辑", () => {
+  it("点击弹窗外部关闭编辑器，未提交的自动化不会创建", async () => {
+    const user = userEvent.setup();
+    const server = renderAt(listPath);
+    await user.click(await screen.findByRole("button", { name: "新建自动化" }));
+    const editor = screen.getByRole("dialog", { name: "新建自动化" });
+    await user.type(within(editor).getByLabelText(/标题/), "未提交");
+    await user.click(editor.parentElement!);
+    expect(editor).not.toBeInTheDocument();
+    expect(callsTo(server.calls, "POST", /\/automations$/)).toHaveLength(0);
+  });
+
   it("未开启直接对话的 Agent 禁用并说明原因", async () => {
     const user = userEvent.setup();
     renderAt(listPath);

@@ -19,6 +19,7 @@ import {
   ConfirmDialog,
   Spinner,
   cn,
+  dismissOnBackdrop,
   useModalBehavior,
   useToast,
   type IconName,
@@ -730,9 +731,7 @@ export function CommandPalette({
   return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-start justify-center bg-scrim/25 pt-[8vh]"
-      onPointerDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+      onPointerDown={dismissOnBackdrop(onClose)}
     >
       <div
         ref={panel}

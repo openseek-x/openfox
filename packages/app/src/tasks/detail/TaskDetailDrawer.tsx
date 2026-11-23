@@ -334,6 +334,7 @@ export function TaskDetailDrawer({
         <Drawer
           open
           modal={false}
+          itemKey={displayId}
           onClose={onClose}
           title={title}
           actions={actions}
