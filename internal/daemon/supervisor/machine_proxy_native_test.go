@@ -274,9 +274,11 @@ func TestMachineProxyNativeAdapters(t *testing.T) {
 			if e != nil && !os.IsNotExist(e) {
 				t.Fatal(e)
 			}
-			for _,entry := range entries {
- if name != "opencode" || entry.Name() != "opencode-sessions" { t.Fatal("runtime temporary state retained",entry.Name()) }
- }
+			for _, entry := range entries {
+				if name != "opencode" || entry.Name() != "opencode-sessions" {
+					t.Fatal("runtime temporary state retained", entry.Name())
+				}
+			}
 			t.Logf("native=%s mode=%s status=%s origin=%d synthetic_auth_matches=%d proxy_connects=%d native_override_proxy=%d policy_snapshots=%d state_clean=true", name, mode, result.Status, hits.Load(), authOK.Load(), proxyHits.Load(), overrideHits.Load(), reads.Load())
 		})
 	}

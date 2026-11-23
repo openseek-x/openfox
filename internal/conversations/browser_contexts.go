@@ -200,8 +200,14 @@ func LoadBrowserContexts(ctx context.Context, tx pgx.Tx, messages []Message) err
 	ids := make([]string, 0, len(messages))
 	index := map[string]int{}
 	for i, m := range messages {
+		if m.ID == "" {
+			continue
+		}
 		ids = append(ids, m.ID)
 		index[m.ID] = i
+	}
+	if len(ids) == 0 {
+		return nil
 	}
 	rows, err := tx.Query(ctx, `SELECT b.message_id::text,b.input_snapshot FROM openfox.message_browser_contexts b JOIN openfox.messages m ON m.organization_id=b.organization_id AND m.id=b.message_id WHERE b.organization_id=openfox_private.current_organization_id() AND b.message_id=ANY($1::uuid[])`, ids)
 	if err != nil {

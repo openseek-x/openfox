@@ -33,7 +33,7 @@ func TestReviewResultReconcilesAndRemainsIdempotent(t *testing.T) {
 	e.expectRow(`SELECT status || ':' || resolution FROM openfox.run_reconciliation_cases WHERE run_id=$1::uuid`, []any{lease.RunID}, "RESOLVED:RESULT_ACCEPTED")
 	e.expectReleasedOnce(lease.RunID)
 	input.Output = "同 ID 不同内容"
-	if err := appendResult(); !errors.Is(err, executiondelivery.ErrResultConflict) {
+	if err := appendResult(); !errors.Is(err, executiondelivery.ErrResultFinalized) {
 		t.Fatalf("冲突结果：%v", err)
 	}
 }

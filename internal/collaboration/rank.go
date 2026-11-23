@@ -3,9 +3,10 @@ package collaboration
 import (
 	"errors"
 	"regexp"
+	"strings"
 )
 
-// 手动排序键（tasks.rank）的分数排序算法。前端实现同一算法，修改时两边必须同步。
+// 手动排序键（tasks.rank）的分数排序算法。服务端根据前端提交的邻居 ID 计算。
 //
 // 键是字母表 "0123456789abcdefghijklmnopqrstuvwxyz"（顺序即 ASCII/C 排序）上的非空字符串，
 // 长度 1..64，按字典序比较（短串若是长串的前缀则更小），与数据库 COLLATE "C" 一致。
@@ -16,8 +17,7 @@ import (
 //
 //  1. a、b 都为空：返回 "i"。
 //  2. b 为空（追加到末尾）：RankAfter(a)。
-//     在 a 中找最后一个不是 'z' 的字符，把它加 1 并截掉其后的字符；a 全是 'z' 时在末尾追加 "i"。
-//     连续追加时每次只让最后一位 +1，长度几乎不增长。
+//     按 36 进制递增并保留宽度；全部进位时追加一组低位，供后续追加使用。
 //  3. a 是 b 的真前缀（含 a 为空）：b = a + rest，返回 a + lower(rest)，其中 lower(rest)
 //     是任一非空且小于 rest 的串：
 //     - rest[0] >= 2：取单字符 digit/2；
@@ -30,7 +30,7 @@ import (
 //     rest 为空取 "i"；rest[0] <= 34 取单字符 (digit + 36) / 2；rest[0] == 'z' 取 "z" + upper(rest[1:])。
 //  5. a >= b、键格式非法或结果超过 64 个字符返回错误。
 //
-// 看板拖动只写被拖动的那一行：取新位置前一个邻居 a 和后一个邻居 b 的有效键调用 RankBetween。
+// 拖动通常只写被拖动的任务。邻居之间没有可用键时，服务端按现有顺序重排空间内的键，再计算一次。
 const (
 	rankAlphabet  = "0123456789abcdefghijklmnopqrstuvwxyz"
 	rankMaxLength = 64
@@ -75,13 +75,13 @@ func RankAfter(a string) (string, error) {
 	}
 	for index := len(a) - 1; index >= 0; index-- {
 		if a[index] != 'z' {
-			return a[:index] + string(rankAlphabet[rankDigit(a[index])+1]), nil
+			return a[:index] + string(rankAlphabet[rankDigit(a[index])+1]) + strings.Repeat("0", len(a)-index-1), nil
 		}
 	}
 	if len(a)+1 > rankMaxLength {
 		return "", ErrRankExhausted
 	}
-	return a + "i", nil
+	return a + strings.Repeat("0", min(4, rankMaxLength-len(a))), nil
 }
 
 // RankBetween 返回严格介于 a 与 b 之间的键，规则见文件头注释。

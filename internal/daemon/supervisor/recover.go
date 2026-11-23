@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -98,7 +99,16 @@ func (s *Supervisor) flushResults(ctx context.Context) {
 		err := s.config.Client.AppendResult(request, result.OrganizationID, result.RunID, result.Input)
 		cancel()
 		if err != nil {
-			s.config.Logger.Warn("supervisor_result_retry_failed", "run_id", result.RunID, "error", err.Error())
+			var apiErr *APIError
+			if !errors.As(err, &apiErr) || apiErr.Status != http.StatusConflict || apiErr.Code != "RESULT_FINALIZED" {
+				s.config.Logger.Warn("supervisor_result_retry_failed", "run_id", result.RunID, "error", err.Error())
+				continue
+			}
+			if err := s.config.Journal.RejectFinalResult(ctx, result.RunID, result.Input); err != nil {
+				s.config.Logger.Error("supervisor_result_ack_failed", "error", err.Error())
+				continue
+			}
+			s.config.Logger.Warn("supervisor_result_permanently_rejected", "run_id", result.RunID, "generation", result.Input.Generation, "result_id", result.Input.ID, "code", apiErr.Code)
 			continue
 		}
 		if err := s.config.Journal.DeleteResult(ctx, result.RunID, result.Input.Generation); err != nil {

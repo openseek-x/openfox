@@ -372,23 +372,18 @@ func TestAccountBindings(t *testing.T) {
 
 	t.Run("list rows and readiness", func(t *testing.T) {
 		v := view(m1)
-		want := []string{"wechat", "github", "gitlab_cn", "gitlab", "gitee", "jira", "tapd", "zentao", "pingcode", "teambition", "slack", "feishu", "lark", "dingtalk"}
-		if len(v.Providers) != 14 || v.Email != "bind-m1@example.test" || len(v.JiraSites) != 0 {
-			t.Fatalf("view = %+v", v)
+		want := strings.Fields("wechat github bitbucket azure_devops gitlab_cn gitlab gitee jira tapd zentao asana zoho_bugtracker shortcut yunxiao pingcode teambition slack feishu lark dingtalk teams discord qq")
+		if len(v.Providers) != len(want) || v.Email != "bind-m1@example.test" || len(v.JiraSites) != 0 {
+			t.Fatalf("unexpected binding catalog (%d rows)", len(v.Providers))
 		}
+		methods := map[string]string{"wechat": "link", "teams": "link", "discord": "link", "qq": "link", "jira": "form", "tapd": "form", "zentao": "link", "pingcode": "link", "yunxiao": "link", "shortcut": "token", "slack": "none"}
 		for i, p := range v.Providers {
-			if p.ID != want[i] || p.OrganizationReady || p.Binding != nil {
+			method := methods[p.ID]
+			if method == "" {
+				method = "oauth"
+			}
+			if p.ID != want[i] || p.OrganizationReady || p.Binding != nil || p.Method != method || (p.Availability == "available") != (method != "none") {
 				t.Fatalf("row %d = %+v", i, p)
-			}
-			available := p.ID == "wechat" || p.ID == "github" || p.ID == "gitlab_cn" || p.ID == "gitlab" || p.ID == "gitee" || p.ID == "jira" || p.ID == "zentao" || p.ID == "pingcode" || p.ID == "feishu" || p.ID == "lark" || p.ID == "dingtalk"
-			if available != (p.Availability == "available") || (!available && p.Method != "none") {
-				t.Fatalf("row %d availability = %+v", i, p)
-			}
-		}
-		methods := map[string]string{"wechat": "link", "github": "oauth", "gitlab_cn": "oauth", "gitlab": "oauth", "gitee": "oauth", "jira": "form", "zentao": "link", "pingcode": "link", "feishu": "oauth", "lark": "oauth", "dingtalk": "oauth"}
-		for _, p := range v.Providers {
-			if m, ok := methods[p.ID]; ok && p.Method != m {
-				t.Fatalf("%s method = %s", p.ID, p.Method)
 			}
 		}
 		// GitHub：组织连接 ACTIVE 且服务端已配置才 ready；飞书：组织应用 ACTIVE。
@@ -681,7 +676,7 @@ func TestAccountBindings(t *testing.T) {
 		}
 		// 汇总响应里不含任何令牌 / 凭据字段。
 		status, payload := m1.do(http.MethodGet, bindURL, nil)
-		if status != http.StatusOK || strings.Contains(payload, "credentials") || strings.Contains(payload, "token") {
+		if status != http.StatusOK || strings.Contains(payload, "credentials") || strings.Contains(payload, `"token":`) || strings.Contains(payload, "access_token") || strings.Contains(payload, "refresh_token") || strings.Contains(payload, "personal-fixture") {
 			t.Fatalf("payload leaks: %d %.200s", status, payload)
 		}
 	})

@@ -771,6 +771,25 @@ func maxRank(ctx context.Context, tx pgx.Tx, spaceID, selfID string) (string, er
 
 // resolveRank 计算任务放到新位置后的排序键。after/before 为空表示没有该侧邻居；都为空放到末尾。
 func resolveRank(ctx context.Context, tx pgx.Tx, spaceID, selfID, afterID, beforeID string) (string, error) {
+	rank, err := rankForNeighbors(ctx, tx, spaceID, selfID, afterID, beforeID)
+	if !errors.Is(err, ErrRankExhausted) {
+		return rank, err
+	}
+	// All ranking writers hold the space row before locking individual tasks.
+	_, err = tx.Exec(ctx, `WITH ordered AS (
+		SELECT t.id, row_number() OVER (ORDER BY `+effectiveRankSQL+`, t.id) AS position
+		FROM openfox.tasks t WHERE t.organization_id=openfox_private.current_organization_id()
+		  AND t.space_id=$1::uuid AND t.deleted_at IS NULL)
+		UPDATE openfox.tasks t SET rank='h' || lpad(ordered.position::text, 12, '0')
+		FROM ordered WHERE t.organization_id=openfox_private.current_organization_id()
+		AND t.space_id=$1::uuid AND t.id=ordered.id`, spaceID)
+	if err != nil {
+		return "", err
+	}
+	return rankForNeighbors(ctx, tx, spaceID, selfID, afterID, beforeID)
+}
+
+func rankForNeighbors(ctx context.Context, tx pgx.Tx, spaceID, selfID, afterID, beforeID string) (string, error) {
 	var lower, upper string
 	var err error
 	switch {
@@ -780,6 +799,9 @@ func resolveRank(ctx context.Context, tx pgx.Tx, spaceID, selfID, afterID, befor
 		}
 		if upper, err = effectiveRankOf(ctx, tx, spaceID, beforeID); err != nil {
 			return "", err
+		}
+		if lower == upper && afterID != beforeID {
+			return "", ErrRankExhausted
 		}
 		if lower >= upper {
 			return "", errInvalidPosition
@@ -804,6 +826,9 @@ func resolveRank(ctx context.Context, tx pgx.Tx, spaceID, selfID, afterID, befor
 		}
 	}
 	rank, err := RankBetween(lower, upper)
+	if errors.Is(err, ErrRankExhausted) {
+		return "", err
+	}
 	if err != nil {
 		return "", errInvalidPosition
 	}
@@ -1045,6 +1070,11 @@ func (s Service) UpdateTask(ctx context.Context, tx pgx.Tx, organizationID, spac
 	assignmentConversation, err := NormalizeAssignmentConversation(input.AssignmentConversation)
 	if err != nil {
 		return Task{}, err
+	}
+	if input.Position != nil {
+		if _, err := s.loadSpace(ctx, tx, organizationID, spaceID, actor.UserID, true); err != nil {
+			return Task{}, err
+		}
 	}
 	newParent := ""
 	if input.ParentTaskID.Set {

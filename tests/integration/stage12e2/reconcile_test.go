@@ -46,6 +46,9 @@ func TestReconciliationEvidenceListIsAdminOnlyAndRedacted(t *testing.T) {
 	item := fixture.seedReconciling()
 	uncertain := item.seedEvidence("PROCESS_NOT_FOUND", "ACCEPTED", false, "pid may have been reused")
 	confirmed := item.seedEvidence("RESULT_CONFIRMED", "ACCEPTED", true, "result uploaded before restart")
+	exited := item.seedEvidence("PROCESS_EXITED", "ACCEPTED", true, "exit with stored result")
+	unlinked := item.seedEvidence("RESULT_CONFIRMED", "ACCEPTED", true, "result from another delivery")
+	env.exec(`UPDATE openfox.run_reconciliation_evidence SET result_id=gen_random_uuid() WHERE id=$1`, unlinked)
 	stale := item.seedEvidence("RESULT_CONFIRMED", "STALE", true, "old supervisor")
 	noResult := item.seedEvidence("RESULT_CONFIRMED", "ACCEPTED", false, "no result id")
 
@@ -77,7 +80,7 @@ func TestReconciliationEvidenceListIsAdminOnlyAndRedacted(t *testing.T) {
 	for _, evidence := range listed.Evidence {
 		byID[evidence.ID] = evidence
 	}
-	if len(byID) != 4 {
+	if len(byID) != 6 {
 		t.Fatalf("evidence = %+v", listed.Evidence)
 	}
 	if got := byID[uncertain]; got.Kind != "PROCESS_NOT_FOUND" || got.Source != "DAEMON" || got.Detail != "pid may have been reused" ||
@@ -85,7 +88,7 @@ func TestReconciliationEvidenceListIsAdminOnlyAndRedacted(t *testing.T) {
 		t.Fatalf("uncertain = %+v", got)
 	}
 	// 只有「已受理 + 结果确认 + 带结果 + 案仍开放」才允许接受已有结果。
-	if !byID[confirmed].CanAcceptResult || byID[stale].CanAcceptResult || byID[noResult].CanAcceptResult {
+	if !byID[exited].CanAcceptResult || byID[unlinked].CanAcceptResult || !byID[confirmed].CanAcceptResult || byID[stale].CanAcceptResult || byID[noResult].CanAcceptResult {
 		t.Fatalf("can_accept_result: confirmed=%v stale=%v noResult=%v",
 			byID[confirmed].CanAcceptResult, byID[stale].CanAcceptResult, byID[noResult].CanAcceptResult)
 	}

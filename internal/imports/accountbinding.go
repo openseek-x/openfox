@@ -97,7 +97,7 @@ var gitBindingRows = []struct{ id, name string }{
 
 func isGitLabBinding(id string) bool { return id == "gitlab" || id == "gitlab_cn" }
 
-// bindingRowList 返回 14 行：GitHub 之后依次插入极狐、GitLab 自部署版、Gitee。
+// bindingRowList 将其他 Git 服务商插入 GitHub 之后。
 func bindingRowList() []struct{ id, name string } {
 	out := make([]struct{ id, name string }, 0, len(bindingProviders)+len(gitBindingRows))
 	for _, p := range bindingProviders {

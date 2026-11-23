@@ -27,6 +27,18 @@ func TestNextRunAfter(t *testing.T) {
 		want     time.Time
 	}{
 		{
+			name:     "纽约春季跳时后仍能到达当天九点",
+			schedule: Schedule{Frequency: "daily", Time: "09:00", Timezone: "America/New_York"},
+			after:    time.Date(2026, 3, 8, 6, 0, 0, 0, time.UTC),
+			want:     time.Date(2026, 3, 8, 13, 0, 0, 0, time.UTC),
+		},
+		{
+			name:     "秋季回拨后重复的一点半是另一个时刻",
+			schedule: Schedule{Frequency: "daily", Time: "01:30", Timezone: "America/New_York"},
+			after:    time.Date(2026, 11, 1, 5, 30, 0, 0, time.UTC),
+			want:     time.Date(2026, 11, 1, 6, 30, 0, 0, time.UTC),
+		},
+		{
 			name:     "每小时在第 15 分",
 			schedule: Schedule{Frequency: "hourly", Minute: minute(15), Timezone: "UTC"},
 			after:    time.Date(2026, 10, 30, 9, 20, 0, 0, time.UTC),

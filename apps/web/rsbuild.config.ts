@@ -28,7 +28,10 @@ if (!Number.isInteger(port) || port < 1024 || port > 65535) {
 export default defineConfig({
   plugins: [pluginReact()],
   source: { entry: { index: "./src/main.tsx" } },
-  html: { template: "./index.html" },
+  html: {
+    template: "./index.html",
+    favicon: "../../packages/ui/src/icons/openfox.png",
+  },
   // 网页由静态服务器在根路径提供（桌面端也加载同一个网页地址），深层路由刷新时资源路径要从根开始
   output: {
     assetPrefix: "/",

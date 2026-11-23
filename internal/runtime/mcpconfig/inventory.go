@@ -72,6 +72,9 @@ func (l Location) files(provider string) []string {
 	}
 }
 
+// SupportsInventory reports whether this adapter has a native MCP inventory reader.
+func SupportsInventory(provider string) bool { return len((Location{}).files(provider)) != 0 }
+
 func Read(provider string, loc Location) Inventory {
 	entries, status := load(provider, loc)
 	result := Inventory{Status: status, Servers: []Metadata{}}

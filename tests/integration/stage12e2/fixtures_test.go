@@ -110,15 +110,21 @@ func (r reconcilingRun) seedEvidence(kind, acceptedState string, withResult bool
 	id := qcNewID(e.t)
 	var resultID any
 	if withResult {
-		resultID = qcNewID(e.t)
+		var stored string
+		if err := e.superuser.QueryRow(e.ctx, `INSERT INTO openfox.run_results(organization_id,id,run_id,generation,status,payload_hash)
+			VALUES ($1,$2,$3,1,'SUCCEEDED',$4) ON CONFLICT (organization_id,run_id) DO UPDATE SET run_id=EXCLUDED.run_id
+			RETURNING id::text`, e.org, qcNewID(e.t), r.run, hashOf(id)).Scan(&stored); err != nil {
+			e.t.Fatal(err)
+		}
+		resultID = stored
 	}
-	state := map[string]string{"RESULT_CONFIRMED": "EXITED", "PROCESS_NOT_FOUND": "UNKNOWN", "HEARTBEAT": "RUNNING"}[kind]
+	state := map[string]string{"PROCESS_EXITED": "EXITED", "RESULT_CONFIRMED": "EXITED", "PROCESS_NOT_FOUND": "UNKNOWN", "HEARTBEAT": "RUNNING"}[kind]
 	e.exec(`INSERT INTO openfox.run_reconciliation_evidence (organization_id, id, case_id, run_id, generation, device_generation,
 			center_epoch, kind, source, device_id, supervisor_nonce, process_pid, process_state, process_exited, result_id,
 			payload_hash, safe_detail, accepted_state, observed_at)
-		VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, 1, 1, 1, $5, 'DAEMON', $6::uuid, $7, 4242, $8, false, $9::uuid,
+		VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, 1, 1, 1, $5, 'DAEMON', $6::uuid, $7, 4242, $8, $13, $9::uuid,
 		 $10, $11, $12, clock_timestamp())`,
-		e.org, id, r.caseID, r.run, kind, r.fixture.device(), "nonce-SECRET-"+id, state, resultID, hashOf(id), detail, acceptedState)
+		e.org, id, r.caseID, r.run, kind, r.fixture.device(), "nonce-SECRET-"+id, state, resultID, hashOf(id), detail, acceptedState, state == "EXITED")
 	return id
 }
 

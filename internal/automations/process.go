@@ -29,8 +29,10 @@ type PendingRun struct {
 	CreatorVersion uint64
 	Source         Source
 	// TriggerID 与 NextRunAt 只用于定时触发器：启动后推进到的下一次时刻。
-	TriggerID string
-	NextRunAt time.Time
+	TriggerID      string
+	TriggerVersion int64
+	PlannedAt      time.Time
+	NextRunAt      time.Time
 	// EventID 只用于事件触发：所有运行完成后标记事件已处理。
 	EventID string
 }
@@ -51,7 +53,7 @@ func (s Service) PendingWork(ctx context.Context, tx pgx.Tx) ([]PendingRun, []st
 // pendingSchedules 列出到期的定时触发器。错过的多个周期只产生一次运行，下一次时刻是 now 之后的第一个匹配时刻。
 func (s Service) pendingSchedules(ctx context.Context, tx pgx.Tx) ([]PendingRun, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT t.id::text, t.automation_id::text, t.next_run_at::text, t.config::text, a.created_by::text
+		SELECT t.id::text, t.automation_id::text, t.next_run_at, t.version, t.config::text, a.created_by::text
 		  FROM openfox.automation_triggers t
 		  JOIN openfox.automations a ON a.organization_id = t.organization_id AND a.id = t.automation_id
 		  JOIN openfox.spaces s ON s.organization_id = a.organization_id AND s.id = a.space_id AND s.deleted_at IS NULL AND s.status = 'ACTIVE'
@@ -63,12 +65,14 @@ func (s Service) pendingSchedules(ctx context.Context, tx pgx.Tx) ([]PendingRun,
 		return nil, err
 	}
 	type due struct {
-		triggerID, automationID, plannedAt, config, creatorID string
+		triggerID, automationID, config, creatorID string
+		plannedAt                                  time.Time
+		version                                    int64
 	}
 	var dues []due
 	for rows.Next() {
 		var d due
-		if err := rows.Scan(&d.triggerID, &d.automationID, &d.plannedAt, &d.config, &d.creatorID); err != nil {
+		if err := rows.Scan(&d.triggerID, &d.automationID, &d.plannedAt, &d.version, &d.config, &d.creatorID); err != nil {
 			rows.Close()
 			return nil, err
 		}
@@ -94,15 +98,16 @@ func (s Service) pendingSchedules(ctx context.Context, tx pgx.Tx) ([]PendingRun,
 		if err != nil {
 			return nil, err
 		}
+		planned := d.plannedAt.UTC().Format(time.RFC3339Nano)
 		out = append(out, PendingRun{
 			Kind: "schedule", AutomationID: d.automationID, CreatorID: d.creatorID, CreatorVersion: version,
-			TriggerID: d.triggerID, NextRunAt: next,
+			TriggerID: d.triggerID, NextRunAt: next, TriggerVersion: d.version, PlannedAt: d.plannedAt,
 			Source: Source{
 				TriggerID: d.triggerID, Kind: "schedule",
-				Title:     "定时运行（计划 " + d.plannedAt + "）",
-				Payload:   map[string]any{"planned_at": d.plannedAt},
-				Context:   "- 触发原因：定时（计划时间 " + d.plannedAt + "）",
-				DedupeKey: "schedule:" + d.triggerID + ":" + d.plannedAt,
+				Title:     "定时运行（计划 " + planned + "）",
+				Payload:   map[string]any{"planned_at": planned},
+				Context:   "- 触发原因：定时（计划时间 " + planned + "）",
+				DedupeKey: "schedule:" + d.triggerID + ":" + planned,
 			},
 		})
 	}
@@ -111,15 +116,29 @@ func (s Service) pendingSchedules(ctx context.Context, tx pgx.Tx) ([]PendingRun,
 
 // ApplyPending 在创建者身份的事务里启动一次运行。停用与找不到自动化不算失败，直接跳过。
 func (s Service) ApplyPending(ctx context.Context, tx pgx.Tx, organizationID string, p PendingRun) error {
-	if _, err := s.StartRun(ctx, tx, organizationID, p.AutomationID, p.Source); err != nil && !errors.Is(err, ErrDisabled) && !errors.Is(err, ErrNotFound) {
-		return err
+	if p.Kind == "schedule" {
+		// Match the editor's lock order so a saved schedule supersedes stale scans.
+		var enabled bool
+		err := tx.QueryRow(ctx, `SELECT enabled FROM openfox.automations
+			WHERE organization_id=openfox_private.current_organization_id() AND id=$1 FOR UPDATE`, p.AutomationID).Scan(&enabled)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		if err != nil || !enabled {
+			return err
+		}
+		tag, err := tx.Exec(ctx, `UPDATE openfox.automation_triggers SET next_run_at=$2
+			WHERE organization_id=openfox_private.current_organization_id() AND id=$1
+			  AND automation_id=$3 AND enabled AND kind='schedule' AND version=$4 AND next_run_at=$5`,
+			p.TriggerID, p.NextRunAt, p.AutomationID, p.TriggerVersion, p.PlannedAt)
+		if err != nil || tag.RowsAffected() == 0 {
+			return err
+		}
 	}
-	if p.Kind != "schedule" {
+	_, err := s.StartRun(ctx, tx, organizationID, p.AutomationID, p.Source)
+	if errors.Is(err, ErrDisabled) || errors.Is(err, ErrNotFound) {
 		return nil
 	}
-	_, err := tx.Exec(ctx, `
-		UPDATE openfox.automation_triggers SET next_run_at = $2
-		 WHERE organization_id = openfox_private.current_organization_id() AND id = $1::uuid`, p.TriggerID, p.NextRunAt)
 	return err
 }
 

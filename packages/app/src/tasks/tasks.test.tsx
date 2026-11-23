@@ -138,6 +138,7 @@ describe("空间任务看板", () => {
 
 describe("新建任务", () => {
   it("通过智能体提交需求，保留切换前的文字并记住创建方式", async () => {
+    let attempts = 0;
     const user = userEvent.setup();
     const server = renderAt(spaceTasks, (call) => {
       if (call.path.endsWith("/agent-directory"))
@@ -149,8 +150,14 @@ describe("新建任务", () => {
           archived_count: 0,
           truncated: false,
         });
-      if (call.path.endsWith("/agent-requests"))
+      if (call.path.endsWith("/agent-requests")) {
+        attempts++;
+        if (attempts === 1)
+          return json(504, { error: { code: "GATEWAY_TIMEOUT" } });
+        if (attempts === 2)
+          return new Response('{"request_id":', { status: 201 });
         return json(201, { request_id: "request-1" });
+      }
       return undefined;
     });
     await screen.findByRole("region", { name: "待处理 2" });
@@ -192,7 +199,15 @@ describe("新建任务", () => {
     await user.click(
       within(dialog).getByRole("button", { name: "切换到智能体" }),
     );
-    await user.click(within(dialog).getByRole("button", { name: "创建" }));
+    const create = within(dialog).getByRole("button", { name: "创建" });
+    for (const attempt of [1, 2]) {
+      await user.click(create);
+      await waitFor(() => {
+        expect(attempts).toBe(attempt);
+        expect(create).toBeEnabled();
+      });
+    }
+    await user.click(create);
     await waitFor(() =>
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
     );
@@ -204,6 +219,10 @@ describe("新建任务", () => {
       due_date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
     });
     expect(call.headers.get("Idempotency-Key")).toBeTruthy();
+    const keys = server
+      .find("POST", "/agent-requests")
+      .map((request) => request.headers.get("Idempotency-Key"));
+    expect(keys).toEqual(Array(3).fill(call.headers.get("Idempotency-Key")));
     await user.keyboard("c");
     expect(
       await screen.findByRole("dialog", { name: "通过智能体创建" }),

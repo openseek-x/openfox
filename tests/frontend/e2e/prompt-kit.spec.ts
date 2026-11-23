@@ -1099,6 +1099,11 @@ for (const locale of ["zh-CN", "en-US"] as const) {
     });
     const panel = page.locator("#org-sidebar-panel");
     const rail = page.getByRole("navigation", { name: t("shell.a11y.rail") });
+    const railLinks = rail.locator(":scope > a");
+    const linkTops = () =>
+      railLinks.evaluateAll((links) =>
+        links.map((link) => link.getBoundingClientRect().top),
+      );
     const sidebar = page.getByRole("complementary", {
       name: t("shell.a11y.sidebar"),
     });
@@ -1144,6 +1149,8 @@ for (const locale of ["zh-CN", "en-US"] as const) {
       const expandedMain = (await page
         .locator("[data-org-main]")
         .boundingBox())!.width;
+      await expect(railLinks).toHaveCount(4);
+      const expandedTops = await linkTops();
       await page
         .getByRole("button", { name: t("shell.collapse"), exact: true })
         .click();
@@ -1151,6 +1158,8 @@ for (const locale of ["zh-CN", "en-US"] as const) {
       await expect(panel).toHaveAttribute("inert", "");
       await expect(sidebar).toHaveCSS("width", "55px");
       await expect(rail).toBeVisible();
+      await expect(rail.getByRole("img", { name: "OpenFox" })).toBeVisible();
+      expect(await linkTops()).toEqual(expandedTops);
       await expect(handle).toHaveAttribute("aria-valuenow", "0");
       expect((await page.locator("[data-org-main]").boundingBox())!.width).toBe(
         expandedMain + 340,

@@ -248,6 +248,19 @@ func (a *Adapter) ListModels(ctx context.Context) ([]Model, error) {
 }
 
 func (a *Adapter) Start(ctx context.Context, request runtime.RunRequest) (runtime.Execution, error) {
+	return a.start(ctx, request, false)
+}
+
+// StartToolFree only launches adapters with native switches for disabling tools.
+func (a *Adapter) StartToolFree(ctx context.Context, request runtime.RunRequest) (runtime.Execution, error) {
+	if a == nil || (a.Name() != NamePi && a.Name() != NameClaudeCode) ||
+		len(request.MCPServers) != 0 || len(request.Tools) != 0 || len(request.Skills) != 0 || len(request.Args) != 0 {
+		return nil, runtime.ErrUnsupported
+	}
+	return a.start(ctx, request, true)
+}
+
+func (a *Adapter) start(ctx context.Context, request runtime.RunRequest, toolFree bool) (runtime.Execution, error) {
 	if a == nil {
 		return nil, runtime.ErrUnavailable
 	}
@@ -340,6 +353,14 @@ func (a *Adapter) Start(ctx context.Context, request runtime.RunRequest) (runtim
 	if err != nil {
 		cleanup()
 		return nil, err
+	}
+	if toolFree {
+		switch a.Name() {
+		case NamePi:
+			invocation.args = append(invocation.args, "--no-tools", "--no-extensions", "--no-skills", "--no-context-files")
+		case NameClaudeCode:
+			invocation.args = append(invocation.args, "--tools", "", "--disable-slash-commands", "--bare")
+		}
 	}
 	for key, value := range invocation.env {
 		env[key] = value

@@ -21,12 +21,7 @@ export function AuthLayout({
         <div aria-hidden className="h-7 shrink-0 [-webkit-app-region:drag]" />
       )}
       <header className="flex h-16 items-center justify-between px-8">
-        <Icon
-          name="brand-logo"
-          size={110}
-          className="h-7 w-auto"
-          label="OpenFox"
-        />
+        <Icon name="brand-logo" size={32} label="OpenFox" />
         <div className="flex items-center gap-4">
           {aside}
           <div className="w-[132px]">

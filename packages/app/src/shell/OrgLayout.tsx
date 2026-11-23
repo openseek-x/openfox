@@ -486,22 +486,15 @@ function Rail({
       aria-label={t("shell.a11y.rail")}
       className="flex w-[55px] shrink-0 flex-col items-center gap-1 border-r border-line-default py-3"
     >
-      {collapsed ? (
-        <IconButton
-          label={t("shell.expand")}
-          icon={<Icon name="chevrons-left" size={18} className="rotate-180" />}
-          size="36"
-          onClick={onToggle}
-          className="mb-1"
-        />
-      ) : (
-        <Icon
-          name="brand-logo"
-          size={24}
-          className="mb-3 h-6 w-6"
-          label="OpenFox"
-        />
-      )}
+      <Icon name="brand-logo" size={28} label="OpenFox" />
+      <IconButton
+        label={t("shell.expand")}
+        icon={<Icon name="chevrons-left" size={18} className="rotate-180" />}
+        size="28"
+        onClick={onToggle}
+        className={collapsed ? undefined : "invisible"}
+        aria-controls="org-sidebar-panel"
+      />
       {railItems.map((item) => (
         <Link
           key={item.label}

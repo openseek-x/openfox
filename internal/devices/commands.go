@@ -78,7 +78,7 @@ var commandErrorCodePattern = regexp.MustCompile(`^[A-Z0-9_]{0,64}$`)
 
 // ExecutionTimeout 是电脑执行该种命令的超时（与 daemon 一致）；领取后的截止时间 = 领取时间 + 超时 + 余量。
 func (kind CommandKind) ExecutionTimeout() time.Duration {
-	if kind == CommandStorageCleanup || kind == CommandSkillImport {
+	if kind == CommandStorageCleanup || kind == CommandSkillImport || kind == dispatch.TaskDraftCommand {
 		return 5 * time.Minute
 	}
 	if kind == CommandRuntimeSessionExport {
@@ -594,7 +594,7 @@ func (s PostgresStore) ListPendingCommands(ctx context.Context, selection tenanc
 			  FROM openfox.device_commands
 			 WHERE organization_id = openfox_private.current_organization_id()
 			   AND device_id = $1::uuid AND status = 'PENDING' AND expires_at > clock_timestamp()
-			 ORDER BY created_at, id
+			 ORDER BY row_number() OVER (PARTITION BY kind ORDER BY created_at, id), created_at, id
 			 LIMIT $2`, deviceID, limit)
 		if err != nil {
 			return err
@@ -626,13 +626,14 @@ func (s PostgresStore) ClaimCommand(ctx context.Context, selection tenancy.Organ
 			   SET status = 'DELIVERED', delivered_at = statement_timestamp(),
 			       -- 截止时间与 delivered_at 取同一个时间点，二者之差恰为执行超时 + 余量。
 			       expires_at = CASE WHEN kind='workspace_path' THEN expires_at ELSE statement_timestamp() + make_interval(secs => CASE kind
-			           WHEN 'task_draft' THEN $3::double precision WHEN 'storage_cleanup' THEN $3::double precision WHEN 'skill_import' THEN $3::double precision ELSE $4::double precision END) END
+			           WHEN 'runtime_session_export' THEN $5::double precision WHEN 'task_draft' THEN $3::double precision WHEN 'storage_cleanup' THEN $3::double precision WHEN 'skill_import' THEN $3::double precision ELSE $4::double precision END) END
 			 WHERE organization_id = openfox_private.current_organization_id()
 			   AND device_id = $1::uuid AND id = $2::uuid
 			   AND status = 'PENDING' AND expires_at > clock_timestamp()
 			 RETURNING `+commandColumns, deviceID, commandID,
 			(CommandStorageCleanup.ExecutionTimeout() + commandExecutionGrace).Seconds(),
-			(CommandRuntimeProbe.ExecutionTimeout() + commandExecutionGrace).Seconds()))
+			(CommandRuntimeProbe.ExecutionTimeout() + commandExecutionGrace).Seconds(),
+			(CommandRuntimeSessionExport.ExecutionTimeout() + commandExecutionGrace).Seconds()))
 		if err == nil {
 			command = claimed
 			if claimed.Kind == dispatch.TaskDraftCommand {

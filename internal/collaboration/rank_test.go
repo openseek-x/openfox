@@ -74,7 +74,7 @@ func TestRankRepeatedInsertSamePosition(t *testing.T) {
 	}
 	// 连续追加到最后。
 	tail := "h000000000001"
-	for i := 0; i < 500; i++ {
+	for i := 0; i < 100000; i++ {
 		next, err := RankAfter(tail)
 		if err != nil || next <= tail {
 			t.Fatalf("RankAfter(%q) = %q, %v", tail, next, err)

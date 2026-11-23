@@ -55,7 +55,7 @@ export function TaskCreatorPicker({
           type="button"
           aria-haspopup="listbox"
           aria-expanded={open}
-          disabled={!creator}
+          disabled={creators.length === 0}
           onClick={toggle}
           className="-ml-1 inline-flex min-h-8 max-w-full items-center gap-2 self-start rounded-md px-1 text-body-sm text-fg-muted enabled:hover:bg-surface-hover"
         >
@@ -70,7 +70,13 @@ export function TaskCreatorPicker({
             </>
           ) : (
             <span>
-              {t(loading ? "common.loading" : "tasks.create.noCreators")}
+              {t(
+                loading
+                  ? "common.loading"
+                  : creators.length
+                    ? "tasks.create.selectCreator"
+                    : "tasks.create.noCreators",
+              )}
             </span>
           )}
         </button>

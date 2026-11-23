@@ -263,7 +263,7 @@ export const iconData = {
   "brand-jira": letterIcon("Ji"),
   "brand-lark": letterIcon("La"),
   "brand-linear": letterIcon("Li"),
-  "brand-logo": letterIcon("OF"),
+  "brand-logo": { viewBox: "0 0 24 24", body: `<image width="24" height="24" href="${new URL("./openfox.png", import.meta.url).href}"/>` },
   "brand-ms_teams": letterIcon("MT"),
   "brand-ones": letterIcon("On"),
   "brand-pingcode": letterIcon("PC"),
@@ -544,4 +544,4 @@ export const iconData = {
 };
 
 export type IconName = keyof typeof iconData;
-export const multicolorIcons: ReadonlySet<IconName> = new Set();
+export const multicolorIcons: ReadonlySet<IconName> = new Set(["brand-logo"]);
