@@ -69,8 +69,8 @@ web URL (validated like `web_url`; omitted when the variable is unset), then the
 CLI is built for the host architecture and `electron-builder` produces an
 arm64 DMG. The URL order is `OPENFOX_DESKTOP_WEB_URL`, then `web_url` in
 `desktop-settings.json`, then the packaged default. Local builds use an ad hoc
-signature (`identity: "-"`). Distribution outside the team requires Developer ID
-signing and notarization.
+signature (`identity: "-"`). The CI release uses the same ad hoc app signature and distributes a PKG.
+Installation is subject to the Mac’s policy for unidentified developers.
 
 ## Desktop experience (stage 12h)
 
@@ -86,14 +86,14 @@ signing and notarization.
   Hidden in unpackaged development runs and on non-macOS platforms.
 - Both settings are local to this computer (`<userData>/desktop-local-prefs.json`)
   and are not synced to the account.
-- **Update check (no silent upgrade)**: fetches `<web origin>/desktop/latest.json`
-  (https only, 10 s timeout, 16 KiB cap, no redirects, no cookies) 30 s after
-  start, every 24 h, and on demand from the tray or Settings > About. The
-  download URL must be https and same-origin (or listed in
-  `OPENFOX_DESKTOP_UPDATE_HOSTS`); the app only opens it in the system browser
-  after the user clicks, and shows the SHA-256 for verification. "Skip this
-  version" is remembered locally. Manifest format and publishing steps:
-  `deploy/README.md`.
+- **Desktop updates on macOS arm64**. The release app checks the HTTPS origin
+  embedded during packaging 30 seconds after launch, every 24 hours while running
+  and on demand. It downloads the PKG through the workbench proxy and verifies
+  SHA-256. Choose **Open macOS Installer** to hand the verified package to the
+  system. Finish installation there and reopen OpenFox. **Later** is the default.
+  Closing the dialog or quitting leaves the current version installed, including
+  for a required update. Local development builds retain manual downloads.
+  See [publishing and rollback](../../deploy/README.md#desktop-updates).
 - **Bundled CLI after an upgrade**: when the bundled `openfox` replaces the
   installed one, the app restarts the local service only if `daemon status`
   reports it running with `active_runs == 0`; with running tasks the restart is
