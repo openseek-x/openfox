@@ -5541,7 +5541,7 @@ export interface paths {
         };
         /**
          * 阶段 6e · 第三方账号绑定页（当前成员在本组织的个人绑定，设计稿第 7 节）
-         * @description 所有非访客成员；访客 403。providers 固定 14 行、顺序：wechat、github、gitlab_cn、gitlab、gitee、jira、tapd、zentao、pingcode、teambition、slack、feishu、lark、dingtalk（7g-4 在 GitHub 后插入极狐、GitLab 自部署版、Gitee）。
+         * @description 所有非访客成员；访客 403。providers 按页面展示顺序列出本组织支持的账号绑定服务商。
          *     availability = coming_soon 的服务商没有任何操作。
          *     微信（7g-W）：method = link，binding 汇总本人在本组织的 Agent ↔ 微信绑定（display_name = 脱敏的第一个微信，detail = "N 个 Agent 绑定"，connection_id = 第一个绑定的 ID），管理在集成详情页；organization_ready = 服务端已配置 iLink 与加密密钥。
          *     禅道：method = link，binding 为本人未断开的 sync_comments 个人连接，管理在集成详情页；organization_ready = 本组织有 ACTIVE 的禅道组织连接。
@@ -6437,7 +6437,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** 提交后台建单需求，完成后向发起人发送收件箱通知 */
+        /**
+         * 提交后台建单需求，完成后向发起人发送收件箱通知
+         * @description 设备使用支持禁用工具的运行时起草。当前支持 Pi 和 Claude Code。运行时无法执行无工具起草时，发起人会收到建单失败通知。
+         */
         post: operations["createTaskWithAgent"];
         delete?: never;
         options?: never;
@@ -9560,7 +9563,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 设备上报 Run 终态结果（同一 id 与相同载荷幂等；不同结果 409 DELIVERY_CONFLICT）
+         * 设备上报 Run 终态结果（同一 id 与相同载荷幂等；已确定终态后提交不同结果返回 409 RESULT_FINALIZED）
          * @description 同一事务内把 Run 置为终态、写入 run.result 事件并把回复写回会话。
          *     usage 可省略（旧 daemon），各字段须为非负整数，否则 400；写入 run_results.usage。
          *     payload_hash 只在省略 usage 时与旧版本一致（usage 参与规范化哈希）。
@@ -15798,7 +15801,7 @@ export interface components {
         };
         AccountBindingProvider: {
             /** @enum {string} */
-            id: "wechat" | "github" | "gitlab_cn" | "gitlab" | "gitee" | "bitbucket" | "azure_devops" | "jira" | "tapd" | "zentao" | "pingcode" | "teambition" | "asana" | "zoho_bugtracker" | "shortcut" | "slack" | "feishu" | "lark" | "dingtalk" | "teams" | "discord" | "qq";
+            id: "wechat" | "github" | "gitlab_cn" | "gitlab" | "gitee" | "bitbucket" | "azure_devops" | "jira" | "tapd" | "zentao" | "pingcode" | "teambition" | "asana" | "zoho_bugtracker" | "shortcut" | "yunxiao" | "slack" | "feishu" | "lark" | "dingtalk" | "teams" | "discord" | "qq";
             name: string;
             /** @enum {string} */
             availability: "available" | "coming_soon";

@@ -8,6 +8,7 @@
     "build:web": "pnpm --filter @openfox/web build",
     "build:cli": "cd ../.. && go build -trimpath -ldflags \"-X main.version=$(node -p \"require('./apps/desktop/package.json').version\")\" -o apps/desktop/resources/bin/openfox ./cmd/openfox",
     "test": "node --test security.test.cjs cli.test.cjs accounts.test.cjs proxy.test.cjs work-directory.test.cjs local-service.test.cjs machine-proxy.test.cjs local-prefs.test.cjs login-item.test.cjs update-check.test.cjs tray.test.cjs restart-policy.test.cjs quit-flow.test.cjs browser/policy.test.cjs browser/public-dns.test.cjs browser/network.test.cjs browser/upstream.test.cjs browser/broker-client.test.cjs browser/tool-contract.test.cjs browser/files.test.cjs",
+    "test:accounts:electron": "node --test accounts.electron.test.cjs",
     "test:work-directory:electron": "node --test work-directory.electron.test.cjs",
     "test:local-service:electron": "node --test local-service.electron.test.cjs",
     "dist:mac": "node build-defaults.cjs && pnpm build:cli && electron-builder --mac --arm64",
@@ -19,7 +20,7 @@
     "electron": "45.0.0",
     "electron-builder": "26.18.0"
   },
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "OpenFox desktop",
   "build": {
     "appId": "io.openfox.desktop",
@@ -43,7 +44,6 @@
       "login-item.cjs",
       "update-check.cjs",
       "tray.cjs",
-      "tray-icon.cjs",
       "restart-policy.cjs",
       "quit-flow.cjs",
       "browser/host.cjs",
@@ -75,6 +75,7 @@
     ],
     "npmRebuild": false,
     "mac": {
+      "icon": "build/icon.icns",
       "target": [
         {
           "target": "dmg",

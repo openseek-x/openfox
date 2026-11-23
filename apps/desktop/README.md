@@ -68,14 +68,14 @@ OPENFOX_DESKTOP_DEFAULT_WEB_URL=https://openfox.example.com \
 web URL (validated like `web_url`; omitted when the variable is unset), then the
 CLI is built for the host architecture and `electron-builder` produces an
 arm64 DMG. The URL order is `OPENFOX_DESKTOP_WEB_URL`, then `web_url` in
-`desktop-settings.json`, then the packaged default. The build is not signed
-or notarized (`identity: null`) and uses the default Electron icon until `build/icon.icns` exists; a release
-for other people needs a Developer ID certificate, notarization and an icon.
+`desktop-settings.json`, then the packaged default. Local builds use an ad hoc
+signature (`identity: "-"`). Distribution outside the team requires Developer ID
+signing and notarization.
 
 ## Desktop experience (stage 12h)
 
-- **Menu bar (macOS)**: a template tray icon (placeholder geometry generated in
-  code, not a brand icon) with: open window, read-only local service status
+- **Menu bar (macOS)**: the monochrome OpenFox icon opens a menu with the
+  main window action, read-only local service status
   (running / stopped / not installed), check for updates, quit. Preference
   "Keep in the menu bar when the window is closed" (Settings > Preferences >
   Desktop app, default off) hides the window instead of quitting. Quitting
@@ -102,11 +102,10 @@ for other people needs a Developer ID certificate, notarization and an icon.
 
 ## App icon
 
-No icon is bundled yet (the default Electron icon is used). electron-builder
-picks up `apps/desktop/build/icon.icns` automatically: provide an `.icns`
-containing 16, 32, 64, 128, 256, 512 and 1024 px representations (1024 px source,
-no transparency requirement but keep the standard macOS rounded-square safe
-area). No `package.json` change is needed.
+The development Dock uses `build/icon.png` (1024 px). The packaged app uses
+`build/icon.icns`, which contains the same artwork at standard and Retina sizes.
+The menu bar uses `renderer/openfoxTemplate.png` and its Retina `@2x` variant
+so macOS can apply the current menu bar color.
 
 ## Development
 

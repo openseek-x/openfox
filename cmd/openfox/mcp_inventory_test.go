@@ -14,6 +14,7 @@ import (
 	"openfox/internal/daemon"
 	"openfox/internal/daemon/supervisor"
 	"openfox/internal/devices"
+	"openfox/internal/runtime"
 	"openfox/internal/runtime/mcpconfig"
 )
 
@@ -45,6 +46,9 @@ func TestMCPInventoryAlwaysUsesPrivateDeviceEndpoint(t *testing.T) {
 			if r.Method != "PUT" || json.NewDecoder(r.Body).Decode(&body) != nil {
 				t.Error("bad inventory PUT")
 			}
+			if _, leaked := body.Runtimes["gemini"]; leaked {
+				t.Error("uploaded unsupported inventory")
+			}
 			entry := body.Runtimes["codex"]
 			if len(entry.Servers) != 1 || entry.Servers[0].Name != "private_qa" || entry.Status != "ok" {
 				t.Error("wrong private inventory")
@@ -58,7 +62,7 @@ func TestMCPInventoryAlwaysUsesPrivateDeviceEndpoint(t *testing.T) {
 	}))
 	defer server.Close()
 	src := daemon.NewStaticHeartbeatSource(devices.Heartbeat{})
-	r := &capabilityReporter{prober: &fakeProber{}, source: src}
+	r := &capabilityReporter{prober: &fakeProber{}, source: src, extras: []*namedProber{{name: "gemini", prober: &fakeProber{report: runtime.Capabilities{Version: "fixture", Runnable: true}}}}}
 	client := &supervisor.Client{BaseURL: server.URL, Token: func(context.Context) (string, error) { return "fixture-device-session", nil }, OnMCPInventoryPrivacy: r.setInventoryPrivacy}
 	r.storeInventory = client.StoreMCPInventory
 	for _, v := range []int32{0, 1, 2, 1} {

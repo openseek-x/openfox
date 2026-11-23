@@ -142,9 +142,9 @@ export function CreateTaskDialog({
         : entry.allow_assign && entry.allow_direct_chat),
   );
   const [creatorValue, setCreatorValue] = useState(init.assignee?.value ?? "");
-  const creator =
-    creators.find((entry) => `${entry.type}:${entry.id}` === creatorValue) ??
-    creators[0];
+  const creator = creatorValue
+    ? creators.find((entry) => `${entry.type}:${entry.id}` === creatorValue)
+    : creators[0];
   const [brief, setBrief] = useState(
     [init.title, init.description].filter(Boolean).join("\n\n"),
   );
@@ -324,8 +324,6 @@ export function CreateTaskDialog({
     },
     onError: (error) => {
       toast(taskErrorMessage(t, error), { tone: "error" });
-      if (isApiError(error) && !error.uncertain)
-        previousBriefRequest.current = null;
     },
   });
   const submit = () => {

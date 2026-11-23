@@ -206,6 +206,19 @@ func TestTasksBoardRankMove(t *testing.T) {
 }
 
 // 幂等创建：同键并发只建一条、序号只消耗一次；同键不同请求 409；非法键 400。
+func TestTaskAppendAfterRankExhaustion(t *testing.T) {
+	env := newTkEnv(t)
+	space := env.createSpace("shared")
+	first := env.newTask(env.owner, space, nil)
+	last := env.newTask(env.owner, space, nil)
+	env.exec(`UPDATE openfox.tasks SET rank=repeat('z',64) WHERE id=$1`, last.ID)
+	added := env.newTask(env.owner, space, nil)
+	got := env.listIDs(env.owner, tasksPath(space), "sort=manual")
+	if !sameStrings(got, []string{first.ID, last.ID, added.ID}) {
+		t.Fatalf("order = %v", got)
+	}
+}
+
 func TestTasksIdempotentCreate(t *testing.T) {
 	env := newTkEnv(t)
 	space := env.createSpace("shared")

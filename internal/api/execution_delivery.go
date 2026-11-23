@@ -774,6 +774,8 @@ func writeDeliveryError(w http.ResponseWriter, r *http.Request, err error) {
 		writeError(w, r, http.StatusBadRequest, "INVALID_REQUEST", "request is invalid")
 	case errors.Is(err, executiondelivery.ErrForbidden):
 		writeError(w, r, http.StatusForbidden, "FORBIDDEN", "resource is not available")
+	case errors.Is(err, executiondelivery.ErrResultFinalized):
+		writeError(w, r, http.StatusConflict, "RESULT_FINALIZED", "the Run already has a final outcome")
 	case errors.Is(err, executiondelivery.ErrEventConflict), errors.Is(err, executiondelivery.ErrResultConflict), errors.Is(err, executiondelivery.ErrGenerationConflict):
 		writeError(w, r, http.StatusConflict, "DELIVERY_CONFLICT", "delivery conflicts with the current Run state")
 	case errors.Is(err, executiondelivery.ErrResourceLimit):

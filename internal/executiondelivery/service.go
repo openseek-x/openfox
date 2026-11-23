@@ -236,12 +236,12 @@ func (s Service) AppendResult(ctx context.Context, tx pgx.Tx, organizationID str
 		if existing.ID == normalized.ID && existing.PayloadHash == hash {
 			return existing, nil
 		}
-		return Result{}, ErrResultConflict
+		return Result{}, ErrResultFinalized
 	} else if !errors.Is(err, ErrNotFound) {
 		return Result{}, err
 	}
 	if run.State.Terminal() {
-		return Result{}, ErrResultConflict
+		return Result{}, ErrResultFinalized
 	}
 	if run.ReconciliationRequired && caseErr != nil {
 		return Result{}, ErrReconciliationRequired
@@ -306,9 +306,6 @@ func (s Service) AppendResult(ctx context.Context, tx pgx.Tx, organizationID str
 	}
 	if len(normalized.Summary)+len(normalized.Output)+len(normalized.Checks)+len(normalized.ArtifactIDs)*64+len(normalized.BranchRef) > MaxResultBytes {
 		return Result{}, ErrInvalidRequest
-	}
-	if run.State.Terminal() {
-		return Result{}, ErrResultConflict
 	}
 	terminalState := resultState(normalized.Status)
 	failureCode := ""

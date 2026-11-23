@@ -69,7 +69,7 @@ function channel(
 }
 
 describe("Slack independent N01 preferences", () => {
-  it("uses the existing 42 event keys and seven group mutes with independent revisions and direct-message consent", async () => {
+  it("uses the catalog event keys and seven group mutes with independent revisions and direct-message consent", async () => {
     const user = userEvent.setup();
     let current = channel();
     const calls = renderSettings("/o/o1/settings/notifications", (c) => {
@@ -97,7 +97,7 @@ describe("Slack independent N01 preferences", () => {
         enabled: true,
       }),
     );
-    expect(screen.getAllByRole("switch")).toHaveLength(51);
+    expect(screen.getAllByRole("switch")).toHaveLength(catalog.length + 2);
     const direct = screen.getByRole("switch", { name: "允许真人消息提醒" });
     expect(direct).not.toBeChecked();
     await user.click(screen.getByRole("switch", { name: "任务分配" }));

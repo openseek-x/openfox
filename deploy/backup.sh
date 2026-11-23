@@ -23,14 +23,15 @@ done
 
 [[ -f "$database_url_file" ]] || { echo "database URL file does not exist" >&2; exit 1; }
 [[ -d "$storage_root" ]] || { echo "storage root does not exist" >&2; exit 1; }
-[[ ! -e "$output_dir" ]] || { echo "output directory already exists; refusing to overwrite" >&2; exit 1; }
 
 umask 077
-mkdir -p "$output_dir"
+mkdir -p -- "$(dirname -- "$output_dir")"
+mkdir -- "$output_dir" || { echo "cannot reserve output directory" >&2; exit 1; }
 cleanup_failed() {
-    rm -rf "$output_dir"
+    rm -rf -- "$output_dir"
 }
-trap cleanup_failed ERR INT TERM
+trap cleanup_failed EXIT
+trap 'exit 1' INT TERM
 
 database_url=$(cat "$database_url_file")
 database_url=${database_url//$'\r'/}
@@ -49,12 +50,8 @@ tar -C "$storage_root" -cf "$output_dir/artifacts.tar" .
     printf '\n'
 } >"$output_dir/metadata.txt"
 
-find "$storage_root" -type f -print | LC_ALL=C sort | while IFS= read -r path; do
-    relative=${path#"$storage_root"/}
-    checksum=$(shasum -a 256 "$path" | awk '{print $1}')
-    printf '%s  %s\n' "$checksum" "$relative"
-done >"$output_dir/storage.sha256"
+(cd -- "$storage_root" && find . -type f -exec shasum -a 256 {} + | LC_ALL=C sort) >"$output_dir/storage.sha256"
 
 (cd "$output_dir" && shasum -a 256 database.dump artifacts.tar metadata.txt storage.sha256 > checksums.sha256)
-trap - ERR INT TERM
+trap - EXIT INT TERM
 echo "backup created: $output_dir"

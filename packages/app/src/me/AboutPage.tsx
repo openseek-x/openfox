@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useI18n, useT } from "@openfox/i18n";
-import { Button, useToast } from "@openfox/ui";
+import { Button, Icon, useToast } from "@openfox/ui";
 
 import {
   desktopBridge,
@@ -73,12 +73,18 @@ export function AboutPage() {
     <SettingsColumn narrow>
       <SettingsSection title={t("me.about.title")}>
         <SettingsCard>
-          <SettingRow
-            title={t("me.about.version")}
-            control={
-              <span className="text-body text-fg-default">{data.version}</span>
-            }
-          />
+          <div className="flex items-center gap-3 px-4 py-3">
+            <Icon name="brand-logo" size={40} />
+            <div>
+              <div className="text-body font-medium text-fg-default">
+                OpenFox
+              </div>
+              <div className="flex gap-1.5 text-body-sm text-fg-secondary">
+                <span>{t("me.about.version")}</span>
+                <span>{data.version}</span>
+              </div>
+            </div>
+          </div>
           <SettingRow
             title={t("me.about.lastCheck")}
             control={

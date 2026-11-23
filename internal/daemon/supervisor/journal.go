@@ -434,6 +434,22 @@ func (j *Journal) PendingResults(ctx context.Context) ([]PendingResult, error) {
 	return result, rows.Err()
 }
 
+// RejectFinalResult keeps the reason in the terminal journal until its normal retention expires.
+func (j *Journal) RejectFinalResult(ctx context.Context, run string, input ResultInput) error {
+	tx, err := j.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err = tx.ExecContext(ctx, `UPDATE run_journal SET detail=?, updated_at=? WHERE run_id=? AND generation=?`, "RESULT_FINALIZED: "+input.ID, j.now().UnixMilli(), run, input.Generation); err != nil {
+		return err
+	}
+	if _, err = tx.ExecContext(ctx, `DELETE FROM result_outbox WHERE run_id=? AND generation=?`, run, input.Generation); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
 func (j *Journal) DeleteResult(ctx context.Context, run string, generation int64) error {
 	_, err := j.db.ExecContext(ctx, `DELETE FROM result_outbox WHERE run_id = ? AND generation = ?`, run, generation)
 	return err

@@ -634,6 +634,7 @@ export const zhCN = {
       briefExample:
         "描述你希望完成的工作，例如：整理本周的客户反馈，列出最常见的三个问题",
       creator: "创建者",
+      selectCreator: "选择智能体或小队",
       noCreators: "当前空间没有可建单的智能体或小队",
       queued: "已提交，建单结果会发到收件箱。",
       recoverBrief: "建单失败，打开后可手动创建",

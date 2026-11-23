@@ -325,11 +325,14 @@ func (r *capabilityReporter) uploadInventory(ctx context.Context) error {
 	org := r.inventoryOrg
 	runtimes := r.runtimesLocked()
 	r.mu.Unlock()
-	if org == "" || r.storeInventory == nil || len(runtimes) == 0 {
+	if org == "" || r.storeInventory == nil {
 		return nil
 	}
 	inventory := make(map[string]mcpconfig.Inventory, len(runtimes))
 	for name := range runtimes {
+		if !mcpconfig.SupportsInventory(name) {
+			continue
+		}
 		inventory[name] = mcpconfig.Read(name, mcpconfig.UserLocation())
 	}
 	if err := r.storeInventory(ctx, org, inventory); err != nil {

@@ -96,7 +96,8 @@ func TestReviewInboundDoesNotInvertOutboundLocks(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer tx.Rollback(w.ctx)
-	if _, err := tx.Exec(w.ctx, `SELECT id FROM openfox.task_issue_links WHERE sync_link_id=$1::uuid AND issue_number=819 FOR UPDATE`, link.ID); err != nil {
+	var issueLinkID string
+	if err := tx.QueryRow(w.ctx, `SELECT id::text FROM openfox.task_issue_links WHERE sync_link_id=$1::uuid AND issue_number=819 FOR UPDATE`, link.ID).Scan(&issueLinkID); err != nil {
 		t.Fatal(err)
 	}
 	var pid int
@@ -111,7 +112,8 @@ func TestReviewInboundDoesNotInvertOutboundLocks(t *testing.T) {
 	deadline := time.Now().Add(5 * time.Second)
 	for {
 		var waiting bool
-		w.scan(&waiting, `SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE $1::int=ANY(pg_blocking_pids(pid)))`, pid)
+		// pg_locks reflects current waiters even while the observer holds an open transaction.
+		w.scan(&waiting, `SELECT EXISTS(SELECT 1 FROM pg_locks WHERE NOT granted AND $1::int=ANY(pg_blocking_pids(pid)))`, pid)
 		if waiting {
 			break
 		}

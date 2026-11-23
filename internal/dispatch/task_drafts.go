@@ -263,7 +263,7 @@ func (d taskDraft) create(ctx context.Context, tx pgx.Tx, org, device string, re
 		return "", err
 	}
 	_, err = tx.Exec(ctx, `INSERT INTO openfox.task_activities(organization_id,space_id,task_id,id,actor_id,kind,safe_diff,source_id)
-	VALUES(openfox_private.current_organization_id(),$1,$2,gen_random_uuid(),$3,'task.via_agent',jsonb_build_object('agent_id',$4::text),'task-draft:' || $2::uuid::text)`, d.space, task.ID, d.actor.UserID, d.agent)
+	VALUES(openfox_private.current_organization_id(),$1,$2,gen_random_uuid(),$3,'task.via_agent',jsonb_build_object('agent_id',$4::text),'task-draft:' || $2::uuid::text)`, task.SpaceID, task.ID, d.actor.UserID, d.agent)
 	if err != nil {
 		return "", err
 	}

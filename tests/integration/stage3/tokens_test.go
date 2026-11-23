@@ -433,7 +433,7 @@ func TestNotificationChannelDefaultsSaveAndReset(t *testing.T) {
 		t.Fatalf("channels = %+v, want desktop, browser, feishu, email, wecom, lark and dingtalk", list.Channels)
 	}
 	for _, channel := range list.Channels {
-		if channel.Enabled != (channel.Channel != "email" && channel.Channel != "wecom") || channel.Available != (channel.Channel != "email") || channel.Customized || len(channel.DisabledEvents) != 0 {
+		if channel.Enabled != (channel.Channel != "email" && channel.Channel != "wecom" && channel.Channel != "slack") || channel.Available != (channel.Channel != "email" && channel.Channel != "slack") || channel.Customized || len(channel.DisabledEvents) != 0 {
 			t.Fatalf("default channel = %+v", channel)
 		}
 	}

@@ -143,7 +143,7 @@ export const slackEn = {
   centralReplies:
     "The central app provides notifications and authorized task previews. Replies do not update tasks or resume an Agent. Open the task link or use the dedicated Agent App.",
   notificationHelp:
-    "Slack has independent choices for the existing 42 events and group mutes. Notifications and direct messages are off by default.",
+    "Slack has independent choices for events and group mutes. Notifications and direct messages are off by default.",
   manageIdentity: "Manage Slack identity",
   reasonGeneric:
     "Action is required. Check authorization and app configuration.",

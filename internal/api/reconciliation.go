@@ -206,8 +206,7 @@ func (h *Handler) listReconciliationEvidence(w http.ResponseWriter, r *http.Requ
 				ID: item.ID, CaseID: item.CaseID, Kind: string(item.Kind), Source: string(item.Source),
 				ProcessState: string(item.ProcessState), AcceptedState: item.AcceptedState,
 				Detail: item.SafeDetail, ObservedAt: item.ObservedAt, CreatedAt: item.CreatedAt,
-				CanAcceptResult: openCases[item.CaseID] && item.AcceptedState == "ACCEPTED" &&
-					item.Kind == reconciliation.EvidenceResultConfirmed && item.ResultID != "",
+				CanAcceptResult: openCases[item.CaseID] && item.AcceptsResult() && item.StoredResult,
 			})
 		}
 		return nil

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -177,5 +178,37 @@ func TestPiBoundSkills(t *testing.T) {
 				t.Fatalf("skill survived completion: %v", err)
 			}
 		}
+	}
+}
+
+func TestDraftNativeToolControls(t *testing.T) {
+	for _, tc := range []struct {
+		adapter *Adapter
+		events  []string
+		flags   []string
+	}{
+		{NewPi(""), piSuccess(), []string{"--no-mcp", "--no-tools", "--no-extensions"}},
+		{NewClaudeCode(""), claudeSuccess(), []string{"--strict-mcp-config", "--tools", "--bare"}},
+	} {
+		t.Run(tc.adapter.Name(), func(t *testing.T) {
+			f := newFixture(t, tc.adapter)
+			f.set(scenario{Stdout: tc.events})
+			run, err := f.adapter.StartToolFree(context.Background(), runtime.RunRequest{Prompt: "draft", WorkingDirectory: f.dir})
+			if err != nil {
+				t.Fatal(err)
+			}
+			for range run.Events() {
+			}
+			if _, err := run.Wait(context.Background()); err != nil {
+				t.Fatal(err)
+			}
+			args := f.record().Args
+			for _, flag := range tc.flags {
+				i := slices.Index(args, flag)
+				if i < 0 || (flag == "--tools" && (i+1 >= len(args) || args[i+1] != "")) {
+					t.Fatalf("missing control %s in %q", flag, args)
+				}
+			}
+		})
 	}
 }

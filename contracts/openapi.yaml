@@ -7069,9 +7069,7 @@ paths:
       operationId: listMyAccountBindings
       summary: 阶段 6e · 第三方账号绑定页（当前成员在本组织的个人绑定，设计稿第 7 节）
       description: >
-        所有非访客成员；访客 403。providers 固定 14
-        行、顺序：wechat、github、gitlab_cn、gitlab、gitee、jira、tapd、zentao、pingcode、teambition、slack、feishu、lark、dingtalk（7g-4
-        在 GitHub 后插入极狐、GitLab 自部署版、Gitee）。
+        所有非访客成员；访客 403。providers 按页面展示顺序列出本组织支持的账号绑定服务商。
 
         availability = coming_soon 的服务商没有任何操作。
 
@@ -8893,6 +8891,7 @@ paths:
     post:
       operationId: createTaskWithAgent
       summary: 提交后台建单需求，完成后向发起人发送收件箱通知
+      description: 设备使用支持禁用工具的运行时起草。当前支持 Pi 和 Claude Code。运行时无法执行无工具起草时，发起人会收到建单失败通知。
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -13181,7 +13180,7 @@ paths:
       - { name: runID, in: path, required: true, schema: { type: string, format: uuid } }
     post:
       operationId: appendDeviceRunResult
-      summary: 设备上报 Run 终态结果（同一 id 与相同载荷幂等；不同结果 409 DELIVERY_CONFLICT）
+      summary: 设备上报 Run 终态结果（同一 id 与相同载荷幂等；已确定终态后提交不同结果返回 409 RESULT_FINALIZED）
       description: |
         同一事务内把 Run 置为终态、写入 run.result 事件并把回复写回会话。
         usage 可省略（旧 daemon），各字段须为非负整数，否则 400；写入 run_results.usage。
@@ -23385,7 +23384,7 @@ components:
       type: object
       required: [id, name, availability, method, organization_ready, binding]
       properties:
-        id: { type: string, enum: [wechat, github, gitlab_cn, gitlab, gitee, bitbucket, azure_devops, jira, tapd, zentao, pingcode, teambition, asana, zoho_bugtracker, shortcut, slack, feishu, lark, dingtalk, teams, discord, qq] }
+        id: { type: string, enum: [wechat, github, gitlab_cn, gitlab, gitee, bitbucket, azure_devops, jira, tapd, zentao, pingcode, teambition, asana, zoho_bugtracker, shortcut, yunxiao, slack, feishu, lark, dingtalk, teams, discord, qq] }
         name: { type: string }
         availability: { type: string, enum: [available, coming_soon] }
         method: { type: string, enum: [oauth, form, token, link, none], description: token = Shortcut 本人身份及可选新评论凭据；oauth = 弹窗授权（GitHub / 飞书）；form = 填写凭证（Jira）；link = 在集成详情页管理（微信：只汇总本人的 Agent ↔ 微信绑定，不做微信登录；禅道与 PingCode：汇总本人的评论同步连接）；none = 暂无操作 }
