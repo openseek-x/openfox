@@ -106,6 +106,10 @@
 }
 
 @layer base {
+  * {
+    scrollbar-width: thin;
+  }
+
   html,
   body {
     font-family: var(--font-sans);
