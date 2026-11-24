@@ -12,6 +12,46 @@ const { pipeline } = require("node:stream/promises");
 const MAX_PACKAGE_BYTES = 512 * 1024 * 1024;
 const DOWNLOAD_TIMEOUT_MS = 20 * 60 * 1000;
 
+// Electron session.fetch cancels manual redirects. Inspect GitHub's redirect
+// with net.request before streaming the package with redirects disabled.
+async function resolveGitHubDownload(net, session, url, signal) {
+  signal.throwIfAborted();
+  const request = net.request({
+    url,
+    session,
+    method: "HEAD",
+    redirect: "manual",
+    credentials: "omit",
+  });
+  const abort = () => request.abort();
+  try {
+    return await new Promise((resolve, reject) => {
+      signal.addEventListener("abort", abort, { once: true });
+      request.once("abort", () => reject(new Error("Update lookup aborted")));
+      request.once("error", reject);
+      request.once("redirect", (_status, _method, location) => {
+        const target = URL.canParse(location) ? new URL(location) : null;
+        if (
+          target?.origin === "https://release-assets.githubusercontent.com" &&
+          !target.username &&
+          !target.password
+        )
+          resolve(target.href);
+        else reject(new Error("Unexpected GitHub release asset redirect"));
+        request.abort();
+      });
+      request.once("response", (response) => {
+        response.resume();
+        if (response.statusCode === 200) resolve(url);
+        else reject(new Error("GitHub release asset unavailable"));
+      });
+      request.end();
+    });
+  } finally {
+    signal.removeEventListener("abort", abort);
+  }
+}
+
 async function downloadPackage(manifest, fetchPackage, file) {
   const signal = AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS);
   const response = await fetchPackage(manifest.download_url, {
@@ -213,6 +253,7 @@ async function removeInstalledPackages(cache, version) {
 }
 
 module.exports = {
+  resolveGitHubDownload,
   removeInstalledPackages,
   createUpdateManager,
   downloadUpdate,

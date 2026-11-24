@@ -241,3 +241,37 @@ test("failed installation reports the failure and retries only after fresh confi
   await updates.check(true);
   assert.equal(attempts, 2);
 });
+
+test("GitHub download accepts only the release asset CDN redirect", async () => {
+  const { EventEmitter } = require("node:events");
+  const { resolveGitHubDownload } = require("./update-install.cjs");
+  const url =
+    "https://github.com/openseek-x/openfox/releases/download/v0.2.0/OpenFox-0.2.0-arm64.pkg";
+  async function redirect(location) {
+    const net = {
+      request(options) {
+        assert.equal(options.redirect, "manual");
+        assert.equal(options.credentials, "omit");
+        const req = new EventEmitter();
+        req.abort = () => req.emit("abort");
+        req.end = () => req.emit("redirect", 302, "HEAD", location);
+        return req;
+      },
+    };
+    return resolveGitHubDownload(net, {}, url, AbortSignal.timeout(1000));
+  }
+  const cdn =
+    "https://release-assets.githubusercontent.com/path?signature=test";
+  assert.equal(await redirect(cdn), cdn);
+  for (const suffix of ["@other.com/file", ".example.org/path", ":8000/file"]) {
+    await assert.rejects(
+      redirect("https://release-assets.githubusercontent.com" + suffix),
+    );
+  }
+  await assert.rejects(
+    redirect("http://release-assets.githubusercontent.com/file"),
+  );
+  await assert.rejects(
+    redirect("https://user@release-assets.githubusercontent.com/file"),
+  );
+});

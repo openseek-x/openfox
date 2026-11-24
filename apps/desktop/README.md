@@ -69,7 +69,7 @@ web URL (validated like `web_url`; omitted when the variable is unset), then the
 CLI is built for the host architecture and `electron-builder` produces an
 arm64 DMG. The URL order is `OPENFOX_DESKTOP_WEB_URL`, then `web_url` in
 `desktop-settings.json`, then the packaged default. Local builds use an ad hoc
-signature (`identity: "-"`). The CI release uses the same ad hoc app signature and distributes a PKG.
+signature (`identity: "-"`). Each stable GitHub Release includes a DMG for manual installation and a PKG containing the same app for macOS Installer.
 Installation is subject to the Mac’s policy for unidentified developers.
 
 ## Desktop experience (stage 12h)
@@ -86,10 +86,10 @@ Installation is subject to the Mac’s policy for unidentified developers.
   Hidden in unpackaged development runs and on non-macOS platforms.
 - Both settings are local to this computer (`<userData>/desktop-local-prefs.json`)
   and are not synced to the account.
-- **Desktop updates on macOS arm64**. The release app checks the HTTPS origin
-  embedded during packaging 30 seconds after launch, every 24 hours while running
-  and on demand. It downloads the PKG through the workbench proxy and verifies
-  SHA-256. Choose **Open macOS Installer** to hand the verified package to the
+- **Desktop updates on macOS arm64**. The app checks the latest published stable GitHub Release
+  in `openseek-x/openfox` 30 seconds after launch, every 24 hours while running
+  and on demand. It reads the version from the `vX.Y.Z` tag and verifies the
+  downloaded PKG against the SHA-256 digest on its GitHub release asset. Choose **Open macOS Installer** to hand the verified package to the
   system. Finish installation there and reopen OpenFox. **Later** is the default.
   Closing the dialog or quitting leaves the current version installed, including
   for a required update. Local development builds retain manual downloads.

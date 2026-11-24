@@ -43,7 +43,7 @@ const MESSAGES = {
     "update.upToDate.message": "已是最新版本",
     "update.upToDate.detail": "当前版本 {current}。",
     "update.noInfo.message": "暂无更新信息",
-    "update.noInfo.detail": "当前连接的服务没有发布桌面端更新。",
+    "update.noInfo.detail": "GitHub 上还没有正式发布的 OpenFox 桌面版本。",
     "update.failed.message": "检查更新失败",
     "update.failed.detail": "请稍后重试。",
     "update.unsupported.message": "无法检查更新",
@@ -101,7 +101,7 @@ const MESSAGES = {
     "update.upToDate.detail": "Current version {current}.",
     "update.noInfo.message": "No update information",
     "update.noInfo.detail":
-      "The connected server does not publish desktop updates.",
+      "There is no published stable OpenFox desktop release on GitHub.",
     "update.failed.message": "Update check failed",
     "update.failed.detail": "Please try again later.",
     "update.unsupported.message": "Cannot check for updates",

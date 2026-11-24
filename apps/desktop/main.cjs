@@ -59,11 +59,12 @@ const { message, pickLocale } = require("./messages.cjs");
 const { createQuitFlow } = require("./quit-flow.cjs");
 const { decideRestart } = require("./restart-policy.cjs");
 const { buildTrayMenu, serviceStatus } = require("./tray.cjs");
-const { checkForUpdate, parseHostList } = require("./update-check.cjs");
+const { checkForUpdate } = require("./update-check.cjs");
 
 const {
   createUpdateManager,
   downloadUpdate,
+  resolveGitHubDownload,
   removeInstalledPackages,
 } = require("./update-install.cjs");
 
@@ -1512,17 +1513,22 @@ const updates = createUpdateManager({
   automatic: automaticUpdates,
   check: () =>
     checkForUpdate({
-      centerURL: automaticUpdates ? defaultWebURL : currentWebURL,
+      systemInstaller: automaticUpdates,
       current: app.getVersion(),
       skippedVersion: localPrefs.get().skipped_version,
-      allowedHosts: parseHostList(process.env.OPENFOX_DESKTOP_UPDATE_HOSTS),
       fetchText: fetchUpdateText,
     }),
   download: (manifest) => {
     const updateSession = mainWindow.webContents.session;
-    return downloadUpdate(manifest, (url, options) =>
-      updateSession.fetch(url, options),
-    );
+    return downloadUpdate(manifest, async (url, options) => {
+      const target = await resolveGitHubDownload(
+        net,
+        updateSession,
+        url,
+        options.signal,
+      );
+      return updateSession.fetch(target, options);
+    });
   },
   install: async (archive) => {
     const cache = path.join(app.getPath("userData"), "desktop-installers");
