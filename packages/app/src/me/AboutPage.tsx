@@ -128,7 +128,7 @@ export function AboutPage() {
                     disabled={check.isPending}
                     onClick={() => check.mutate()}
                   >
-                    {t("me.about.restart")}
+                    {t("me.about.reviewUpdate")}
                   </Button>
                 ) : phase === "manual" ? (
                   <div className="flex gap-2">

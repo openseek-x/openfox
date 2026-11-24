@@ -30,10 +30,10 @@ const MESSAGES = {
     "update.available.detail":
       "当前版本 {current}。\n\n{notes}\n\n下载后请核对 SHA-256：\n{sha256}",
     "update.available.mandatory": "当前版本低于最低要求 {min}，请尽快升级。",
-    "update.ready.message": "使用 macOS 安装器安装更新 {version}？",
+    "update.ready.message": "OpenFox {version} 已准备就绪",
     "update.ready.detail":
-      "更新包已下载。请在系统安装器中确认安装，完成后重新打开 OpenFox。",
-    "update.restart": "打开系统安装器",
+      "重启后将打开新版 OpenFox。你也可以稍后安装。",
+    "update.restart": "安装并重启",
     "update.installFailed.message": "未能准备桌面更新",
     "update.installFailed.detail":
       "请从可写位置运行已安装的 OpenFox，然后重新检查更新。若仍失败，请联系发布方核对发布的安装包。",
@@ -87,10 +87,10 @@ const MESSAGES = {
       "Current version {current}.\n\n{notes}\n\nVerify its SHA-256 after downloading:\n{sha256}",
     "update.available.mandatory":
       "Your version is below the minimum required {min}. Please upgrade soon.",
-    "update.ready.message": "Open macOS Installer for update {version}?",
+    "update.ready.message": "OpenFox {version} is ready to install",
     "update.ready.detail":
-      "The update is downloaded. Confirm installation in macOS Installer and reopen OpenFox when it finishes.",
-    "update.restart": "Open macOS Installer",
+      "Restart to open the new version of OpenFox, or install it later.",
+    "update.restart": "Install and Restart",
     "update.installFailed.message": "Could not prepare the desktop update",
     "update.installFailed.detail":
       "Run the installed app from a writable location and check again. If this persists, ask the publisher to verify the published installer package.",
