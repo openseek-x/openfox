@@ -34,3 +34,7 @@
 0.1.3 从官方仓库的最新正式 Release 读取 vX.Y.Z 标签、对应架构的附件地址和 SHA-256。生产客户端后台下载 PKG，默认暂缓，选择「打开系统安装器」后才进入系统安装界面。手动下载使用 DMG。Electron 的 session.fetch 会取消手动重定向，因此使用同一代理会话的 net.request 检查 GitHub 附件跳转，再从官方 CDN 下载并核对摘要。API 限流或无法访问时保留当前版本，可再次检查。
 
 配置变更包括桌面 package.json 版本、release-config.cjs 的 DMG 目标、desktop-release.yml 的 v* 标签条件与正式 Release 发布任务。desktop-production 环境已允许 v* 标签，发布任务单独使用 contents: write 权限。OPENFOX_PUBLIC_URL 用于工作台地址及向已安装的 0.1.2 提供同一 PKG。新版客户端的下载来源固定为官方 GitHub 仓库。构建验证 DMG 与 PKG 内容一致，附件摘要核对后公开 GitHub Release，随后部署工作台和旧客户端的更新入口。发布失败可在同一运行上重试失败作业。修复已安装的版本需发布更高版本；静态服务可按上文恢复原目录。无 SQL 或数据库迁移。
+
+标签 `v0.1.3` 指向提交 `3d72409`。2026-11-24 14:57（北京时间），Actions 公开 GitHub Release，15:07 完成生产工作台与旧更新清单部署。三项作业全部成功，125 项桌面测试、35 项设置页测试、4 项发布测试及类型检查通过。正式 DMG 与 PKG 的 SHA-256 分别为 `818a0aeac403135580499cf3978a3691d50181860b3aa072f0ce52fb2da35efe` 和 `797e7625f11e645aa4e2906386adfe3c275c45b3af03b16342420c13b1e61613`。[0.1.3 Release](https://github.com/openseek-x/openfox/releases/tag/v0.1.3) · [成功运行](https://github.com/openseek-x/openfox/actions/runs/45343384946)
+
+实测 Electron 主进程通过 GitHub 获取标签及官方 CDN 地址，完整下载正式 PKG，校验摘要后清理，未打开 Installer。公网 DMG 下载期间本机代理出现 TLS 中断，按范围重试并还原完整文件后，SHA-256 与 GitHub 一致。只读挂载后确认应用版本为 0.1.3、主程序为 arm64、签名完整，包内的三个更新相关模块与源码逐字节一致，发行更新开关已开启。旧端的公网清单指向 0.1.3，PKG 摘要与 GitHub 附件一致。新版以公开稳定标签选择更新，自建清单的 min_version 及 OPENFOX_DESKTOP_UPDATE_HOSTS 不参与新版选择。
