@@ -46,3 +46,25 @@
 `.github/workflows/desktop-release.yml` 的触发条件改为推送 master，发布队列采用 GitHub 的 queue: max。并发推送依次处理，平台最多允许 100 次运行排队。已有标签仅在指向相同 SHA 时可复用，较旧版本不能取代 GitHub 最新版本或切换生产站点。生产环境 desktop-production 的部署来源改为 master 分支。构建凭据、部署密钥、下载格式及安装确认流程沿用现有配置。无 SQL 或数据库迁移。[GitHub 并发队列说明](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency)
 
 本地验证了工作流触发条件、所有 shell 步骤的语法，以及运行号 4、5、5 对应的包版本 0.1.4、0.1.5、0.1.5。用模拟的 GitHub API 验证了新版本发布、较旧运行不提升为 latest、同名标签与 SHA 不符时终止。生产运行的发布摘要链接到实际构建提交及 Release。恢复旧触发方式需同时恢复工作流和环境的标签部署规则。已上线版本保留其原有标签和附件，修复使用后续 master 推送发版。
+
+## 2026-11-24 应用内确认安装 DMG 并重启
+
+桌面端复用定时、托盘和关于页的检查与代理下载。先核对 GitHub Release 上 DMG 与同名 `.dmg.sig` 的 SHA-256，再用构建时内嵌的 Ed25519 公钥验证 DMG。准备就绪后显示「安装并重启」和「稍后」。暂缓保留进程内已验证的文件；退出清理临时目录。只有原生确认框的肯定答复才启动 Sparkle。关于页的「查看更新…」打开该确认框。安装发起的退出复用已有授权，本地服务和已有任务继续运行。
+
+选择 Sparkle 2.10.1 处理应用包替换、签名检查与重新启动。构建脚本验证官方二进制 SDK 和同标签 CLI 源码的固定 SHA-256，用系统 clang 编译 CLI 并将带许可证的辅助应用放入 Contents/Helpers。Sparkle 仅接受 HTTP(S) 更新包地址；确认安装后，主进程在随机的 IPv4 回环端口及随机路径上提供本次已验证的 DMG，避免系统更新器用另一套代理重复下载。Sparkle 在解包前再次验签。保留原发布流水线的 PKG 产物和静态清单，已有客户端可以使用原入口获取带新更新器的应用。原版本遇到系统安装器拦截的用户可从本次发布的 DMG 手动安装一次。
+
+### 发布配置
+
+- `apps/desktop/package.json` 的发行打包命令先构建辅助程序，同时将主进程的 Sparkle 安装模块打包。普通开发构建沿用手动下载。
+- `apps/desktop/release-config.cjs` 将辅助程序及公钥写入发行包，将 CFBundleVersion 固定为本次发布版本；启用 Sparkle 解包前验签，安装由应用内确认触发。`apps/desktop/sparkle/Info.plist` 定义无 Dock 窗口的独立更新辅助程序。
+- `.github/workflows/desktop-release.yml` 验证 DMG 内的签名、公钥、版本和辅助程序，在独立步骤签署已完成构建的 DMG；发布前核对 DMG、签名文件及 PKG 的 GitHub 摘要。
+- 仓库变量 `OPENFOX_UPDATE_PUBLIC_KEY` 存放 Base64 原始公钥，仓库 Secret `OPENFOX_UPDATE_PRIVATE_KEY` 存放 PKCS#8 PEM 私钥。已按维护者授权配置并核对远端公钥。正式 Ed25519 种子的备份在维护者本机登录钥匙串，服务为 `io.openfox.desktop.release-signing`、账户为 `openseek-x/openfox`。密钥不匹配会中止签名。后续版本复用此密钥。
+- 不涉及 SQL、数据库 Schema、数据迁移或服务配置。
+
+### 验证与回退
+
+在 macOS 15.7.7 arm64 运行桌面测试 125 项、关于页所在测试文件 35 项、静态发布测试 4 项和工作区类型检查，全部通过。覆盖签名不匹配（包括同步改写摘要）、签名文件超限、网络中断、暂缓、重复检查、发布撤回和失败重试。发行工作流通过 YAML 和内嵌 shell 语法检查。
+
+本机使用已安装的 Electron 45.0.0 构建 DMG 和 PKG。首次构建因下载 Electron 时 DNS 解析失败，改用相同版本的本机发行文件完成。用两份隔离的真实 Electron 应用包、独立应用标识、临时用户目录和测试密钥验证生产主进程。测试夹具保留 Electron 查找子进程所需的应用名称；模拟 GitHub 发布响应、文件传输和原生按钮选择。4.0.0 首次选择「稍后」，仍为同一进程；第二次确认后 Sparkle 安装 DMG，4.0.1 从原位置以新 PID 启动，版本和深度代码签名检查通过。其间未出现额外的退出确认框。本机日常使用的 OpenFox 保持 0.1.3。
+
+设备若禁止替换应用，用户可以从正式 Release 的 DMG 安装。需要回退时，将修复或还原提交作为更高版本重新发布；保留同一签名密钥，使已安装的 Sparkle 客户端能够验签。正式用户设备上的授权提示仍由 macOS 策略决定。

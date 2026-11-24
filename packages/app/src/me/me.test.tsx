@@ -825,7 +825,7 @@ describe("桌面应用偏好与关于页", () => {
     expect(
       screen.queryByRole("button", { name: "跳过此版本" }),
     ).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "打开系统安装器" }));
+    await user.click(screen.getByRole("button", { name: "查看更新…" }));
     expect(checkForUpdate).toHaveBeenCalledTimes(1);
   });
 

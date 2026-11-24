@@ -78,13 +78,13 @@ export const meEn: Messages["me"] = {
     },
     available: "Version {version} is available",
     sha256: "SHA-256",
-    restart: "Open macOS Installer",
+    reviewUpdate: "Review Update…",
     phase: {
       manual: "Download and install the update manually for this build.",
       downloading: "Downloading and verifying the update…",
       installer_opened:
         "Complete installation in macOS Installer, then reopen OpenFox.",
-      installing: "Opening macOS Installer…",
+      installing: "Installing and restarting OpenFox…",
       ready: "The update is downloaded and waiting for your confirmation.",
       failed: "Download or verification failed. Check for updates to retry.",
     },

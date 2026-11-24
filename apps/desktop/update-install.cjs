@@ -1,11 +1,10 @@
-// Download through the workbench proxy. Only hand a verified local package to Installer.
-const { createHash } = require("node:crypto");
+// Download through the workbench proxy. Only offer installation of a signed DMG.
+const { createHash, createPublicKey, verify } = require("node:crypto");
+const { promisify } = require("node:util");
+const verifyDMG = promisify(verify);
 const fs = require("node:fs/promises");
 const { createWriteStream, rmSync } = require("node:fs");
 const os = require("node:os");
-const { execFile } = require("node:child_process");
-const { promisify } = require("node:util");
-const runFile = promisify(execFile);
 const path = require("node:path");
 const { pipeline } = require("node:stream/promises");
 
@@ -52,7 +51,12 @@ async function resolveGitHubDownload(net, session, url, signal) {
   }
 }
 
-async function downloadPackage(manifest, fetchPackage, file) {
+async function downloadPackage(
+  manifest,
+  fetchPackage,
+  file,
+  maxBytes = MAX_PACKAGE_BYTES,
+) {
   const signal = AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS);
   const response = await fetchPackage(manifest.download_url, {
     credentials: "omit",
@@ -63,7 +67,7 @@ async function downloadPackage(manifest, fetchPackage, file) {
   if (
     response.status !== 200 ||
     !response.body ||
-    Number(response.headers.get("content-length")) > MAX_PACKAGE_BYTES
+    Number(response.headers.get("content-length")) > maxBytes
   ) {
     await response.body?.cancel();
     throw new Error("Update download rejected");
@@ -75,7 +79,7 @@ async function downloadPackage(manifest, fetchPackage, file) {
     async function* (chunks) {
       for await (const chunk of chunks) {
         bytes += chunk.byteLength;
-        if (bytes > MAX_PACKAGE_BYTES) throw new Error("Update too large");
+        if (bytes > maxBytes) throw new Error("Update too large");
         hash.update(chunk);
         yield chunk;
       }
@@ -85,55 +89,54 @@ async function downloadPackage(manifest, fetchPackage, file) {
   );
   if (!bytes || hash.digest("hex") !== manifest.sha256)
     throw new Error("Update checksum mismatch");
+  return bytes;
 }
 
-// Installer may still be reading its package after OpenFox exits. Move the
-// confirmed file to our private cache before handing it to the system.
-async function downloadUpdate(manifest, fetchPackage) {
+async function downloadUpdate(manifest, fetchPackage, publicKey) {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "openfox-update-"));
   const discard = () => {
     process.off("exit", discard);
     try {
       rmSync(dir, { recursive: true, force: true });
     } catch {
-      // The system owns cleanup of its temporary directory after a hard exit.
+      // The OS also reclaims temporary files after exit.
     }
   };
   process.once("exit", discard);
   try {
-    const pkg = path.join(dir, "update.pkg");
-    await downloadPackage(manifest, fetchPackage, pkg);
-    return {
-      discard,
-      async openInstaller(cache, openPath) {
-        await fs.mkdir(cache, { recursive: true, mode: 0o700 });
-        // A stable name for this digest allows retries without accumulating copies.
-        const target = path.join(
-          cache,
-          `OpenFox-${manifest.version}-${manifest.sha256}.pkg`,
-        );
-        const tmp = await fs.mkdtemp(path.join(cache, ".copy-"));
-        try {
-          const copy = path.join(tmp, "update.pkg");
-          await fs.copyFile(pkg, copy);
-          if (process.platform === "darwin") {
-            // Keep downloaded installers subject to the user's normal Gatekeeper policy.
-            const timestamp = Math.floor(Date.now() / 1000).toString(16);
-            await runFile("/usr/bin/xattr", [
-              "-w",
-              "com.apple.quarantine",
-              `0083;${timestamp};OpenFox;`,
-              copy,
-            ]);
-          }
-          await fs.rename(copy, target);
-        } finally {
-          await fs.rm(tmp, { recursive: true, force: true });
-        }
-        const error = await openPath(target);
-        if (error) throw new Error("Could not open macOS Installer");
+    const signatureFile = path.join(dir, "update.sig");
+    await downloadPackage(
+      {
+        download_url: manifest.download_url + ".sig",
+        sha256: manifest.signature_sha256,
       },
-    };
+      fetchPackage,
+      signatureFile,
+      89,
+    );
+    const signature = (await fs.readFile(signatureFile, "utf8")).trim();
+    if (!/^[A-Za-z0-9+/]{86}==$/.test(signature))
+      throw new Error("Invalid Ed25519 signature");
+    const key = createPublicKey({
+      format: "jwk",
+      key: {
+        kty: "OKP",
+        crv: "Ed25519",
+        x: Buffer.from(publicKey, "base64").toString("base64url"),
+      },
+    });
+    const file = path.join(dir, "OpenFox.dmg");
+    const size = await downloadPackage(manifest, fetchPackage, file);
+    if (
+      !(await verifyDMG(
+        null,
+        await fs.readFile(file),
+        key,
+        Buffer.from(signature, "base64"),
+      ))
+    )
+      throw new Error("DMG signature verification failed");
+    return { file, size, signature, version: manifest.version, discard };
   } catch (error) {
     discard();
     throw error;
@@ -163,7 +166,8 @@ function createUpdateManager({
       archive &&
       found &&
       update.manifest.version === result.manifest.version &&
-      update.manifest.sha256 === result.manifest.sha256;
+      update.manifest.sha256 === result.manifest.sha256 &&
+      update.manifest.signature_sha256 === result.manifest.signature_sha256;
     if (!reuse) {
       archive?.discard();
       archive = null;
@@ -191,7 +195,6 @@ function createUpdateManager({
       update.phase = "installing";
       try {
         await install(archive);
-        update.phase = "installer_opened";
       } catch {
         update.phase = "failed";
         result = { status: "failed", version: update.manifest.version };
@@ -228,33 +231,8 @@ function createUpdateManager({
   };
 }
 
-async function removeInstalledPackages(cache, version) {
-  const { compareVersions } = require("./update-check.cjs");
-  const entries = await fs
-    .readdir(cache, { withFileTypes: true })
-    .catch((error) => {
-      if (error.code === "ENOENT") return [];
-      throw error;
-    });
-  for (const entry of entries) {
-    const match = /^OpenFox-(\d+\.\d+\.\d+)-[a-f0-9]{64}\.pkg$/.exec(
-      entry.name,
-    );
-    if (
-      entry.isFile() &&
-      match &&
-      [0, 1].includes(compareVersions(version, match[1]))
-    ) {
-      await fs.unlink(path.join(cache, entry.name)).catch((error) => {
-        if (error.code !== "ENOENT") throw error;
-      });
-    }
-  }
-}
-
 module.exports = {
   resolveGitHubDownload,
-  removeInstalledPackages,
   createUpdateManager,
   downloadUpdate,
   MAX_PACKAGE_BYTES,

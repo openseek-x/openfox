@@ -36,16 +36,24 @@ Reruns retain their version. After tests pass, Actions creates the `vX.Y.Z`
 tag on the exact commit it built and checks any existing tag before reusing it.
 
 GitHub Actions builds the arm64 app, verifies the DMG contains the same app as
-the PKG, and attaches both installers to a draft GitHub Release. After the
+the PKG, signs the DMG and attaches both installers and the detached signature to a draft GitHub Release. After the
 SHA-256 digests match, the workflow publishes the release and then deploys
 the web workbench and the update feed used by older clients.
 Rerun failed jobs on the original run to reuse its verified build artifacts.
 
-From 0.1.3, the app checks the latest stable GitHub Release in `openseek-x/openfox`.
-The tag supplies the version. People installing manually use the DMG. The release
-app downloads the PKG with a 512 MiB limit and 20-minute timeout, checks its
-GitHub digest and opens macOS Installer only on explicit consent. The app uses
-ad hoc signing and installation is subject to the user's macOS security policy.
+Release builds check the latest stable GitHub Release in `openseek-x/openfox`.
+Sparkle-enabled clients download the DMG and its `.dmg.sig` asset through the workspace
+proxy. They check both GitHub digests and verify the DMG with the embedded Ed25519
+public key. The DMG is limited to 512 MiB and the download to 20 minutes.
+Confirming **Install and Restart** starts Sparkle and preserves the local service.
+A Mac's application-management and first-launch policies still apply.
+
+The build reads repository variable `OPENFOX_UPDATE_PUBLIC_KEY` (32-byte raw
+Ed25519 public key, Base64). Only the DMG signing step reads repository secret
+`OPENFOX_UPDATE_PRIVATE_KEY` (Ed25519, PKCS#8 PEM). Configure the pair before
+releasing and keep the same key across releases. A mismatch stops publication.
+For the initial switch, install a Sparkle-enabled release once using its DMG
+or the existing PKG update flow. Each later release can update in place.
 
 Configure repository variable `OPENFOX_PUBLIC_URL` with the HTTPS workbench
 origin. The workflow also publishes the same PKG and `desktop/latest.json` on

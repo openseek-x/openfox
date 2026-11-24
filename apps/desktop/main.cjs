@@ -59,13 +59,13 @@ const { message, pickLocale } = require("./messages.cjs");
 const { createQuitFlow } = require("./quit-flow.cjs");
 const { decideRestart } = require("./restart-policy.cjs");
 const { buildTrayMenu, serviceStatus } = require("./tray.cjs");
+const { installWithSparkle } = require("./sparkle-install.cjs");
 const { checkForUpdate } = require("./update-check.cjs");
 
 const {
   createUpdateManager,
   downloadUpdate,
   resolveGitHubDownload,
-  removeInstalledPackages,
 } = require("./update-install.cjs");
 
 const MAX_OUTPUT_BYTES = 64 * 1024;
@@ -1513,26 +1513,32 @@ const updates = createUpdateManager({
   automatic: automaticUpdates,
   check: () =>
     checkForUpdate({
-      systemInstaller: automaticUpdates,
+      requireSignature: automaticUpdates,
       current: app.getVersion(),
       skippedVersion: localPrefs.get().skipped_version,
       fetchText: fetchUpdateText,
     }),
   download: (manifest) => {
     const updateSession = mainWindow.webContents.session;
-    return downloadUpdate(manifest, async (url, options) => {
-      const target = await resolveGitHubDownload(
-        net,
-        updateSession,
-        url,
-        options.signal,
-      );
-      return updateSession.fetch(target, options);
-    });
+    return downloadUpdate(
+      manifest,
+      async (url, options) => {
+        const target = await resolveGitHubDownload(
+          net,
+          updateSession,
+          url,
+          options.signal,
+        );
+        return updateSession.fetch(target, options);
+      },
+      require("./package.json").openfoxUpdatePublicKey,
+    );
   },
   install: async (archive) => {
-    const cache = path.join(app.getPath("userData"), "desktop-installers");
-    await archive.openInstaller(cache, (file) => shell.openPath(file));
+    const bundle = path.resolve(process.resourcesPath, "../..");
+    await installWithSparkle(bundle, archive);
+    // A successful relaunch terminates this process before the helper returns.
+    throw new Error("OpenFox did not restart");
   },
   record: async (result) => {
     await localPrefs
@@ -1576,9 +1582,7 @@ async function showUpdateResult(result, update) {
       const { response } = await box({
         type: "info",
         message: tr("update.ready.message", { version: m.version }),
-        detail: [tr("update.ready.detail"), m.notes]
-          .filter(Boolean)
-          .join("\n\n"),
+        detail: tr("update.ready.detail"),
         buttons: [tr("update.restart"), tr("update.later")],
         defaultId: 1,
         cancelId: 1,
@@ -1714,6 +1718,8 @@ const confirmQuit = createQuitFlow({
 });
 
 app.on("before-quit", (event) => {
+  // The native install confirmation already authorized this restart. Keep the daemon running.
+  if (updates.update?.phase === "installing") quitting = true;
   if (quitting) return;
   event.preventDefault();
   if (confirmingQuit) return;
@@ -1852,11 +1858,6 @@ app.whenReady().then(async () => {
   if (settings.prevent_sleep) applySleepGuard(await daemonStatus());
   createWindow();
   createTray();
-  if (automaticUpdates)
-    void removeInstalledPackages(
-      path.join(app.getPath("userData"), "desktop-installers"),
-      app.getVersion(),
-    ).catch(() => {});
   scheduleUpdateChecks();
   // 系统关机/注销时不能卡在退出确认上
   const suspendBrowser = () => browserHosts.get(mainWindow)?.suspend();
