@@ -38,3 +38,11 @@
 标签 `v0.1.3` 指向提交 `3d72409`。2026-11-24 14:57（北京时间），Actions 公开 GitHub Release，15:07 完成生产工作台与旧更新清单部署。三项作业全部成功，125 项桌面测试、35 项设置页测试、4 项发布测试及类型检查通过。正式 DMG 与 PKG 的 SHA-256 分别为 `818a0aeac403135580499cf3978a3691d50181860b3aa072f0ce52fb2da35efe` 和 `797e7625f11e645aa4e2906386adfe3c275c45b3af03b16342420c13b1e61613`。[0.1.3 Release](https://github.com/openseek-x/openfox/releases/tag/v0.1.3) · [成功运行](https://github.com/openseek-x/openfox/actions/runs/45343384946)
 
 实测 Electron 主进程通过 GitHub 获取标签及官方 CDN 地址，完整下载正式 PKG，校验摘要后清理，未打开 Installer。公网 DMG 下载期间本机代理出现 TLS 中断，按范围重试并还原完整文件后，SHA-256 与 GitHub 一致。只读挂载后确认应用版本为 0.1.3、主程序为 arm64、签名完整，包内的三个更新相关模块与源码逐字节一致，发行更新开关已开启。旧端的公网清单指向 0.1.3，PKG 摘要与 GitHub 附件一致。新版以公开稳定标签选择更新，自建清单的 min_version 及 OPENFOX_DESKTOP_UPDATE_HOSTS 不参与新版选择。
+
+## 2026-11-24 从 master 推送自动发布
+
+发布入口改为 `master` 的 push，包括 PR 的合并提交。此前 0.1.3 发布标签位于单独的发行历史。此次把完整工作流经 develop 合入 master。CI 核对检出的提交等于事件中的 SHA，测试、打包后在同一 SHA 创建稳定版本标签。工作流在运行器本地写入版本，主、次版本来自桌面 package.json，补丁号取 GitHub 工作流运行序号。沿用前序运行号 3，下一次预计为 v0.1.4。构建失败可能留出版本号空档，重试同一运行保留原号。Git 历史中的 package.json 保留开发版本。
+
+`.github/workflows/desktop-release.yml` 的触发条件改为推送 master，发布队列采用 GitHub 的 queue: max。并发推送依次处理，平台最多允许 100 次运行排队。已有标签仅在指向相同 SHA 时可复用，较旧版本不能取代 GitHub 最新版本或切换生产站点。生产环境 desktop-production 的部署来源改为 master 分支。构建凭据、部署密钥、下载格式及安装确认流程沿用现有配置。无 SQL 或数据库迁移。[GitHub 并发队列说明](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency)
+
+本地验证了工作流触发条件、所有 shell 步骤的语法，以及运行号 4、5、5 对应的包版本 0.1.4、0.1.5、0.1.5。用模拟的 GitHub API 验证了新版本发布、较旧运行不提升为 latest、同名标签与 SHA 不符时终止。生产运行的发布摘要链接到实际构建提交及 Release。恢复旧触发方式需同时恢复工作流和环境的标签部署规则。已上线版本保留其原有标签和附件，修复使用后续 master 推送发版。

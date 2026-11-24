@@ -28,7 +28,13 @@ assets with `pnpm --filter @openfox/web build` and publish `apps/web/dist`.
 
 ## Desktop updates
 
-Push a `vX.Y.Z` Git tag matching the version in `apps/desktop/package.json`.
+Every push to `master`, including a merged pull request, queues a release of the
+push's head commit. GitHub Actions takes the major and minor from
+`apps/desktop/package.json` and uses this workflow's run number for the patch.
+The runner sets that version in its checkout for the app, CLI and installers.
+Reruns retain their version. After tests pass, Actions creates the `vX.Y.Z`
+tag on the exact commit it built and checks any existing tag before reusing it.
+
 GitHub Actions builds the arm64 app, verifies the DMG contains the same app as
 the PKG, and attaches both installers to a draft GitHub Release. After the
 SHA-256 digests match, the workflow publishes the release and then deploys
@@ -45,7 +51,7 @@ Configure repository variable `OPENFOX_PUBLIC_URL` with the HTTPS workbench
 origin. The workflow also publishes the same PKG and `desktop/latest.json` on
 that origin so existing 0.1.2 installations can receive the GitHub-enabled app.
 
-The `desktop-production` GitHub environment permits release tags. It contains
+The `desktop-production` GitHub environment permits the `master` branch. It contains
 `OPENFOX_DEPLOY_KEY` (secret), `OPENFOX_DEPLOY_TARGET` (user@host) and
 `OPENFOX_KNOWN_HOSTS` (pinned SSH host keys). The build job has no deployment key.
 On the server, install `publish-static.py` in a root-owned location and restrict

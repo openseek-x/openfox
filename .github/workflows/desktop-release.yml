@@ -1,17 +1,18 @@
 name: Release OpenFox desktop and web
 on:
   push:
-    tags: ['v*']
+    branches: [master]
 
 permissions:
   contents: read
 
 concurrency:
   group: openfox-desktop-production
-  cancel-in-progress: false
+  queue: max
 
 jobs:
   build:
+    if: github.event.deleted == false
     runs-on: macos-15
     timeout-minutes: 40
     outputs:
@@ -33,8 +34,10 @@ jobs:
         run: |
           set -eu
           test "$(uname -m)" = arm64
-          version=$(node -p "require('./apps/desktop/package.json').version")
-          test "$GITHUB_REF_NAME" = "v$version"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          base=$(node -p "require('./apps/desktop/package.json').version")
+          version="${base%.*}.$GITHUB_RUN_NUMBER"
+          npm --prefix apps/desktop pkg set "version=$version"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           node -e 'if(new URL(process.env.OPENFOX_DESKTOP_DEFAULT_WEB_URL).protocol !== "https:") process.exit(1)'
           npm install --global pnpm@11.15.1
@@ -92,6 +95,7 @@ jobs:
 
   deploy:
     needs: [build, github-release]
+    if: needs.github-release.outputs.is_latest == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: desktop-production
@@ -125,6 +129,8 @@ jobs:
   github-release:
     needs: build
     runs-on: ubuntu-latest
+    outputs:
+      is_latest: ${{ steps.publish.outputs.is_latest }}
     permissions:
       contents: write
     steps:
@@ -132,14 +138,20 @@ jobs:
         with:
           name: mac-installers
       - name: Publish verified installers on the version tag
+        id: publish
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.build.outputs.version }}
         run: |
           set -euo pipefail
           repo="$GITHUB_REPOSITORY"
-          tag="$GITHUB_REF_NAME"
+          tag="v$VERSION"
           files=("OpenFox-$VERSION-arm64.dmg" "OpenFox-$VERSION-arm64.pkg")
+          # Reserve the immutable tag at the built master commit. Retries may reuse that exact ref.
+          if ! gh api --method POST "repos/$repo/git/refs" -f "ref=refs/tags/$tag" -f "sha=$GITHUB_SHA" >/dev/null; then
+            target=$(gh api "repos/$repo/git/ref/tags/$tag" --jq .object.sha)
+            test "$target" = "$GITHUB_SHA"
+          fi
           if ! draft=$(gh release view "$tag" --repo "$repo" --json isDraft --jq .isDraft); then
             gh release create "$tag" --repo "$repo" --verify-tag --draft --title "OpenFox $VERSION" \
               --notes 'Apple 芯片 Mac 请下载 DMG，打开后将 OpenFox 拖入「应用程序」。PKG 用于确认后的系统安装。'
@@ -154,14 +166,21 @@ jobs:
             jq -e --arg name "$file" --arg digest "$digest" \
               'any(.assets[]; .name == $name and .state == "uploaded" and .digest == $digest)' <<< "$assets"
           done
+          # A delayed retry of an older tag must not demote the current release.
+          if ! latest=$(gh api "repos/$repo/releases/latest" --jq .tag_name 2>lookup-error); then
+            grep -q 'HTTP 404' lookup-error || { cat lookup-error >&2; exit 1; }
+            latest="$tag"
+          fi
           if [[ "$draft" == true ]]; then
-            # A delayed retry of an older tag must not demote the current release.
-            if ! latest=$(gh api "repos/$repo/releases/latest" --jq .tag_name 2>lookup-error); then
-              grep -q 'HTTP 404' lookup-error || { cat lookup-error >&2; exit 1; }
-              latest="$tag"
-            fi
             highest=$(printf '%s\n' "$tag" "$latest" | sort -V | tail -1)
             make_latest=false
             if [[ "$highest" == "$tag" ]]; then make_latest=true; fi
             gh release edit "$tag" --repo "$repo" --draft=false --latest="$make_latest"
+            latest="$highest"
           fi
+          if [[ "$tag" == "$latest" ]]; then
+            echo "is_latest=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_latest=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Released [$tag]($GITHUB_SERVER_URL/$repo/releases/tag/$tag) from [master commit $GITHUB_SHA]($GITHUB_SERVER_URL/$repo/commit/$GITHUB_SHA)." >> "$GITHUB_STEP_SUMMARY"
