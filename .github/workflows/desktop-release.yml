@@ -1,0 +1,186 @@
+name: Release OpenFox desktop and web
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: openfox-desktop-production
+  queue: max
+
+jobs:
+  build:
+    if: github.event.deleted == false
+    runs-on: macos-15
+    timeout-minutes: 40
+    outputs:
+      version: ${{ steps.inputs.outputs.version }}
+      artifact_id: ${{ steps.upload.outputs.artifact-id }}
+      artifact_digest: ${{ steps.upload.outputs.artifact-digest }}
+    env:
+      OPENFOX_DESKTOP_DEFAULT_WEB_URL: ${{ vars.OPENFOX_PUBLIC_URL }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22.23.1'
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+      - name: Check release inputs and install dependencies
+        id: inputs
+        run: |
+          set -eu
+          test "$(uname -m)" = arm64
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          base=$(node -p "require('./apps/desktop/package.json').version")
+          version="${base%.*}.$GITHUB_RUN_NUMBER"
+          npm --prefix apps/desktop pkg set "version=$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          node -e 'if(new URL(process.env.OPENFOX_DESKTOP_DEFAULT_WEB_URL).protocol !== "https:") process.exit(1)'
+          npm install --global pnpm@11.15.1
+          pnpm install --frozen-lockfile
+      - name: Test desktop and update UI
+        run: |
+          pnpm --filter @openfox/desktop test
+          pnpm exec vitest run packages/app/src/me/me.test.tsx
+          pnpm typecheck
+          python3 deploy/test_publish_static.py
+      - name: Build and verify the web and macOS installer
+        env:
+          RELEASE_VERSION: ${{ steps.inputs.outputs.version }}
+        run: |
+          set -eu
+          pnpm --filter @openfox/web build
+          pnpm --filter @openfox/desktop dist:mac:release
+          version="$RELEASE_VERSION"
+          release="$RUNNER_TEMP/payload"
+          mkdir -p "$release/desktop"
+          cp -R apps/web/dist "$release/web"
+          cp apps/desktop/dist/release/{latest.json,OpenFox-"$version"-arm64.pkg} "$release/desktop/"
+          pkgutil --expand-full "$release/desktop/OpenFox-$version-arm64.pkg" "$RUNNER_TEMP/expanded"
+          app=$(find "$RUNNER_TEMP/expanded" -type d -name OpenFox.app -print -quit)
+          test -n "$app"
+          test "$(plutil -extract CFBundleShortVersionString raw "$app/Contents/Info.plist")" = "$version"
+          test "$(plutil -extract CFBundleIdentifier raw "$app/Contents/Info.plist")" = io.openfox.desktop
+          codesign --verify --deep --strict "$app"
+          dmg="apps/desktop/dist/release/OpenFox-$version-arm64.dmg"
+          hdiutil verify "$dmg"
+          mount="$RUNNER_TEMP/dmg-mount"
+          mkdir "$mount"
+          hdiutil attach -readonly -nobrowse -mountpoint "$mount" "$dmg"
+          trap 'hdiutil detach "$mount" >/dev/null' EXIT
+          codesign --verify --deep --strict "$mount/OpenFox.app"
+          diff -qr "$app" "$mount/OpenFox.app"
+          COPYFILE_DISABLE=1 tar -czf "$RUNNER_TEMP/openfox-static.tar.gz" -C "$release" web desktop
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        id: upload
+        with:
+          name: openfox-static
+          path: ${{ runner.temp }}/openfox-static.tar.gz
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 7
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: mac-installers
+          path: |
+            apps/desktop/dist/release/OpenFox-*.dmg
+            apps/desktop/dist/release/OpenFox-*.pkg
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy:
+    needs: [build, github-release]
+    if: needs.github-release.outputs.is_latest == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: desktop-production
+    permissions:
+      actions: read
+    steps:
+      - name: Publish and verify the production release
+        env:
+          DEPLOY_KEY: ${{ secrets.OPENFOX_DEPLOY_KEY }}
+          KNOWN_HOSTS: ${{ vars.OPENFOX_KNOWN_HOSTS }}
+          DEPLOY_TARGET: ${{ vars.OPENFOX_DEPLOY_TARGET }}
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_ID: ${{ needs.build.outputs.artifact_id }}
+          ARTIFACT_DIGEST: ${{ needs.build.outputs.artifact_digest }}
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          set -eu
+          umask 077
+          printf '%s\n' "$DEPLOY_KEY" > "$RUNNER_TEMP/deploy.key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$RUNNER_TEMP/known_hosts"
+          unset DEPLOY_KEY
+          url=$(curl --fail --silent --show-error --output /dev/null --write-out '%{redirect_url}' \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/artifacts/$ARTIFACT_ID/zip")
+          test -n "$url"
+          printf '%s\n' "$url" | ssh -i "$RUNNER_TEMP/deploy.key" -o BatchMode=yes -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/known_hosts" \
+            -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
+            "$DEPLOY_TARGET" "publish-artifact $RELEASE_VERSION $GITHUB_SHA ${ARTIFACT_DIGEST#sha256:}"
+
+  github-release:
+    needs: build
+    runs-on: ubuntu-latest
+    outputs:
+      is_latest: ${{ steps.publish.outputs.is_latest }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: mac-installers
+      - name: Publish verified installers on the version tag
+        id: publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          set -euo pipefail
+          repo="$GITHUB_REPOSITORY"
+          tag="v$VERSION"
+          files=("OpenFox-$VERSION-arm64.dmg" "OpenFox-$VERSION-arm64.pkg")
+          # Reserve the immutable tag at the built master commit. Retries may reuse that exact ref.
+          if ! gh api --method POST "repos/$repo/git/refs" -f "ref=refs/tags/$tag" -f "sha=$GITHUB_SHA" >/dev/null; then
+            target=$(gh api "repos/$repo/git/ref/tags/$tag" --jq .object.sha)
+            test "$target" = "$GITHUB_SHA"
+          fi
+          if ! draft=$(gh release view "$tag" --repo "$repo" --json isDraft --jq .isDraft); then
+            gh release create "$tag" --repo "$repo" --verify-tag --draft --title "OpenFox $VERSION" \
+              --notes 'Apple 芯片 Mac 请下载 DMG，打开后将 OpenFox 拖入「应用程序」。PKG 用于确认后的系统安装。'
+            draft=true
+          fi
+          if [[ "$draft" == true ]]; then
+            gh release upload "$tag" --repo "$repo" "${files[@]}" --clobber
+          fi
+          assets=$(gh release view "$tag" --repo "$repo" --json assets)
+          for file in "${files[@]}"; do
+            digest="sha256:$(sha256sum "$file" | cut -d' ' -f1)"
+            jq -e --arg name "$file" --arg digest "$digest" \
+              'any(.assets[]; .name == $name and .state == "uploaded" and .digest == $digest)' <<< "$assets"
+          done
+          # A delayed retry of an older tag must not demote the current release.
+          if ! latest=$(gh api "repos/$repo/releases/latest" --jq .tag_name 2>lookup-error); then
+            grep -q 'HTTP 404' lookup-error || { cat lookup-error >&2; exit 1; }
+            latest="$tag"
+          fi
+          if [[ "$draft" == true ]]; then
+            highest=$(printf '%s\n' "$tag" "$latest" | sort -V | tail -1)
+            make_latest=false
+            if [[ "$highest" == "$tag" ]]; then make_latest=true; fi
+            gh release edit "$tag" --repo "$repo" --draft=false --latest="$make_latest"
+            latest="$highest"
+          fi
+          if [[ "$tag" == "$latest" ]]; then
+            echo "is_latest=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_latest=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Released [$tag]($GITHUB_SERVER_URL/$repo/releases/tag/$tag) from [master commit $GITHUB_SHA]($GITHUB_SERVER_URL/$repo/commit/$GITHUB_SHA)." >> "$GITHUB_STEP_SUMMARY"

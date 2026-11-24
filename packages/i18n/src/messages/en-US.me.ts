@@ -77,9 +77,17 @@ export const meEn: Messages["me"] = {
       failed: "Check failed. Please try again later.",
     },
     available: "Version {version} is available",
-    sha256: "SHA-256 (verify after downloading)",
-    unsigned:
-      "The installer is not signed, so the system may warn about an unidentified developer when you open it.",
+    sha256: "SHA-256",
+    restart: "Open macOS Installer",
+    phase: {
+      manual: "Download and install the update manually for this build.",
+      downloading: "Downloading and verifying the update…",
+      installer_opened:
+        "Complete installation in macOS Installer, then reopen OpenFox.",
+      installing: "Opening macOS Installer…",
+      ready: "The update is downloaded and waiting for your confirmation.",
+      failed: "Download or verification failed. Check for updates to retry.",
+    },
     download: "Download",
     skip: "Skip this version",
     skipped: "Skipped {version}",
