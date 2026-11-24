@@ -130,8 +130,14 @@ export function CreateTaskProvider({
   );
 }
 
-/** 侧栏「新建任务」：弹出按空间分组的任务类型菜单，选中后打开弹窗。 */
-export function NewTaskButton({ orgId }: { orgId: string }) {
+/** 选择空间中的任务类型后打开新建任务弹窗。 */
+export function NewTaskButton({
+  orgId,
+  inTitleBar = false,
+}: {
+  orgId: string;
+  inTitleBar?: boolean;
+}) {
   const t = useT();
   const api = useApi();
   const navigate = useNavigate();
@@ -151,9 +157,15 @@ export function NewTaskButton({ orgId }: { orgId: string }) {
       <IconButton
         ref={anchor}
         label={t("shell.newTask")}
-        icon={<Icon name="plus" />}
+        icon={
+          inTitleBar ? (
+            <Icon name="hifox-new-chat" size={18} />
+          ) : (
+            <Icon name="plus" />
+          )
+        }
         size="28"
-        variant="outline"
+        variant={inTitleBar ? "ghost-soft" : "outline"}
         className="aria-expanded:bg-surface-active focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-line-focus"
         aria-expanded={open}
         aria-haspopup="menu"

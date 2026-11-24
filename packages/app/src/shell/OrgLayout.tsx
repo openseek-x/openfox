@@ -169,6 +169,7 @@ export function OrgLayout() {
     setCollapsed(next);
   };
   const toggle = () => changeCollapsed(!collapsed);
+  const sidebarHidden = collapsed || sidebar.width === 0;
 
   return (
     <WorkspacePersistence key={orgId} orgId={orgId}>
@@ -178,7 +179,11 @@ export function OrgLayout() {
             className="flex h-screen flex-col bg-surface-app"
             style={outlineStyle(prefs.data?.outline_color ?? 0, theme)}
           >
-            <TitleBar org={org} organizations={organizations.data ?? []} />
+            <TitleBar
+              org={org}
+              organizations={organizations.data ?? []}
+              showNewTask={sidebarHidden}
+            />
             <div
               ref={sidebar.containerRef}
               className="flex min-h-0 flex-1 gap-2 px-2 pb-2"
@@ -192,8 +197,8 @@ export function OrgLayout() {
                   <div
                     id="org-sidebar-panel"
                     style={{ width: collapsed ? 0 : sidebar.width }}
-                    aria-hidden={collapsed || sidebar.width === 0}
-                    inert={collapsed || sidebar.width === 0}
+                    aria-hidden={sidebarHidden}
+                    inert={sidebarHidden}
                     className={cn(
                       "flex min-w-0 shrink-0 overflow-hidden",
                       !sidebar.resizing &&
@@ -216,6 +221,7 @@ export function OrgLayout() {
                           key={orgId}
                           orgId={orgId}
                           onCollapse={toggle}
+                          showNewTask={!sidebarHidden}
                         />
                       )}
                     </div>
@@ -262,9 +268,11 @@ export function OrgLayout() {
 function TitleBar({
   org,
   organizations,
+  showNewTask,
 }: {
   org: Organization;
   organizations: Organization[];
+  showNewTask: boolean;
 }) {
   const t = useT();
   const api = useApi();
@@ -344,6 +352,7 @@ function TitleBar({
           {t("shell.createOrg")}
         </MenuItem>
       </Menu>
+      {showNewTask && <NewTaskButton orgId={org.id} inTitleBar />}
       <div className="flex flex-1 items-center justify-center gap-2">
         {desktop && <DesktopNav />}
         <SearchLauncher orgId={org.id} />
@@ -571,9 +580,11 @@ function readCollapsedSpaces(orgId: string): string[] {
 function Navigation({
   orgId,
   onCollapse,
+  showNewTask,
 }: {
   orgId: string;
   onCollapse: () => void;
+  showNewTask: boolean;
 }) {
   const t = useT();
   const conversationId = useCurrentConversationId();
@@ -611,7 +622,7 @@ function Navigation({
           {t("shell.home")}
         </h2>
         <SidebarCollapseButton onClick={onCollapse} />
-        <NewTaskButton orgId={orgId} />
+        {showNewTask && <NewTaskButton orgId={orgId} />}
       </div>
       <div className="flex flex-col gap-0.5">
         <NavRow
