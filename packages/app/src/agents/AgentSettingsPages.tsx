@@ -59,26 +59,28 @@ function Grouped({
                 {t("agents.settingsPages.empty")}
               </p>
             ) : (
-              <Table>
-                <TableHead>
-                  <tr className="bg-surface-muted">
-                    {columns.map((column) => (
-                      <TableHeaderCell
-                        key={column}
-                        className="first:rounded-l-lg first:pl-14"
-                      >
-                        {column}
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHead>
+                    <tr className="bg-surface-muted">
+                      {columns.map((column) => (
+                        <TableHeaderCell
+                          key={column}
+                          className="first:rounded-l-lg first:pl-14"
+                        >
+                          {column}
+                        </TableHeaderCell>
+                      ))}
+                      <TableHeaderCell className="w-12 rounded-r-lg">
+                        <span className="sr-only">
+                          {t("agents.settingsPages.settings")}
+                        </span>
                       </TableHeaderCell>
-                    ))}
-                    <TableHeaderCell className="w-12 rounded-r-lg">
-                      <span className="sr-only">
-                        {t("agents.settingsPages.settings")}
-                      </span>
-                    </TableHeaderCell>
-                  </tr>
-                </TableHead>
-                <TableBody>{list.map(row)}</TableBody>
-              </Table>
+                    </tr>
+                  </TableHead>
+                  <TableBody>{list.map(row)}</TableBody>
+                </Table>
+              </div>
             )}
           </section>
         );

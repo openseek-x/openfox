@@ -67,7 +67,7 @@ export function TableHeaderCell({
       scope={scope}
       aria-sort={sort}
       className={cn(
-        "h-[var(--density-group-row,36px)] px-3 text-caption font-normal text-fg-muted",
+        "relative h-[var(--density-group-row,36px)] px-3 text-caption font-normal text-fg-muted",
         className,
       )}
       {...rest}

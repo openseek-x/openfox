@@ -233,7 +233,7 @@ export function AgentsPage({ space }: { space?: AgentsPageSpace } = {}) {
         <div
           aria-busy="true"
           aria-label={t("agents.directory.loading")}
-          className="grid grid-cols-3 gap-3"
+          className="grid grid-cols-1 gap-3 @[500px]:grid-cols-2 @[760px]:grid-cols-3"
         >
           {Array.from({ length: 6 }, (_, i) => (
             <Skeleton key={i} className="h-[72px] rounded-xl" />
@@ -316,7 +316,7 @@ export function AgentsPage({ space }: { space?: AgentsPageSpace } = {}) {
                 />
               </button>
               {!folded && (
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 gap-3 @[500px]:grid-cols-2 @[760px]:grid-cols-3">
                   {group.entries.map((entry) => (
                     <DirectoryCard
                       key={`${entry.type}:${entry.id}`}
@@ -409,9 +409,9 @@ export function AgentsPage({ space }: { space?: AgentsPageSpace } = {}) {
 
   if (!space)
     return (
-      <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-8 pt-3 pb-10">
-        <header className="flex h-16 items-center gap-2 border-b border-line-default">
-          <h1 className="flex-1 text-heading font-medium">
+      <div className="@container mx-auto flex max-w-[1100px] flex-col gap-4 px-8 pt-3 pb-10">
+        <header className="flex min-h-16 flex-wrap items-center gap-2 border-b border-line-default">
+          <h1 className="flex-auto text-heading font-medium">
             {t("agents.directory.title")}
           </h1>
           {headerActions}
@@ -426,17 +426,21 @@ export function AgentsPage({ space }: { space?: AgentsPageSpace } = {}) {
       <header className="flex h-11 shrink-0 items-center gap-2 border-b border-line-default px-4">
         <nav
           aria-label={t("agents.directory.breadcrumb")}
-          className="flex flex-1 items-center gap-1.5 text-body"
+          className="flex min-w-0 flex-1 items-center gap-1.5 text-body"
         >
           <SpaceIcon icon={space.icon} />
-          <span className="text-fg-muted">{space.name}</span>
+          <span className="truncate text-fg-muted" title={space.name}>
+            {space.name}
+          </span>
           <Icon name="chevron-right" size={12} className="text-fg-subtle" />
-          <h1 className="font-medium">{t("agents.directory.spaceTitle")}</h1>
+          <h1 className="shrink-0 font-medium">
+            {t("agents.directory.spaceTitle")}
+          </h1>
         </nav>
         {headerActions}
       </header>
       <div className="min-h-0 flex-1 overflow-auto">
-        <div className="mx-auto flex max-w-[1100px] flex-col gap-4 px-8 pt-3 pb-10">
+        <div className="@container mx-auto flex max-w-[1100px] flex-col gap-4 px-8 pt-3 pb-10">
           {body}
         </div>
       </div>
