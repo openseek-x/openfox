@@ -5,6 +5,7 @@ import { cn } from "../cn";
 import { Button } from "./Button";
 import { Icon } from "./Icon";
 import { IconButton } from "./IconButton";
+import { dismissOnBackdrop } from "./outsideClick";
 import { useT } from "@openfox/i18n";
 
 const FOCUSABLE =
@@ -70,7 +71,7 @@ export function useModalBehavior(
 
 export interface DialogProps {
   open: boolean;
-  /** 不传时对话框不可关闭（首登向导） */
+  /** 提交期间可省略，暂时禁止关闭。 */
   onClose?: () => void;
   title?: ReactNode;
   /** 搜索面板把关闭按钮放在输入框里，标题只供辅助技术读取。 */
@@ -107,10 +108,7 @@ export function Dialog({
   return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-scrim/25 p-6"
-      onPointerDown={(event) => {
-        if (event.target === event.currentTarget && closeOnBackdrop)
-          onClose?.();
-      }}
+      onPointerDown={closeOnBackdrop ? dismissOnBackdrop(onClose) : undefined}
     >
       <div
         ref={panel}

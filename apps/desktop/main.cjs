@@ -59,7 +59,14 @@ const { message, pickLocale } = require("./messages.cjs");
 const { createQuitFlow } = require("./quit-flow.cjs");
 const { decideRestart } = require("./restart-policy.cjs");
 const { buildTrayMenu, serviceStatus } = require("./tray.cjs");
-const { checkForUpdate, parseHostList } = require("./update-check.cjs");
+const { checkForUpdate } = require("./update-check.cjs");
+
+const {
+  createUpdateManager,
+  downloadUpdate,
+  resolveGitHubDownload,
+  removeInstalledPackages,
+} = require("./update-install.cjs");
 
 const MAX_OUTPUT_BYTES = 64 * 1024;
 const COMMAND_TIMEOUT_MS = 10_000;
@@ -1389,8 +1396,7 @@ let confirmingQuit = false;
 let shuttingDown = false;
 let tray = null;
 let trayService = "unknown";
-// 最近一次发现的新版本（只存清单里已通过校验的内容；下载地址不会交给渲染进程）
-let availableUpdate = null;
+
 const promptedVersions = new Set();
 let updateTimer = null;
 let restartTimer = null;
@@ -1439,10 +1445,11 @@ function rebuildTrayMenu() {
       buildTrayMenu({
         locale,
         service: trayService,
-        updateVersion: availableUpdate ? availableUpdate.version : null,
+        updateVersion: updates.update?.manifest.version ?? null,
         handlers: {
           open: showMainWindow,
-          checkUpdate: () => void runUpdateCheck({ manual: true }),
+          checkUpdate: () =>
+            void runUpdateCheck({ manual: true }).catch(() => {}),
           quit: () => app.quit(),
         },
       }),
@@ -1498,62 +1505,98 @@ async function fetchUpdateText(url, { timeoutMs, maxBytes }) {
   return { status: 200, text: Buffer.concat(chunks).toString("utf8") };
 }
 
-async function runUpdateCheck({ manual }) {
-  let result;
-  if (!currentWebURL) {
-    result = { status: "unsupported_origin" };
-  } else {
-    result = await checkForUpdate({
-      centerURL: currentWebURL,
+const automaticUpdates =
+  app.isPackaged &&
+  process.platform === "darwin" &&
+  require("./package.json").openfoxAutoUpdate === true;
+const updates = createUpdateManager({
+  automatic: automaticUpdates,
+  check: () =>
+    checkForUpdate({
+      systemInstaller: automaticUpdates,
       current: app.getVersion(),
       skippedVersion: localPrefs.get().skipped_version,
-      allowedHosts: parseHostList(process.env.OPENFOX_DESKTOP_UPDATE_HOSTS),
       fetchText: fetchUpdateText,
+    }),
+  download: (manifest) => {
+    const updateSession = mainWindow.webContents.session;
+    return downloadUpdate(manifest, async (url, options) => {
+      const target = await resolveGitHubDownload(
+        net,
+        updateSession,
+        url,
+        options.signal,
+      );
+      return updateSession.fetch(target, options);
     });
-  }
-  const found = result.status === "update_available" ? result.manifest : null;
-  // 被跳过的版本在后台检查里保持安静，手动检查仍然提示
-  availableUpdate = found && (!result.skipped || manual) ? found : null;
-  try {
-    await localPrefs.update({
-      last_check: {
-        at: new Date().toISOString(),
-        status: result.status,
-        version: found ? found.version : (result.version ?? null),
-      },
-    });
-  } catch {
-    // 偏好写盘失败不影响检查结果
-  }
-  rebuildTrayMenu();
-  const shouldPrompt = found
-    ? manual || (!result.skipped && !promptedVersions.has(found.version))
-    : manual;
-  if (shouldPrompt) await showUpdateResult(result);
-  return result;
+  },
+  install: async (archive) => {
+    const cache = path.join(app.getPath("userData"), "desktop-installers");
+    await archive.openInstaller(cache, (file) => shell.openPath(file));
+  },
+  record: async (result) => {
+    await localPrefs
+      .update({
+        last_check: {
+          at: new Date().toISOString(),
+          status: result.status,
+          version: result.manifest?.version ?? result.version ?? null,
+        },
+      })
+      .catch(() => {});
+  },
+  showResult: async (result, update, manual) => {
+    rebuildTrayMenu();
+    if (quitting || shuttingDown) return;
+    if (
+      !manual &&
+      (result.status !== "update_available" ||
+        !update ||
+        promptedVersions.has(update.manifest.version))
+    )
+      return;
+    return showUpdateResult(result, update);
+  },
+});
+
+function runUpdateCheck({ manual }) {
+  return updates.check(manual);
 }
 
-async function showUpdateResult(result) {
+async function showUpdateResult(result, update) {
   const owner = mainWindow && !mainWindow.isDestroyed() ? mainWindow : null;
   const box = (options) =>
     owner
       ? dialog.showMessageBox(owner, options)
       : dialog.showMessageBox(options);
   if (result.status === "update_available") {
-    const m = result.manifest;
+    const m = update.manifest;
     promptedVersions.add(m.version);
+    if (update.phase === "ready") {
+      const { response } = await box({
+        type: "info",
+        message: tr("update.ready.message", { version: m.version }),
+        detail: [tr("update.ready.detail"), m.notes]
+          .filter(Boolean)
+          .join("\n\n"),
+        buttons: [tr("update.restart"), tr("update.later")],
+        defaultId: 1,
+        cancelId: 1,
+      });
+      return response === 0 && !confirmingQuit && !quitting && !shuttingDown;
+    }
     const detail = [
       tr("update.available.detail", {
         current: app.getVersion(),
         notes: m.notes || "-",
         sha256: m.sha256,
       }),
-      result.mandatory
+      update.mandatory
         ? "\n" + tr("update.available.mandatory", { min: m.min_version })
         : "",
     ].join("");
     const buttons = [tr("update.download"), tr("update.later")];
-    if (!result.mandatory) buttons.push(tr("update.skip"));
+    if (!update.mandatory) buttons.push(tr("update.skip"));
     const { response } = await box({
       type: "info",
       message: tr("update.available.message", { version: m.version }),
@@ -1574,7 +1617,10 @@ async function showUpdateResult(result) {
     unsafe_manifest: "rejected",
     failed: "failed",
   };
-  const key = keys[result.status] || "failed";
+  const key =
+    update?.phase === "failed"
+      ? "installFailed"
+      : keys[result.status] || "failed";
   await box({
     type: "info",
     message: tr(`update.${key}.message`),
@@ -1585,9 +1631,9 @@ async function showUpdateResult(result) {
 
 /** 只打开主进程里已校验过的下载地址（渲染进程不能传 URL）。 */
 async function openUpdateDownload() {
-  if (!availableUpdate) return { ok: false };
+  if (updates.update?.phase !== "manual") return { ok: false };
   try {
-    await shell.openExternal(availableUpdate.download_url);
+    await shell.openExternal(updates.update.manifest.download_url);
     return { ok: true };
   } catch {
     return { ok: false };
@@ -1595,15 +1641,11 @@ async function openUpdateDownload() {
 }
 
 async function skipUpdate() {
-  if (!availableUpdate) return { ok: false };
-  try {
-    await localPrefs.update({ skipped_version: availableUpdate.version });
-  } catch {
-    return { ok: false };
-  }
-  availableUpdate = null;
+  const ok = await updates
+    .skip((version) => localPrefs.update({ skipped_version: version }))
+    .catch(() => false);
   rebuildTrayMenu();
-  return { ok: true };
+  return { ok };
 }
 
 function scheduleUpdateChecks() {
@@ -1619,8 +1661,13 @@ function aboutInfo() {
   return {
     version: app.getVersion(),
     last_check: prefs.last_check,
-    update: availableUpdate
-      ? { version: availableUpdate.version, sha256: availableUpdate.sha256 }
+    update: updates.update
+      ? {
+          version: updates.update.manifest.version,
+          sha256: updates.update.manifest.sha256,
+          phase: updates.update.phase,
+          mandatory: updates.update.mandatory,
+        }
       : null,
     skipped_version: prefs.skipped_version,
   };
@@ -1805,6 +1852,11 @@ app.whenReady().then(async () => {
   if (settings.prevent_sleep) applySleepGuard(await daemonStatus());
   createWindow();
   createTray();
+  if (automaticUpdates)
+    void removeInstalledPackages(
+      path.join(app.getPath("userData"), "desktop-installers"),
+      app.getVersion(),
+    ).catch(() => {});
   scheduleUpdateChecks();
   // 系统关机/注销时不能卡在退出确认上
   const suspendBrowser = () => browserHosts.get(mainWindow)?.suspend();

@@ -10,7 +10,13 @@ import {
 import { createPortal } from "react-dom";
 
 import { useT } from "@openfox/i18n";
-import { Button, Textarea, cn, useModalBehavior } from "@openfox/ui";
+import {
+  Button,
+  Textarea,
+  cn,
+  dismissOnBackdrop,
+  useModalBehavior,
+} from "@openfox/ui";
 
 import {
   INSTRUCTION_NAVIGATION,
@@ -151,104 +157,119 @@ export function InstructionsEditor({
     <div ref={anchor}>
       {createPortal(
         <div
-          ref={panel}
-          role={expanded ? "dialog" : undefined}
-          aria-modal={expanded || undefined}
-          aria-label={expanded ? label : undefined}
-          onKeyDownCapture={(event) => {
-            if (expanded && event.key === "Escape") {
-              event.preventDefault();
-              event.stopPropagation();
-              changeExpanded(false);
-            }
-          }}
-          className={cn(
-            "flex min-w-0 flex-col gap-3",
-            expanded &&
-              "fixed inset-6 z-50 overflow-auto rounded-xl border border-line-default bg-surface-card p-6 shadow-dialog",
-          )}
+          className={expanded ? "fixed inset-0 z-50 p-6" : undefined}
+          onPointerDown={
+            expanded
+              ? dismissOnBackdrop(() => changeExpanded(false))
+              : undefined
+          }
         >
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              size="28"
-              variant="outline"
-              aria-pressed={!rich}
-              onClick={() => setRich(false)}
-            >
-              {t("agents.sections.instructions.source")}
-            </Button>
-            <Button
-              size="28"
-              variant="outline"
-              aria-pressed={rich}
-              onClick={() => setRich(true)}
-            >
-              {t("agents.sections.instructions.rich")}
-            </Button>
-            <span className="flex-1 text-caption text-fg-muted">
-              {t("agents.sections.instructions.chars", { count: draft.length })}
-            </span>
-            <Button
-              size="28"
-              variant="outline"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => changeExpanded(!expanded)}
-            >
-              {t(
-                expanded
-                  ? "agents.sections.instructions.collapse"
-                  : "agents.sections.instructions.expand",
-              )}
-            </Button>
-            <Button
-              size="28"
-              disabled={!editable || !dirty || draft.length > INSTRUCTIONS_MAX}
-              loading={saving}
-              onClick={() => void save(draft)}
-            >
-              {t("common.save")}
-            </Button>
-          </div>
-          {draft.length > INSTRUCTIONS_MAX && (
-            <p role="alert" className="text-danger">
-              {t("agents.sections.instructions.tooLong")}
-            </p>
-          )}
-          <div hidden={rich}>
-            <Textarea
-              ref={textarea}
-              rows={expanded ? 22 : 12}
-              aria-label={label}
-              value={draft}
-              maxLength={INSTRUCTIONS_MAX}
-              readOnly={!editable || saving}
-              onChange={(event) => setDraft(event.target.value)}
-              className="bg-surface-canvas font-mono"
-            />
-          </div>
-          {rich && (
-            <Suspense fallback={<p>{t("common.loading")}</p>}>
-              <RichInstructions
+          <div
+            ref={panel}
+            role={expanded ? "dialog" : undefined}
+            aria-modal={expanded || undefined}
+            aria-label={expanded ? label : undefined}
+            onKeyDownCapture={(event) => {
+              if (expanded && event.key === "Escape") {
+                event.preventDefault();
+                event.stopPropagation();
+                changeExpanded(false);
+              }
+            }}
+            className={cn(
+              "flex min-w-0 flex-col gap-3",
+              expanded &&
+                "h-full overflow-auto rounded-xl border border-line-default bg-surface-card p-6 shadow-dialog",
+            )}
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                size="28"
+                variant="outline"
+                aria-pressed={!rich}
+                onClick={() => setRich(false)}
+              >
+                {t("agents.sections.instructions.source")}
+              </Button>
+              <Button
+                size="28"
+                variant="outline"
+                aria-pressed={rich}
+                onClick={() => setRich(true)}
+              >
+                {t("agents.sections.instructions.rich")}
+              </Button>
+              <span className="flex-1 text-caption text-fg-muted">
+                {t("agents.sections.instructions.chars", {
+                  count: draft.length,
+                })}
+              </span>
+              <Button
+                size="28"
+                variant="outline"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => changeExpanded(!expanded)}
+              >
+                {t(
+                  expanded
+                    ? "agents.sections.instructions.collapse"
+                    : "agents.sections.instructions.expand",
+                )}
+              </Button>
+              <Button
+                size="28"
+                disabled={
+                  !editable || !dirty || draft.length > INSTRUCTIONS_MAX
+                }
+                loading={saving}
+                onClick={() => void save(draft)}
+              >
+                {t("common.save")}
+              </Button>
+            </div>
+            {draft.length > INSTRUCTIONS_MAX && (
+              <p role="alert" className="text-danger">
+                {t("agents.sections.instructions.tooLong")}
+              </p>
+            )}
+            <div hidden={rich}>
+              <Textarea
+                ref={textarea}
+                rows={expanded ? 22 : 12}
+                aria-label={label}
                 value={draft}
-                onChange={setDraft}
-                editable={editable && !saving}
-                expanded={expanded}
-                label={label}
+                maxLength={INSTRUCTIONS_MAX}
+                readOnly={!editable || saving}
+                onChange={(event) => setDraft(event.target.value)}
+                className="bg-surface-canvas font-mono"
               />
-            </Suspense>
-          )}
-          {history?.(
-            draft,
-            async (value) => {
-              if (
-                dirty &&
-                !window.confirm(t("agents.sections.instructions.replaceDraft"))
-              )
-                return false;
-              return save(value);
-            },
-            saving,
-          )}
+            </div>
+            {rich && (
+              <Suspense fallback={<p>{t("common.loading")}</p>}>
+                <RichInstructions
+                  value={draft}
+                  onChange={setDraft}
+                  editable={editable && !saving}
+                  expanded={expanded}
+                  label={label}
+                />
+              </Suspense>
+            )}
+            {history?.(
+              draft,
+              async (value) => {
+                if (
+                  dirty &&
+                  !window.confirm(
+                    t("agents.sections.instructions.replaceDraft"),
+                  )
+                )
+                  return false;
+                return save(value);
+              },
+              saving,
+            )}
+          </div>
         </div>,
         host,
       )}

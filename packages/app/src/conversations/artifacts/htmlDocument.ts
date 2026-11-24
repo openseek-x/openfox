@@ -151,7 +151,7 @@ export function htmlPreviewDocument(
   const policy = `default-src 'none'; script-src ${session ? `'nonce-${session}'` : "'none'"}; script-src-attr 'none'; style-src 'unsafe-inline'; img-src data:; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'`;
   head.childNodes.unshift(
     ...parseFragment(
-      `<meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${policy}"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html{color-scheme:light}body{margin:16px;color:#171717;background:#fff}img{max-width:100%;height:auto}</style>`,
+      `<meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${policy}"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{scrollbar-width:thin}html{color-scheme:light}body{margin:16px;color:#171717;background:#fff}img{max-width:100%;height:auto}</style>`,
     ).childNodes,
   );
   if (session) {

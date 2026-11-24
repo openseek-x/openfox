@@ -55,13 +55,13 @@ const workTypeIcons: Record<WorkType, IconName> = {
 /** 等待电脑连接时轮询更快；与电脑页共用 keys.devices 查询键 */
 const DEVICE_POLL_MS = 5000;
 
-/** 首登向导：768 宽弹窗叠在应用外壳上，不可关闭（Figma 02 页 08–11）。 */
+/** 关闭首登向导后，下次进入组织时从已保存的步骤继续。 */
 export function OnboardingWizard({
   orgId,
-  onFinish,
+  onClose,
 }: {
   orgId: string;
-  onFinish: () => void;
+  onClose: () => void;
 }) {
   const t = useT();
   const [state, setState] = useState<OnboardingState>(
@@ -70,14 +70,14 @@ export function OnboardingWizard({
   const go = (next: OnboardingState) => {
     saveOnboarding(orgId, next);
     setState(next);
-    if (next.step === "done") onFinish();
+    if (next.step === "done") onClose();
   };
   const current = state.step === "runtime" ? 2 : state.step === "agent" ? 3 : 1;
   return (
     <Dialog
       open
       width={768}
-      closeOnBackdrop={false}
+      onClose={onClose}
       className="h-[min(832px,calc(100vh-48px))]"
     >
       <div className="flex h-full min-h-[560px] flex-col gap-6">

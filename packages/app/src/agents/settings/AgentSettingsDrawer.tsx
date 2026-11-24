@@ -24,6 +24,7 @@ import {
   Spinner,
   Tabs,
   Tooltip,
+  useDrawerOutsideClick,
   cn,
 } from "@openfox/ui";
 
@@ -218,6 +219,8 @@ export function AgentSettingsDrawer({
     if (dirty.current.size > 0) setPending(() => action);
     else action();
   };
+  const panel = useRef<HTMLElement>(null);
+  useDrawerOutsideClick(panel, true, () => guard(onClose));
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => setEntered(true));
@@ -246,6 +249,8 @@ export function AgentSettingsDrawer({
 
   return createPortal(
     <aside
+      ref={panel}
+      data-openfox-settings-drawer=""
       role="complementary"
       aria-label={t("agents.drawer.label", { name: agent?.name ?? "" })}
       style={{

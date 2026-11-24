@@ -1,7 +1,7 @@
 import type { ReactNode, RefObject } from "react";
 import { createPortal } from "react-dom";
 
-import { cn } from "@openfox/ui";
+import { cn, dismissOnBackdrop } from "@openfox/ui";
 
 /**
  * 「撰写式」弹窗外壳（Figma 新建任务 / 新建专项）：遮罩 + 圆角卡片 + 顶部一行（面包屑与右侧操作）。
@@ -29,9 +29,7 @@ export function ComposeShell({
   return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-scrim/25 p-6"
-      onPointerDown={(event) => {
-        if (event.target === event.currentTarget) onBackdrop();
-      }}
+      onPointerDown={dismissOnBackdrop(onBackdrop)}
     >
       <div
         ref={panelRef}

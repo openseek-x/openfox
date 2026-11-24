@@ -1,15 +1,9 @@
-// 桌面端「检查更新并提示下载」（不做静默升级：安装包未签名未公证）。
-// 清单来自当前连接的中心服务：<origin>/desktop/latest.json。
-// 纯 Node 实现，请求函数由调用方注入，便于单测各项安全校验。
-//
-// 清单格式：{ "version": "0.2.0", "download_url": "https://…/OpenFox-0.2.0-arm64.dmg",
-//     "notes": "更新说明", "sha256": "64 位十六进制", "min_version": "0.1.0"(可选) }
-
-const MANIFEST_PATH = "/desktop/latest.json";
-const MAX_MANIFEST_BYTES = 16 * 1024;
+// Desktop releases are published under the official repository's vX.Y.Z tags.
+const REPOSITORY = "openseek-x/openfox";
+const RELEASE_API = `https://api.github.com/repos/${REPOSITORY}/releases/latest`;
+const MANIFEST_PATH = "/desktop/latest.json"; // Feed emitted for already-installed 0.1.2 clients.
 const REQUEST_TIMEOUT_MS = 10_000;
-const MAX_NOTES_LENGTH = 2000;
-const MAX_URL_LENGTH = 2048;
+const MAX_RELEASE_BYTES = 128 * 1024;
 // 语义化版本（含可选预发布与构建元数据）；每段数字不带前导零
 const SEMVER =
   /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
@@ -71,136 +65,69 @@ function manifestURL(centerURL) {
   return url.origin + MANIFEST_PATH;
 }
 
-function parseHostList(value) {
-  return String(value || "")
-    .split(",")
-    .map((item) => item.trim().toLowerCase())
-    .filter(Boolean);
-}
-
-/**
- * 校验并规范化清单；任一项不合格返回 { ok:false, reason }。
- * reason：invalid_manifest（格式问题）/ unsafe_manifest（下载地址不可信）。
- */
-function validateManifest(raw, { origin, allowedHosts = [] }) {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    return { ok: false, reason: "invalid_manifest" };
-  }
-  if (!parseSemver(raw.version))
-    return { ok: false, reason: "invalid_manifest" };
-  if (typeof raw.sha256 !== "string" || !/^[0-9a-fA-F]{64}$/.test(raw.sha256)) {
-    return { ok: false, reason: "invalid_manifest" };
-  }
-  if (raw.min_version !== undefined && !parseSemver(raw.min_version)) {
-    return { ok: false, reason: "invalid_manifest" };
-  }
-  if (raw.notes !== undefined && typeof raw.notes !== "string") {
-    return { ok: false, reason: "invalid_manifest" };
-  }
-  if (
-    typeof raw.download_url !== "string" ||
-    raw.download_url.length > MAX_URL_LENGTH
-  ) {
-    return { ok: false, reason: "invalid_manifest" };
-  }
-  let download;
-  try {
-    download = new URL(raw.download_url);
-  } catch {
-    return { ok: false, reason: "invalid_manifest" };
-  }
-  if (
-    download.protocol !== "https:" ||
-    download.username ||
-    download.password
-  ) {
-    return { ok: false, reason: "unsafe_manifest" };
-  }
-  const sameOrigin = download.origin === origin;
-  const allowed = allowedHosts.includes(download.hostname.toLowerCase());
-  if (!sameOrigin && !allowed) return { ok: false, reason: "unsafe_manifest" };
-  return {
-    ok: true,
-    manifest: {
-      version: raw.version,
-      download_url: download.href,
-      sha256: raw.sha256.toLowerCase(),
-      notes: (raw.notes || "").slice(0, MAX_NOTES_LENGTH),
-      min_version: raw.min_version || null,
-    },
-  };
-}
-
-/** 判断清单相对当前版本的结果与是否被用户跳过。 */
-function evaluate(manifest, { current, skippedVersion }) {
-  const cmp = compareVersions(manifest.version, current);
-  if (cmp === null || cmp <= 0) return { status: "up_to_date" };
-  const mandatory =
-    manifest.min_version !== null &&
-    compareVersions(current, manifest.min_version) === -1;
-  return {
-    status: "update_available",
-    // 低于最低版本的强提示不允许跳过
-    skipped: !mandatory && skippedVersion === manifest.version,
-    mandatory,
-  };
-}
-
-/**
- * 检查更新。fetchText(url, {timeoutMs, maxBytes}) 由调用方注入：
- * 返回 { status, text }；超时、超限、网络错误时抛错。
- * 结果 status：up_to_date / update_available / no_update_info / invalid_manifest /
- * unsafe_manifest / unsupported_origin / failed。
- */
+/** GitHub supplies the tag and the SHA-256 of each uploaded release asset. */
 async function checkForUpdate({
-  centerURL,
   current,
-  skippedVersion = null,
-  allowedHosts = [],
+  skippedVersion,
+  systemInstaller,
   fetchText,
 }) {
-  const url = manifestURL(centerURL);
-  if (!url) return { status: "unsupported_origin" };
   let response;
   try {
-    response = await fetchText(url, {
+    response = await fetchText(RELEASE_API, {
       timeoutMs: REQUEST_TIMEOUT_MS,
-      maxBytes: MAX_MANIFEST_BYTES,
+      maxBytes: MAX_RELEASE_BYTES,
     });
   } catch {
     return { status: "failed" };
   }
   if (response.status === 404) return { status: "no_update_info" };
   if (response.status !== 200) return { status: "failed" };
-  let raw;
+
+  let release;
   try {
-    raw = JSON.parse(response.text);
+    release = JSON.parse(response.text);
   } catch {
-    // 静态站点把不存在的路径回退到 index.html（状态码 200）：HTML 内容等同于没有清单
-    if (/^\s*</.test(response.text)) return { status: "no_update_info" };
     return { status: "invalid_manifest" };
   }
-  const checked = validateManifest(raw, {
-    origin: new URL(url).origin,
-    allowedHosts,
-  });
-  if (!checked.ok) return { status: checked.reason };
-  const verdict = evaluate(checked.manifest, { current, skippedVersion });
-  if (verdict.status === "up_to_date") {
-    return { status: "up_to_date", version: checked.manifest.version };
+  const match = /^v(\d+\.\d+\.\d+)$/.exec(release?.tag_name);
+  if (
+    !match ||
+    !parseSemver(match[1]) ||
+    release.draft !== false ||
+    release.prerelease !== false ||
+    !Array.isArray(release.assets)
+  ) {
+    return { status: "invalid_manifest" };
   }
-  return { ...verdict, manifest: checked.manifest };
+
+  const version = match[1];
+  if (compareVersions(version, current) !== 1)
+    return { status: "up_to_date", version };
+  const name = `OpenFox-${version}-arm64.${systemInstaller ? "pkg" : "dmg"}`;
+  const asset = release.assets.find((entry) => entry?.name === name);
+  if (
+    asset?.state !== "uploaded" ||
+    !/^sha256:[a-f0-9]{64}$/.test(asset.digest)
+  )
+    return { status: "invalid_manifest" };
+  const downloadURL = `https://github.com/${REPOSITORY}/releases/download/v${version}/${name}`;
+  if (asset.browser_download_url !== downloadURL)
+    return { status: "unsafe_manifest" };
+
+  return {
+    status: "update_available",
+    manifest: {
+      version,
+      download_url: downloadURL,
+      sha256: asset.digest.slice(7),
+      notes:
+        typeof release.body === "string" ? release.body.slice(0, 2000) : "",
+      min_version: null,
+    },
+    mandatory: false,
+    skipped: skippedVersion === version,
+  };
 }
 
-module.exports = {
-  MANIFEST_PATH,
-  MAX_MANIFEST_BYTES,
-  REQUEST_TIMEOUT_MS,
-  checkForUpdate,
-  compareVersions,
-  evaluate,
-  manifestURL,
-  parseHostList,
-  parseSemver,
-  validateManifest,
-};
+module.exports = { checkForUpdate, compareVersions, manifestURL };

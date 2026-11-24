@@ -173,7 +173,7 @@ export function BrowserPanel({ session }: { session: BrowserSession }) {
         const rect = element.getBoundingClientRect();
         const occluded = [
           ...document.querySelectorAll(
-            '[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"]',
+            '[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"], [data-openfox-settings-drawer]',
           ),
         ].some(
           (node) =>

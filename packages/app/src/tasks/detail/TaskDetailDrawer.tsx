@@ -334,6 +334,7 @@ export function TaskDetailDrawer({
         <Drawer
           open
           modal={false}
+          itemKey={displayId}
           onClose={onClose}
           title={title}
           actions={actions}
@@ -883,7 +884,7 @@ function DetailBody({
                   readOnly={readOnly}
                   label={t("tasks.detail.titleLabel")}
                   value={task.title}
-                  className="text-[24px] leading-8 font-semibold"
+                  className="text-[24px] leading-8 font-semibold hover:bg-surface-hover focus:bg-transparent"
                   required
                   maxLength={500}
                   onSave={(title) =>
@@ -1058,7 +1059,7 @@ function InlineText({
     readOnly,
     onBlur: commit,
     className: cn(
-      "w-full resize-none rounded-md bg-transparent px-1 -mx-1 outline-none placeholder:text-fg-subtle hover:bg-surface-hover focus:bg-transparent focus-visible:shadow-none",
+      "w-full resize-none rounded-md bg-transparent px-1 -mx-1 outline-none placeholder:text-fg-subtle focus-visible:shadow-none",
       className,
     ),
   };
