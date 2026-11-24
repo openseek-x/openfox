@@ -14,6 +14,7 @@ import (
 	"time"
 	"unicode"
 
+	"openfox/internal/daemon"
 	localbrowser "openfox/internal/daemon/browser"
 	"openfox/internal/daemon/storage"
 	"openfox/internal/daemon/supervisor"
@@ -102,8 +103,33 @@ func (e *executorRuntime) sessionExporter(name string) runtime.NativeSessionExpo
 	return nil
 }
 
-// newExecutor 组装 Run 执行监督者：HTTPS 基址由 WSS 地址推导，工作目录限制在
-// 管理根下，Runtime 只接受受支持版本矩阵中的 Codex。
+// Only the registered macOS data directory has a managed relocation alias.
+func localStoragePaths(dir string) (workdir.StoragePaths, error) {
+	var paths workdir.StoragePaths
+	if goruntime.GOOS != "darwin" {
+		return paths, nil
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return paths, err
+	}
+	stable := filepath.Join(home, "Library", "Application Support", "OpenFox")
+	if dir != stable {
+		// CLI users can also open the physical directory shown in computer details.
+		original, err := os.Stat(stable)
+		selected, selectedErr := os.Stat(dir)
+		if err != nil || selectedErr != nil || !os.SameFile(original, selected) {
+			return paths, nil
+		}
+	}
+	physical, err := (daemon.Manager{SocketPath: filepath.Join(stable, "daemon.sock")}).StorageLocation()
+	if err != nil {
+		return paths, err
+	}
+	return workdir.StoragePaths{Stable: stable, Physical: physical}, nil
+}
+
+// newExecutor assembles the local run supervisor and its runtime adapters.
 func newExecutor(options executorOptions) (*executorRuntime, error) {
 	baseURL, err := centerBaseURL(options.wssURL)
 	if err != nil {
@@ -132,9 +158,17 @@ func newExecutor(options executorOptions) (*executorRuntime, error) {
 	}
 	adapter := codex.New(options.runtimeExecutable)
 	adapter.SupportedVersions = supported
+	locations, err := localStoragePaths(filepath.Dir(options.socketPath))
+	if err != nil {
+		return nil, err
+	}
 	journalPath := strings.TrimSpace(options.journalPath)
 	if journalPath == "" {
-		journalPath = filepath.Join(filepath.Dir(options.socketPath), "runs.db")
+		stateDir := filepath.Dir(options.socketPath)
+		if real, err := filepath.EvalSymlinks(stateDir); err == nil {
+			stateDir = real
+		}
+		journalPath = filepath.Join(stateDir, "runs.db")
 	}
 	journalPath, err = filepath.Abs(journalPath)
 	if err != nil {
@@ -143,7 +177,10 @@ func newExecutor(options executorOptions) (*executorRuntime, error) {
 	// 阶段 12e（D-04）：内置受保护目录名单。工作目录（直接运行目录、Git 源目录、worktree）命中时拒绝；
 	// 已注册的根目录命中时只告警（日志 + 心跳 protected_directory_roots），不自动移除。
 	protected := defaultProtectedDirectories(filepath.Dir(journalPath))
-	manager, err := workdir.NewManager(workdir.GuardPolicy{ManagedRoot: root, AllowNonGit: true, Protected: protected})
+	if locations.Physical != "" && locations.Physical != filepath.Dir(journalPath) {
+		protected.Subtrees = append(protected.Subtrees, locations.Physical)
+	}
+	manager, err := workdir.NewManager(workdir.GuardPolicy{StoragePaths: locations, ManagedRoot: root, AllowNonGit: true, Protected: protected})
 	if err != nil {
 		return nil, err
 	}
@@ -161,6 +198,7 @@ func newExecutor(options executorOptions) (*executorRuntime, error) {
 	if err != nil {
 		return nil, err
 	}
+	journal.StoragePaths = locations
 	client := &supervisor.Client{BaseURL: baseURL, Token: options.tokenProvider, Invalidate: options.invalidate, HTTP: options.httpClient}
 	var browser *localbrowser.Broker
 	browserRoot := filepath.Join(filepath.Dir(options.socketPath), "browser")

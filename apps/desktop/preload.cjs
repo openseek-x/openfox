@@ -30,6 +30,14 @@ contextBridge.exposeInMainWorld("openfoxDesktop", {
   getLocalStatus: () => ipcRenderer.invoke("openfox:local-status"),
   getLocalService: (input) =>
     ipcRenderer.invoke("openfox:local-service-service-status", input),
+  setLocalKeepRunning: (input) =>
+    ipcRenderer.invoke("openfox:local-service-keep-running", input),
+  setLocalAwake: (input) =>
+    ipcRenderer.invoke("openfox:local-service-timed-awake", input),
+  moveLocalStorage: (input) =>
+    ipcRenderer.invoke("openfox:local-service-move-storage", input),
+  openLocalStorage: (input) =>
+    ipcRenderer.invoke("openfox:local-service-open-storage", input),
   getMachineProxy: (input) =>
     ipcRenderer.invoke("openfox:local-service-proxy-status", input),
   saveMachineProxy: (input) =>

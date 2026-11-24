@@ -38,7 +38,11 @@ func (m *Manager) prepareShared(ctx context.Context, req Request) (*PreparedWork
 	var binding Binding
 	data, err := os.ReadFile(manifest)
 	if err == nil {
-		if json.Unmarshal(data, &binding) != nil || binding.Key != req.Key || binding.ActualPath != path ||
+		if err := json.Unmarshal(data, &binding); err != nil {
+			return nil, ErrBindingConflict
+		}
+		binding = binding.MapPaths(m.policy.StoragePaths.Current)
+		if binding.Key != req.Key || binding.ActualPath != path ||
 			binding.Mode != req.Mode || binding.ConfiguredPath != source {
 			return nil, ErrBindingConflict
 		}
@@ -76,7 +80,7 @@ func (m *Manager) prepareShared(ctx context.Context, req Request) (*PreparedWork
 		return nil, err
 	}
 	workspace.Binding = bound
-	data, err = json.Marshal(bound)
+	data, err = json.Marshal(bound.MapPaths(m.policy.StoragePaths.Stored))
 	if err == nil {
 		err = os.WriteFile(manifest+".tmp", data, 0o600)
 	}

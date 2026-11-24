@@ -367,6 +367,26 @@ describe("防止休眠", () => {
     ]);
   });
 
+  it("限时保持唤醒覆盖空闲，期满仍保护活动任务，取消会释放", (t) => {
+    t.mock.timers.enable({ apis: ["setTimeout", "Date"] });
+    const blocker = fakeBlocker();
+    const guard = createSleepGuard(blocker);
+    guard.keepAwakeFor(60);
+    assert.equal(guard.until, Date.now() + 3600000);
+    assert.equal(guard.active, true);
+    assert.equal(guard.protectingRuns, false);
+    guard.update({ enabled: true, activeRuns: 1 });
+    t.mock.timers.tick(3600000);
+    assert.equal(guard.until, 0);
+    assert.equal(guard.active, true);
+    guard.update({ enabled: true, activeRuns: 0 });
+    assert.equal(guard.active, false);
+    guard.keepAwakeFor(120);
+    guard.keepAwakeFor(0);
+    assert.equal(guard.active, false);
+    assert.throws(() => guard.keepAwakeFor(-1));
+  });
+
   it("活动 Run 数：缺失、负数、非整数按 0", () => {
     assert.equal(activeRunCount({ active_runs: 2 }), 2);
     for (const status of [

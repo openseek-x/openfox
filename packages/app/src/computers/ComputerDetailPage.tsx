@@ -1,5 +1,10 @@
 import { DevelopmentTools } from "./DevelopmentTools";
-import { LocalServiceDetails } from "./LocalServiceDetails";
+import {
+  LocalServiceDetails,
+  LocalStorageLocation,
+  LocalPowerSettings,
+  useLocalService,
+} from "./LocalServiceDetails";
 import { LocalMachineProxy } from "./LocalMachineProxy";
 import { DeviceSettingsEditor } from "./DeviceSettingsEditor";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -87,6 +92,7 @@ function deviceError(error: unknown, t: Translate): string {
 export function ComputerDetailPage({ deviceId }: { deviceId: string }) {
   const t = useT();
   const { orgId = "" } = useParams();
+  const navigate = useNavigate();
   const detail = useDevice(orgId, deviceId);
   const me = useMe();
   const back = `/o/${orgId}/settings/computers`;
@@ -134,37 +140,37 @@ export function ComputerDetailPage({ deviceId }: { deviceId: string }) {
       </div>
     );
   return (
-    <DetailBody
+    <ComputerDetailBody
       orgId={orgId}
       device={detail.data}
       meId={me.data?.id}
       backLink={backLink}
-      back={back}
+      onLeave={() => navigate(back, { replace: true })}
     />
   );
 }
 
-function DetailBody({
+export function ComputerDetailBody({
   orgId,
   device,
   meId,
   backLink,
-  back,
+  onLeave,
 }: {
   orgId: string;
   device: DeviceDetail;
   meId: string | undefined;
-  backLink: React.ReactNode;
-  back: string;
+  backLink?: React.ReactNode;
+  onLeave: () => void;
 }) {
   const { t, locale } = useI18n();
   const api = useApi();
   const toast = useToast();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const applyDevice = useApplyDevice(orgId);
   const canManageOrg = useCanManage(orgId);
   const isOwner = meId !== undefined && device.owner_user_id === meId;
+  const localService = useLocalService(orgId, device.id, isOwner);
   const [renaming, setRenaming] = useState(false);
   const [dialog, setDialog] = useState<
     "removeFromOrg" | "removeMachine" | "unbind" | "revoke" | null
@@ -233,7 +239,7 @@ function DetailBody({
 
   /** 电脑离开本组织后：回到列表，清掉详情缓存，刷新列表与 Agent 相关查询 */
   const leave = () => {
-    navigate(back, { replace: true });
+    onLeave();
     queryClient.removeQueries({ queryKey: keys.device(orgId, device.id) });
     void queryClient.invalidateQueries({ queryKey: keys.devices(orgId) });
     void queryClient.invalidateQueries({
@@ -514,12 +520,7 @@ function DetailBody({
           <InfoRow label={t("computers.detail.uuid")}>
             <code className="font-mono text-code">{device.id}</code>
           </InfoRow>
-          <LocalServiceDetails
-            key={device.id}
-            orgId={orgId}
-            deviceId={device.id}
-            isOwner={isOwner}
-          />
+          <LocalServiceDetails key={device.id} state={localService} />
           <LocalMachineProxy
             key={`proxy-${device.id}`}
             orgId={orgId}
@@ -554,21 +555,38 @@ function DetailBody({
               <RuntimeConfigBadge status={device.runtime_config_status} />
             </InfoRow>
           )}
-          <InfoRow label={t("connect.devicePolicy.protection")}>
+          {localService.enabled && device.online ? (
             <DeviceSettingsEditor
+              key={device.id}
+              inline
               section="protection"
               orgId={orgId}
               deviceId={device.id}
-              disabled={!isOwner || !device.online}
+              disabled={false}
             />
-          </InfoRow>
+          ) : (
+            <InfoRow
+              label={t("connect.devicePolicy.protection")}
+              description={t("connect.devicePolicy.protectionHint")}
+            >
+              <DeviceSettingsEditor
+                section="protection"
+                orgId={orgId}
+                deviceId={device.id}
+                disabled={!isOwner || !device.online}
+              />
+            </InfoRow>
+          )}
         </InfoCard>
       </section>
 
       <section className="flex flex-col gap-2">
         <SectionTitle>{t("computers.detail.storage")}</SectionTitle>
+        <LocalStorageLocation state={localService} />
         <StorageSection orgId={orgId} device={device} isOwner={isOwner} />
       </section>
+
+      <LocalPowerSettings key={device.id} state={localService} />
 
       <section className="flex flex-col gap-2">
         <SectionTitle>{t("computers.detail.info")}</SectionTitle>

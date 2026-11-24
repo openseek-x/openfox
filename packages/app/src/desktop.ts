@@ -19,6 +19,7 @@ export interface DesktopDaemonStatus {
   /** 与中心的连接状态：CONNECTING / CONNECTED / RECONNECTING / DISCONNECTED / RECONCILE_REQUIRED */
   remote_state?: string;
   pid?: number;
+  started_at?: string;
   center_epoch?: number;
   /** 本机未终态的 Run 数（daemon 不上报时为 0），用于防止休眠 */
   active_runs?: number;
@@ -222,6 +223,16 @@ export interface DesktopBridge {
     },
   ): Promise<DesktopMachineProxy>;
   getLocalService?(target: DesktopLocalTarget): Promise<DesktopServiceSettings>;
+  setLocalKeepRunning?(
+    input: DesktopLocalTarget & { enabled: boolean },
+  ): Promise<DesktopServiceSettings>;
+  setLocalAwake?(
+    input: DesktopLocalTarget & { minutes: number },
+  ): Promise<DesktopServiceSettings>;
+  moveLocalStorage?(
+    target: DesktopLocalTarget,
+  ): Promise<DesktopServiceSettings | null>;
+  openLocalStorage?(target: DesktopLocalTarget): Promise<void>;
   setLocalStartup?(
     input: DesktopLocalTarget & { mode: "login" | "manual" },
   ): Promise<DesktopServiceSettings>;
@@ -400,6 +411,10 @@ export interface DesktopServiceSettings {
   installed: boolean;
   startup: "login" | "manual" | "";
   keep_alive: boolean;
+  keep_service_running?: boolean;
+  storage_path?: string;
+  log_path?: string;
+  awake_until?: number;
 }
 
 export interface DesktopLogPage {

@@ -3,6 +3,11 @@
 
 const MESSAGES = {
   "zh-CN": {
+    "storage.choose": "选择新的存储父目录",
+    "storage.move": "迁移本机数据",
+    "storage.detail":
+      "将把设备密钥、令牌、运行数据库和工作区移至 {path}。请选择私有且不会同步的目录。迁移后可在电脑详情启动本机服务。",
+
     "tray.tooltip": "OpenFox",
     "tray.open": "打开 OpenFox",
     "tray.service.running": "本地服务：运行中",
@@ -31,8 +36,7 @@ const MESSAGES = {
       "当前版本 {current}。\n\n{notes}\n\n下载后请核对 SHA-256：\n{sha256}",
     "update.available.mandatory": "当前版本低于最低要求 {min}，请尽快升级。",
     "update.ready.message": "OpenFox {version} 已准备就绪",
-    "update.ready.detail":
-      "重启后将打开新版 OpenFox。你也可以稍后安装。",
+    "update.ready.detail": "重启后将打开新版 OpenFox。你也可以稍后安装。",
     "update.restart": "安装并重启",
     "update.installFailed.message": "未能准备桌面更新",
     "update.installFailed.detail":
@@ -56,6 +60,11 @@ const MESSAGES = {
       "OpenFox 已更新自带命令行工具，需要重启本地服务才能生效。请在「本机服务」里手动重启。",
   },
   "en-US": {
+    "storage.choose": "Choose a storage parent folder",
+    "storage.move": "Move local data",
+    "storage.detail":
+      "Device keys, tokens, the run database and managed workspaces will move to {path}. Choose a private folder that is not synced. After the move, start the service in computer details.",
+
     "tray.tooltip": "OpenFox",
     "tray.open": "Open OpenFox",
     "tray.service.running": "Local service: running",

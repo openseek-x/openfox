@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { DeviceDetail } from "@openfox/api";
+import type { DeviceDetail, DevicePreferences } from "@openfox/api";
 import type {
   DesktopLocalStatus,
   DesktopServiceSettings,
@@ -61,7 +61,40 @@ const device: DeviceDetail = {
   timezone: null,
 };
 function route(owner = "u1") {
+  let version = 4;
+  let settings: DevicePreferences = {
+    session_idle_minutes: 10,
+    session_max_minutes: 120,
+    codex_path: "/fixture/codex",
+    codex_args: [],
+    min_memory_mib: 300,
+    memory_guard: false,
+    load_guard: false,
+    load_policy: "balanced",
+  };
+  let command: unknown;
   return (call: Call) => {
+    if (call.method === "POST" && call.path.endsWith("/d1/commands")) {
+      const body = call.body as {
+        kind: string;
+        params: { version?: number; settings?: DevicePreferences };
+      };
+      if (body.kind === "device_settings") {
+        if (body.params.settings) {
+          settings = body.params.settings;
+          version++;
+        }
+        command = {
+          id: "policy-" + version,
+          kind: body.kind,
+          params: body.params,
+          status: "SUCCEEDED",
+          result: { version, settings },
+        };
+        return json(200, { command });
+      }
+    }
+    if (call.path.includes("/commands/policy-")) return json(200, { command });
     if (call.path.endsWith("/devices/center"))
       return json(200, { center_url: centerUrl });
     if (call.path.endsWith("/devices/d1"))
@@ -203,6 +236,120 @@ describe("本机机器代理", () => {
 });
 
 describe("本机详情服务控制", () => {
+  it("从侧栏进入完整本机设置，退出偏好单独保存，Esc 仅关闭日志", async () => {
+    const settings = {
+      supported: true,
+      installed: true,
+      startup: "login",
+      keep_alive: true,
+      keep_service_running: true,
+      log_path: "/fixture/daemon.log",
+      storage_path: "/fixture/OpenFox",
+      awake_until: 0,
+    };
+    const local = bridge({
+      getLocalService: vi.fn(async () => settings),
+      setLocalKeepRunning: vi.fn(async ({ enabled }) => ({
+        ...settings,
+        keep_service_running: enabled,
+      })),
+      openLocalStorage: vi.fn(async () => {}),
+    });
+    const user = userEvent.setup();
+    renderSettings("/o/o1/inbox", route());
+    await user.click(await screen.findByRole("button", { name: /^电脑：/ }));
+    const popover = within(
+      await screen.findByRole("dialog", { name: "电脑列表" }),
+    );
+    await user.click(
+      await within(
+        await popover.findByRole("region", { name: "本机" }),
+      ).findByText("local-mac"),
+    );
+    const drawer = within(
+      await screen.findByRole("dialog", { name: "本机电脑详情" }),
+    );
+    expect(
+      drawer.getByRole("textbox", { name: "最大并发运行任务数" }),
+    ).toBeEnabled();
+    const keep = await drawer.findByRole("switch", {
+      name: "退出桌面端后保持后台服务运行",
+    });
+    await user.click(keep);
+    await waitFor(() => expect(keep).not.toBeChecked());
+    expect(local.localDaemonAction).not.toHaveBeenCalled();
+    expect(drawer.getByText("/fixture/OpenFox")).toBeInTheDocument();
+    await user.click(drawer.getByRole("button", { name: "查看日志" }));
+    await screen.findByRole("dialog", { name: "运行日志" });
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "运行日志" })).toBeNull();
+    expect(drawer.getByText("local-mac")).toBeVisible();
+  });
+  it("就地保存内存保护，以 MiB 提交用户选择的 GiB 阈值", async () => {
+    bridge();
+    const calls = renderSettings(
+      "/o/o1/settings/computers?computer=d1",
+      route(),
+    );
+    const user = userEvent.setup();
+    const guard = await screen.findByRole("checkbox", { name: "可用内存保护" });
+    const fields = within(guard.closest("fieldset")!.parentElement!);
+    const unit = fields.getByRole("combobox", { name: "最低可用内存单位" });
+    expect(unit).toBeDisabled();
+    await user.click(guard);
+    await user.selectOptions(unit, "GiB");
+    const memory = fields.getByRole("spinbutton", { name: "最低可用内存" });
+    await user.clear(memory);
+    await user.type(memory, "1.5");
+    await user.click(fields.getByRole("button", { name: "保存" }));
+    await waitFor(() =>
+      expect(calls.map((c) => c.body)).toContainEqual({
+        kind: "device_settings",
+        params: {
+          version: 4,
+          settings: expect.objectContaining({
+            min_memory_mib: 1536,
+            memory_guard: true,
+            codex_path: "/fixture/codex",
+            session_max_minutes: 120,
+          }),
+        },
+      }),
+    );
+    await waitFor(() =>
+      expect(fields.getByRole("button", { name: "保存" })).toBeDisabled(),
+    );
+  });
+
+  it("服务停止后迁移，取消保留当前位置，成功后刷新路径", async () => {
+    const service = {
+      supported: true,
+      installed: true,
+      keep_alive: true,
+      startup: "manual",
+      storage_path: "/old/OpenFox",
+    };
+    const move = vi
+      .fn()
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ ...service, storage_path: "/new/OpenFox" });
+    bridge({
+      getLocalStatus: vi.fn(async () => ({
+        ...status,
+        daemon: { state: "STOPPED" },
+      })),
+      getLocalService: vi.fn(async () => service),
+      moveLocalStorage: move,
+    });
+    renderSettings("/o/o1/settings/computers?computer=d1", route());
+    const user = userEvent.setup();
+    const button = await screen.findByRole("button", { name: "修改存储位置" });
+    await user.click(button);
+    expect(screen.getByText("/old/OpenFox")).toBeVisible();
+    await user.click(button);
+    expect(await screen.findByText("/new/OpenFox")).toBeVisible();
+    expect(move).toHaveBeenCalledWith(target);
+  });
   it("按设备、组织及完整中心地址严格识别本机", () => {
     expect(
       isLocalDevice(status, "o1", "d1", "https://CENTER.example:443/base/"),

@@ -1,7 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { useT } from "@openfox/i18n";
-import { Button, ConfirmDialog, Dialog, Select, useToast } from "@openfox/ui";
+import { useEffect, useState } from "react";
+import { useI18n, useT } from "@openfox/i18n";
+import {
+  Button,
+  ConfirmDialog,
+  Dialog,
+  Select,
+  Switch,
+  useToast,
+} from "@openfox/ui";
 
 import {
   desktopBridge,
@@ -9,21 +16,18 @@ import {
   type DesktopLocalTarget,
 } from "../desktop";
 import { isLocalDevice } from "./localRegistration";
-import { InfoRow } from "./parts";
-import { useLocalStatus, useServerCenterUrl } from "./queries";
+import { formatDateTime, InfoCard, InfoRow, SectionTitle } from "./parts";
+import {
+  useTaskSleepPreference,
+  useLocalStatus,
+  useServerCenterUrl,
+} from "./queries";
 
-export function LocalServiceDetails({
-  orgId,
-  deviceId,
-  isOwner,
-}: {
-  orgId: string;
-  deviceId: string;
-  isOwner: boolean;
-}) {
-  const t = useT();
-  const toast = useToast();
-  const client = useQueryClient();
+export function useLocalService(
+  orgId: string,
+  deviceId: string,
+  isOwner: boolean,
+) {
   const bridge = desktopBridge();
   const local = useLocalStatus();
   const center = useServerCenterUrl(orgId, Boolean(bridge));
@@ -59,6 +63,45 @@ export function LocalServiceDetails({
     enabled,
     retry: false,
   });
+  const reason = !bridge
+    ? "desktopOnly"
+    : bridge.platform !== "darwin"
+      ? "macOnly"
+      : !supported
+        ? "upgrade"
+        : !matches
+          ? "notLocal"
+          : !isOwner
+            ? "ownerOnly"
+            : "failed";
+  const ready =
+    enabled &&
+    service.data?.supported &&
+    service.data.installed &&
+    !service.isError;
+  return {
+    enabled,
+    ready,
+    reason,
+    running: ["RUNNING", "STARTING", "RECONCILE_REQUIRED"].includes(
+      local.data?.daemon.state ?? "",
+    ),
+    local,
+    service,
+    serviceKey,
+    bridge,
+    target,
+  } as const;
+}
+
+type LocalService = ReturnType<typeof useLocalService>;
+
+export function LocalServiceDetails({ state }: { state: LocalService }) {
+  const { enabled, ready, reason, local, service, serviceKey, bridge, target } =
+    state;
+  const { t, locale } = useI18n();
+  const toast = useToast();
+  const client = useQueryClient();
   const [confirmStop, setConfirmStop] = useState(false);
   const [logs, setLogs] = useState(false);
   const startup = useMutation({
@@ -88,26 +131,14 @@ export function LocalServiceDetails({
       void local.refetch();
     },
   });
-  const reason = !bridge
-    ? "desktopOnly"
-    : bridge.platform !== "darwin"
-      ? "macOnly"
-      : !supported
-        ? "upgrade"
-        : !matches
-          ? "notLocal"
-          : !isOwner
-            ? "ownerOnly"
-            : "failed";
-  const ready =
-    enabled &&
-    service.data?.supported &&
-    service.data.installed &&
-    !service.isError;
-  const busy = startup.isPending || action.isPending;
-  const running = ["RUNNING", "STARTING", "RECONCILE_REQUIRED"].includes(
-    local.data?.daemon.state ?? "",
-  );
+  const keep = useMutation({
+    mutationFn: (enabled: boolean) =>
+      bridge!.setLocalKeepRunning!({ ...target, enabled }),
+    onSuccess: (result) => client.setQueryData(serviceKey, result),
+    onError: () => toast(t("computers.localService.failed"), { tone: "error" }),
+  });
+  const busy = startup.isPending || action.isPending || keep.isPending;
+  const running = state.running;
   return (
     <>
       <InfoRow
@@ -168,7 +199,32 @@ export function LocalServiceDetails({
           t(`computers.localService.${reason}`)
         )}
       </InfoRow>
-      <InfoRow label={t("computers.detail.logs")}>
+      {ready &&
+        bridge?.setLocalKeepRunning &&
+        typeof service.data?.keep_service_running === "boolean" && (
+          <InfoRow
+            label={t("computers.localService.keepOnQuit")}
+            description={t("computers.localService.keepOnQuitHint")}
+          >
+            <Switch
+              label={t("computers.localService.keepOnQuit")}
+              checked={service.data.keep_service_running}
+              disabled={busy}
+              onCheckedChange={(value) => keep.mutate(value)}
+            />
+          </InfoRow>
+        )}
+      {ready && (
+        <InfoRow label={t("computers.localService.startedAt")}>
+          {running && local.data?.daemon.started_at
+            ? formatDateTime(local.data.daemon.started_at, locale)
+            : t("computers.detail.notAvailable")}
+        </InfoRow>
+      )}
+      <InfoRow
+        label={t("computers.detail.logs")}
+        description={ready ? service.data?.log_path : undefined}
+      >
         {enabled ? (
           <Button size="28" variant="outline" onClick={() => setLogs(true)}>
             {t("computers.localService.viewLogs")}
@@ -191,6 +247,150 @@ export function LocalServiceDetails({
         <LocalLogs target={target} onClose={() => setLogs(false)} />
       )}
     </>
+  );
+}
+
+export function LocalStorageLocation({ state }: { state: LocalService }) {
+  const t = useT();
+  const toast = useToast();
+  const client = useQueryClient();
+  const move = useMutation({
+    mutationFn: () => state.bridge!.moveLocalStorage!(state.target),
+    onSuccess: (result) => {
+      if (result) {
+        client.setQueryData(state.serviceKey, result);
+        toast(t("computers.localService.moved"));
+      }
+    },
+    onError: (error) => {
+      const message = String(error);
+      const reason = message.includes("storage_busy")
+        ? "moveBusy"
+        : message.includes("storage_different_volume")
+          ? "moveVolume"
+          : "moveFailed";
+      toast(t(`computers.localService.${reason}`), { tone: "error" });
+      void state.service.refetch();
+    },
+  });
+  const open = useMutation({
+    mutationFn: () => state.bridge!.openLocalStorage!(state.target),
+    onError: () =>
+      toast(t("computers.localService.openFailed"), { tone: "error" }),
+  });
+  if (!state.ready || !state.service.data?.storage_path) return null;
+  return (
+    <InfoCard>
+      <InfoRow
+        label={t("computers.localService.storageLocation")}
+        description={
+          <code className="break-all">{state.service.data.storage_path}</code>
+        }
+      >
+        {state.bridge?.openLocalStorage && (
+          <Button
+            size="28"
+            variant="outline"
+            disabled={open.isPending}
+            onClick={() => open.mutate()}
+          >
+            {t("computers.localService.openStorage")}
+          </Button>
+        )}
+        {state.bridge?.moveLocalStorage && (
+          <Button
+            size="28"
+            variant="outline"
+            disabled={move.isPending || state.running}
+            onClick={() => move.mutate()}
+          >
+            {t("computers.localService.moveStorage")}
+          </Button>
+        )}
+      </InfoRow>
+      {state.bridge?.moveLocalStorage && state.running && (
+        <p className="px-4 py-2 text-caption text-fg-muted">
+          {t("computers.localService.moveStopFirst")}
+        </p>
+      )}
+    </InfoCard>
+  );
+}
+
+export function LocalPowerSettings({ state }: { state: LocalService }) {
+  const { t, locale } = useI18n();
+  const toast = useToast();
+  const client = useQueryClient();
+  const taskSleep = useTaskSleepPreference();
+  const taskPreference = state.local.data?.prevent_sleep;
+  const [minutes, setMinutes] = useState(60);
+  const until = state.service.data?.awake_until;
+  const { refetch } = state.service;
+  useEffect(() => {
+    if (!state.ready || !until) return;
+    const timer = setTimeout(
+      () => void refetch(),
+      Math.max(0, until - Date.now()) + 50,
+    );
+    return () => clearTimeout(timer);
+  }, [until, state.ready, refetch]);
+  const awake = useMutation({
+    mutationFn: (duration: number) =>
+      state.bridge!.setLocalAwake!({ ...state.target, minutes: duration }),
+    onSuccess: (result) => client.setQueryData(state.serviceKey, result),
+    onError: () => toast(t("connect.sleep.failed"), { tone: "error" }),
+  });
+  if (!state.ready || !state.bridge?.setLocalAwake || until === undefined)
+    return null;
+  const active = until > Date.now();
+  return (
+    <section className="flex flex-col gap-2">
+      <SectionTitle>{t("connect.sleep.label")}</SectionTitle>
+      <InfoCard>
+        {taskPreference && state.bridge?.setPreventSleep && (
+          <InfoRow label={t("connect.sleep.desc")}>
+            <Switch
+              label={t("connect.sleep.desc")}
+              checked={taskPreference.enabled}
+              disabled={taskSleep.isPending}
+              onCheckedChange={(value) => taskSleep.mutate(value)}
+            />
+          </InfoRow>
+        )}
+        <InfoRow
+          label={t("computers.localService.timedAwake")}
+          description={t("computers.localService.timedAwakeHint")}
+        >
+          {active ? (
+            <span>
+              {t("computers.localService.until", {
+                time: new Intl.DateTimeFormat(locale, {
+                  hour: "numeric",
+                  minute: "2-digit",
+                }).format(until),
+              })}
+            </span>
+          ) : (
+            <Select
+              aria-label={t("computers.localService.duration")}
+              value={String(minutes)}
+              disabled={awake.isPending}
+              options={[60, 120, 240, 480].map((value) => ({
+                value: String(value),
+                label: t("computers.localService.hours", { count: value / 60 }),
+              }))}
+              onChange={(value) => setMinutes(Number(value))}
+            />
+          )}
+          <Switch
+            label={t("computers.localService.timedAwake")}
+            checked={active}
+            disabled={awake.isPending}
+            onCheckedChange={(next) => awake.mutate(next ? minutes : 0)}
+          />
+        </InfoRow>
+      </InfoCard>
+    </section>
   );
 }
 

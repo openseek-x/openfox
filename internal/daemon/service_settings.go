@@ -10,6 +10,10 @@ import (
 	"runtime"
 )
 
+var ErrStorageBusy = errors.New("storage_busy")
+var ErrStorageTarget = errors.New("storage_target_invalid")
+var ErrStorageVolume = errors.New("storage_different_volume")
+
 var ErrServiceBusy = errors.New("daemon service settings are busy")
 var ErrServiceUnavailable = errors.New("daemon service settings are unavailable")
 
@@ -165,7 +169,7 @@ func (m Manager) SetStartup(mode string) (ServiceSettings, error) {
 		if err := os.MkdirAll(filepath.Dir(target), 0o700); err != nil {
 			return err
 		}
-		if info, err := os.Lstat(filepath.Dir(target)); err != nil || !info.IsDir() {
+		if !checkedDirectory(filepath.Dir(target)) {
 			return ErrUnsafeFile
 		}
 		// Same-user home directories share a filesystem. Rename is atomic; on a

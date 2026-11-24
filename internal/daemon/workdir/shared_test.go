@@ -90,3 +90,90 @@ func TestSharedTaskWorkspacePersistsAndIsolates(t *testing.T) {
 		})
 	}
 }
+
+func TestSharedGitTaskAfterStorageMove(t *testing.T) {
+	base, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	stable := filepath.Join(base, "OpenFox")
+	physical := filepath.Join(base, "moved")
+	policy := GuardPolicy{ManagedRoot: filepath.Join(stable, "workspaces")}
+	repo := initRepository(t, base)
+	key := BindingKey{OrganizationID: "org", SpaceID: "space", AgentID: "crew", ConversationID: "existing"}
+	req := Request{Key: key, Mode: ModeSpecifiedGit, SourcePath: repo, Shared: true}
+	manager, err := NewManager(policy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	task, err := manager.Prepare(t.Context(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(task.Path, "uncommitted"), []byte("user edit"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := task.Release(); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(stable, physical); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(physical, stable); err != nil {
+		t.Fatal(err)
+	}
+	policy.StoragePaths = StoragePaths{Stable: stable, Physical: physical}
+	moved, err := NewManager(policy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reopened, err := moved.Prepare(t.Context(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reopened.Path != policy.StoragePaths.Current(task.Path) {
+		t.Fatal("workspace was replaced")
+	}
+	if data, err := os.ReadFile(filepath.Join(reopened.Path, "uncommitted")); err != nil || string(data) != "user edit" {
+		t.Fatal("lost changes", err)
+	}
+	if _, err := moved.git.Run(t.Context(), reopened.Path, "status", "--short"); err != nil {
+		t.Fatal("git worktree unavailable", err)
+	}
+	if _, err := moved.Prepare(t.Context(), req); !errors.Is(err, ErrPathConflict) {
+		t.Fatalf("lease after relocation: %v", err)
+	}
+	if err := reopened.Release(); err != nil {
+		t.Fatal(err)
+	}
+	req.Key.ConversationID = "created-after-move"
+	created, err := moved.Prepare(t.Context(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := created.Release(); err != nil {
+		t.Fatal(err)
+	}
+	// The new manifest must also be portable when moving back.
+	if err := os.Remove(stable); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(physical, stable); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(stable, physical); err != nil {
+		t.Fatal(err)
+	}
+	policy.StoragePaths = StoragePaths{}
+	back, err := NewManager(policy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	last, err := back.Prepare(t.Context(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := last.Release(); err != nil {
+		t.Fatal(err)
+	}
+}

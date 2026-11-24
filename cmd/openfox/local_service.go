@@ -16,8 +16,8 @@ import (
 	"openfox/internal/devices"
 )
 
-// Only fixed manager paths and explicit enums cross this CLI boundary. The
-// desktop supplies expected registration identity, never a path or shell text.
+// Each command is scoped to the expected registration. Only move-storage
+// accepts a directory, selected by the native desktop picker.
 func runLocalService(args []string, manager daemon.Manager, output io.Writer) error {
 	return runLocalServiceInput(args, manager, strings.NewReader(""), output)
 }
@@ -29,12 +29,13 @@ func runLocalServiceInput(args []string, manager daemon.Manager, input io.Reader
 	device := flags.String("device-id", "", "expected device")
 	center := flags.String("center-url", "", "expected center")
 	mode := flags.String("mode", "", "login or manual")
+	parent := flags.String("parent", "", "new parent of the OpenFox data directory")
 	cursor := flags.String("cursor", "", "opaque log cursor")
 	action := flags.String("action", "", "start, stop or restart")
 	if flags.Parse(args[1:]) != nil || flags.NArg() != 0 {
 		return errors.New("invalid local service request")
 	}
-	if (args[0] != "startup" && *mode != "") || (args[0] != "logs" && *cursor != "") || (args[0] != "service-action" && *action != "") {
+	if (args[0] != "move-storage" && *parent != "") || (args[0] != "startup" && *mode != "") || (args[0] != "logs" && *cursor != "") || (args[0] != "service-action" && *action != "") {
 		return errors.New("invalid local service request")
 	}
 	configPath := filepath.Join(filepath.Dir(manager.SocketPath), daemon.DeviceConfigFileName)
@@ -83,10 +84,37 @@ func runLocalServiceInput(args []string, manager daemon.Manager, input io.Reader
 			daemon.MachineProxyView
 			Runtime *daemon.MachineProxyStatus `json:"runtime,omitempty"`
 		}{view, status.MachineProxy}
-	case "service-status":
-		result, err = manager.ServiceSettings()
-	case "startup":
-		result, err = manager.SetStartup(*mode)
+	case "move-storage", "service-status", "startup":
+		var service daemon.ServiceSettings
+		if args[0] == "startup" {
+			service, err = manager.SetStartup(*mode)
+		} else {
+			service, err = manager.ServiceSettings()
+		}
+		if args[0] == "move-storage" && errors.Is(err, daemon.ErrServiceBusy) {
+			return daemon.ErrStorageBusy
+		}
+		if err != nil {
+			return err
+		}
+		location, err := manager.StorageLocation()
+		if err != nil {
+			return err
+		}
+		if args[0] == "move-storage" {
+			if !service.Installed || !filepath.IsAbs(*parent) {
+				return daemon.ErrStorageTarget
+			}
+			location, err = manager.RelocateStorage(*parent, config)
+			if err != nil {
+				return err
+			}
+		}
+		result = struct {
+			daemon.ServiceSettings
+			StoragePath string `json:"storage_path"`
+			LogPath     string `json:"log_path"`
+		}{service, location, manager.LogPath}
 	case "logs":
 		result, err = manager.ServiceLogs(*cursor)
 	case "service-action":

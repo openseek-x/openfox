@@ -41,7 +41,11 @@ func (j *Journal) readConversationWorkspace(ctx context.Context, device string, 
 	if err := rows.Err(); err != nil {
 		return result, err
 	}
-	return result, json.Unmarshal(payload, &result.Binding)
+	if err := json.Unmarshal(payload, &result.Binding); err != nil {
+		return result, err
+	}
+	result.Binding = result.Binding.MapPaths(j.StoragePaths.Current)
+	return result, nil
 }
 
 func (j *Journal) saveConversationWorkspace(ctx context.Context, device string, rc RunContext, saved *savedWorkspace) error {
@@ -50,7 +54,7 @@ func (j *Journal) saveConversationWorkspace(ctx context.Context, device string, 
 		_, err := j.db.ExecContext(ctx, `DELETE FROM conversation_workdirs WHERE device_id=? AND organization_id=? AND space_id=? AND conversation_id=? AND agent_id=?`, args...)
 		return err
 	}
-	payload, err := json.Marshal(saved.Binding)
+	payload, err := json.Marshal(saved.Binding.MapPaths(j.StoragePaths.Stored))
 	if err != nil {
 		return err
 	}

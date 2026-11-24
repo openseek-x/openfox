@@ -14,6 +14,7 @@ import (
 
 	_ "modernc.org/sqlite" // 纯 Go SQLite 驱动（BSD-3-Clause），无 cgo 依赖
 
+	"openfox/internal/daemon/workdir"
 	"openfox/internal/runtime"
 )
 
@@ -45,9 +46,10 @@ var ErrJournal = errors.New("supervisor: journal unavailable")
 
 // Journal 是基于 SQLite 的本地 Run 日志，文件权限 0600，目录 0700。
 type Journal struct {
-	db   *sql.DB
-	now  func() time.Time
-	path string
+	StoragePaths workdir.StoragePaths
+	db           *sql.DB
+	now          func() time.Time
+	path         string
 }
 
 // Path 返回日志文件路径（存储统计用）。
@@ -220,7 +222,7 @@ func (j *Journal) migrate(ctx context.Context) error {
 
 // SetWorkspaceConversation 记录创建/复用 worktree 的会话；会话 ID 为空时保持 NULL。
 func (j *Journal) SetWorkspaceConversation(ctx context.Context, path, conversationID string) error {
-	if _, err := j.db.ExecContext(ctx, `UPDATE workspaces SET conversation_id = NULLIF(?, '') WHERE path = ?`, conversationID, path); err != nil {
+	if _, err := j.db.ExecContext(ctx, `UPDATE workspaces SET conversation_id = NULLIF(?, '') WHERE path = ?`, conversationID, j.StoragePaths.Stored(path)); err != nil {
 		return fmt.Errorf("%w: set workspace conversation: %v", ErrJournal, err)
 	}
 	return nil
@@ -228,7 +230,7 @@ func (j *Journal) SetWorkspaceConversation(ctx context.Context, path, conversati
 
 // SetWorkspaceKind 记录 worktree 的用途（task / conversation）。
 func (j *Journal) SetWorkspaceKind(ctx context.Context, path, kind string) error {
-	if _, err := j.db.ExecContext(ctx, `UPDATE workspaces SET kind = ? WHERE path = ?`, kind, path); err != nil {
+	if _, err := j.db.ExecContext(ctx, `UPDATE workspaces SET kind = ? WHERE path = ?`, kind, j.StoragePaths.Stored(path)); err != nil {
 		return fmt.Errorf("%w: set workspace kind: %v", ErrJournal, err)
 	}
 	return nil
@@ -247,7 +249,7 @@ func (j *Journal) WorkspaceKinds(ctx context.Context, limit int) (map[string]str
 		if err := rows.Scan(&path, &kind); err != nil {
 			return nil, fmt.Errorf("%w: workspace kinds: %v", ErrJournal, err)
 		}
-		result[path] = kind
+		result[j.StoragePaths.Current(path)] = kind
 	}
 	return result, rows.Err()
 }
@@ -520,7 +522,7 @@ func (j *Journal) RecordWorkspace(ctx context.Context, path, repositoryRoot, run
 		VALUES (?, ?, ?, ?, ?, COALESCE((SELECT organization_id FROM run_journal WHERE run_id=? AND generation=?),''))
 		ON CONFLICT (path) DO UPDATE SET repository_root = excluded.repository_root, last_run_id = excluded.last_run_id,
 		       last_generation = excluded.last_generation, last_used_at = excluded.last_used_at, organization_id=excluded.organization_id, kind=''`,
-		path, repositoryRoot, runID, generation, j.now().UnixMilli(), runID, generation)
+		j.StoragePaths.Stored(path), j.StoragePaths.Stored(repositoryRoot), runID, generation, j.now().UnixMilli(), runID, generation)
 	if err != nil {
 		return fmt.Errorf("%w: record workspace: %v", ErrJournal, err)
 	}
@@ -529,7 +531,7 @@ func (j *Journal) RecordWorkspace(ctx context.Context, path, repositoryRoot, run
 
 // TouchWorkspace 在 Run 结束时刷新最近使用时间（保留期从最后一次使用结束算起）。
 func (j *Journal) TouchWorkspace(ctx context.Context, path string) error {
-	if _, err := j.db.ExecContext(ctx, `UPDATE workspaces SET last_used_at = ? WHERE path = ?`, j.now().UnixMilli(), path); err != nil {
+	if _, err := j.db.ExecContext(ctx, `UPDATE workspaces SET last_used_at = ? WHERE path = ?`, j.now().UnixMilli(), j.StoragePaths.Stored(path)); err != nil {
 		return fmt.Errorf("%w: touch workspace: %v", ErrJournal, err)
 	}
 	return nil
@@ -551,6 +553,8 @@ func (j *Journal) Workspaces(ctx context.Context, limit int) ([]Workspace, error
 		if err := rows.Scan(&workspace.Path, &workspace.RepositoryRoot, &workspace.LastRunID, &workspace.LastGeneration, &usedAt); err != nil {
 			return nil, fmt.Errorf("%w: workspaces: %v", ErrJournal, err)
 		}
+		workspace.Path = j.StoragePaths.Current(workspace.Path)
+		workspace.RepositoryRoot = j.StoragePaths.Current(workspace.RepositoryRoot)
 		workspace.LastUsedAt = time.UnixMilli(usedAt)
 		result = append(result, workspace)
 	}
@@ -559,7 +563,7 @@ func (j *Journal) Workspaces(ctx context.Context, limit int) ([]Workspace, error
 
 // DeleteWorkspace 删除已清理 worktree 的登记。
 func (j *Journal) DeleteWorkspace(ctx context.Context, path string) error {
-	if _, err := j.db.ExecContext(ctx, `DELETE FROM workspaces WHERE path = ?`, path); err != nil {
+	if _, err := j.db.ExecContext(ctx, `DELETE FROM workspaces WHERE path = ?`, j.StoragePaths.Stored(path)); err != nil {
 		return fmt.Errorf("%w: delete workspace: %v", ErrJournal, err)
 	}
 	return nil

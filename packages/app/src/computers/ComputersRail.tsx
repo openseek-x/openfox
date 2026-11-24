@@ -6,8 +6,9 @@ import { useI18n, useT } from "@openfox/i18n";
 import { Avatar, Button, Drawer, Icon, Popover, cn } from "@openfox/ui";
 
 import { isDesktop } from "../desktop";
+import { ComputerDetailBody } from "./ComputerDetailPage";
 import { ConnectComputerDialog } from "./ConnectComputer";
-import { useComputerGroups } from "./localRegistration";
+import { isLocalDevice, useComputerGroups } from "./localRegistration";
 import { localOs, localState } from "./LocalComputerCard";
 import {
   computerStatus,
@@ -29,14 +30,21 @@ import {
   StatusDot,
   formatDateTime,
 } from "./parts";
-import { isNotFound, useDevice, useDevices, useLocalStatus } from "./queries";
+import {
+  isNotFound,
+  useDevice,
+  useDevices,
+  useLocalStatus,
+  useMe,
+  useServerCenterUrl,
+} from "./queries";
 
 /** 悬停打开 / 离开关闭的延迟（与 HiFox HoverCard 一致） */
 export const HOVER_OPEN_MS = 250;
 export const HOVER_CLOSE_MS = 80;
 
 /**
- * 侧栏左下角「电脑」入口（Figma 页 18）：状态点 + 悬停弹层「电脑列表」，点击电脑打开只读详情抽屉。
+ * 侧栏左下角「电脑」入口（Figma 页 18）：状态点 + 悬停弹层「电脑列表」，点击电脑打开详情抽屉。
  */
 export function ComputersRailButton({ orgId }: { orgId: string }) {
   const t = useT();
@@ -358,7 +366,7 @@ function LocalPopoverCard({
   );
 }
 
-/** 电脑详情抽屉（页 18 C1–C7）：只读；离线时显示「修复并重连」（2c 开放）。电脑不可见时自动关闭。 */
+/** 电脑详情抽屉（页 18 C1–C7）：本机复用完整设置，远程电脑显示摘要；离线时显示「修复并重连」（2c 开放）。电脑不可见时自动关闭。 */
 export function ComputerDrawer({
   orgId,
   deviceId,
@@ -371,6 +379,18 @@ export function ComputerDrawer({
   const { t, locale } = useI18n();
   const detail = useDevice(orgId, deviceId);
   const device = detail.data;
+  const me = useMe();
+  const local = useLocalStatus();
+  const center = useServerCenterUrl(
+    orgId,
+    Boolean(local.data?.registration?.registered),
+  );
+  const isLocal = isLocalDevice(
+    local.data,
+    orgId,
+    deviceId,
+    center.data?.center_url,
+  );
   const gone = isNotFound(detail.error);
   useEffect(() => {
     if (gone) onClose();
@@ -386,11 +406,25 @@ export function ComputerDrawer({
   };
 
   return (
-    <Drawer open onClose={close} title={t("computers.drawer.title")}>
+    <Drawer
+      open
+      onClose={close}
+      title={t(
+        isLocal ? "computers.drawer.localTitle" : "computers.drawer.title",
+      )}
+    >
       {!device ? (
         <div className="px-6 py-6 text-body-sm text-fg-muted" aria-busy="true">
           {detail.isError ? t("computers.loadFailed") : t("common.loading")}
         </div>
+      ) : isLocal ? (
+        <ComputerDetailBody
+          key={device.id}
+          orgId={orgId}
+          device={device}
+          meId={me.data?.id}
+          onLeave={onClose}
+        />
       ) : (
         <div className="flex flex-col gap-8 px-6 pt-3 pb-6">
           <header className="flex items-center gap-4">

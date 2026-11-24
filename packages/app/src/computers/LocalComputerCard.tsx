@@ -28,7 +28,7 @@ import {
   useLocalRegisterState,
   useLocalRegistrationView,
 } from "./localRegistration";
-import { useLocalStatus } from "./queries";
+import { useTaskSleepPreference, useLocalStatus } from "./queries";
 import { OsBadge, RuntimeIcons, StatusDot } from "./parts";
 import { runtimeName } from "./model";
 
@@ -186,16 +186,7 @@ export function LocalComputerCard({
   });
   const pending = action.isPending ? action.variables : null;
   const bridge = desktopBridge();
-  const sleep = useMutation({
-    mutationFn: (enabled: boolean) => bridge!.setPreventSleep!(enabled),
-    onSuccess: (prevent_sleep) => {
-      queryClient.setQueryData<DesktopLocalStatus>(
-        desktopLocalStatusKey,
-        (status) => (status ? { ...status, prevent_sleep } : status),
-      );
-    },
-    onError: () => toast(t("connect.sleep.failed"), { tone: "error" }),
-  });
+  const sleep = useTaskSleepPreference();
   const preventSleep = local.data?.prevent_sleep;
   const sleepEnabled = sleep.isPending
     ? sleep.variables

@@ -1604,7 +1604,29 @@ export const enUS: Messages = {
       startupHint:
         "Changes automatic loading at the next login only. Current service and tasks keep running.",
       keepAliveHint:
-        "Once started, the system keeps the service running and restarts it after a crash, even after the desktop app exits.",
+        "The system restarts the service if it exits unexpectedly.",
+      keepOnQuit: "Keep the service running after quitting",
+      keepOnQuitHint:
+        "Sets the default choice in the quit dialog. You can change it each time you quit.",
+      startedAt: "Service start time",
+      storageLocation: "Local OpenFox data directory",
+      moveStorage: "Change storage location",
+      moved: "Local data moved. You can start the service again.",
+      moveStopFirst:
+        "To change the location, stop the local service in the settings above.",
+      moveBusy:
+        "Stop the local service and wait for current operations to finish before moving.",
+      moveVolume: "Choose a folder on the same macOS data volume.",
+      moveFailed:
+        "Could not move data. Choose a writable parent without a conflicting OpenFox directory and retry.",
+      openStorage: "Show storage location",
+      openFailed: "Could not open the local data directory",
+      timedAwake: "Keep awake temporarily",
+      timedAwakeHint:
+        "Keep this computer awake while the desktop app is open. The display can still sleep.",
+      duration: "Keep-awake duration",
+      hours: "{count} h",
+      until: "Until {time}",
       running: "Running in background",
       notRunning: "Running state not confirmed",
       desktopOnly: "Use the desktop app on this computer.",
@@ -1810,6 +1832,7 @@ export const enUS: Messages = {
       title: "Computers",
     },
     drawer: {
+      localTitle: "Local computer details",
       title: "Computer details",
     },
     guide: {

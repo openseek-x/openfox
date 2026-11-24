@@ -92,7 +92,9 @@ export const connectZh = {
     argsHint:
       "每行填写一个允许的 -c 配置及其值。Agent 参数会追加在 Runtime 参数后面。",
     memory: "可用内存保护",
-    minimum: "最低可用内存（MiB）",
+    minimum: "最低可用内存",
+    memoryUnit: "最低可用内存单位",
+    protectionHint: "调整持久会话时长、可用内存和系统负载阈值。",
     load: "系统负载保护",
     policy: "保护策略",
     conservative: "保守",

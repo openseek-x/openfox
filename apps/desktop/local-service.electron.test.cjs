@@ -55,6 +55,7 @@ test(
       origin = `http://127.0.0.1:${server.address().port}`;
       const fixture = path.join(directory, "cli-state.json");
       const operations = path.join(directory, "operations.jsonl");
+      const selectedParent = path.join(directory, "new location");
       const cli = path.join(directory, "openfox-fixture");
       await fs.writeFile(
         fixture,
@@ -73,8 +74,9 @@ else if(args[1]==='status')result={state:'RUNNING'};
 else {
  fs.appendFileSync(${JSON.stringify(operations)},JSON.stringify(args)+'\\n');
  if(state.fail){process.stderr.write('PRIVATE-TOKEN-do-not-expose');process.exit(1)}
+ if(args[1]==='move-storage'){state.storage_path=require('node:path').join(args[args.indexOf('--parent')+1],'OpenFox');fs.writeFileSync(${JSON.stringify(fixture)},JSON.stringify(state));}
  if(args[1]==='startup'){state.startup=args[args.indexOf('--mode')+1];fs.writeFileSync(${JSON.stringify(fixture)},JSON.stringify(state));}
- result=args[1]==='logs'?{lines:['2026/11/13 12:00:00 INFO daemon_token_renewed [details redacted]'],next_cursor:null,reset:false}:{supported:true,installed:true,startup:state.startup,keep_alive:true};
+ result=args[1]==='logs'?{lines:['2026/11/13 12:00:00 INFO daemon_token_renewed [details redacted]'],next_cursor:null,reset:false}:{supported:true,installed:true,startup:state.startup,keep_alive:true,storage_path:state.storage_path};
 }
 process.stdout.write(JSON.stringify(result));
 `,
@@ -131,6 +133,43 @@ process.stdout.write(JSON.stringify(result));
         (await invoke("readLocalLogs")).result.lines[0],
         /details redacted/,
       );
+      assert.equal(
+        (await invoke("setLocalKeepRunning", { ...target, enabled: false }))
+          .result.keep_service_running,
+        false,
+      );
+      assert.equal(
+        (await invoke("getLocalService")).result.keep_service_running,
+        false,
+      );
+      assert.ok(
+        (await invoke("setLocalAwake", { ...target, minutes: 60 })).result
+          .awake_until > Date.now(),
+      );
+      assert.equal(
+        (await invoke("setLocalAwake", { ...target, minutes: 0 })).result
+          .awake_until,
+        0,
+      );
+      await application.evaluate(({ dialog }, selectedParent) => {
+        dialog.showOpenDialog = async () => ({
+          canceled: false,
+          filePaths: [selectedParent],
+        });
+        dialog.showMessageBox = async () => ({ response: 0 });
+      }, selectedParent);
+      const moved = await invoke("moveLocalStorage", {
+        ...target,
+        parent: "/renderer-value",
+      });
+      assert.equal(
+        moved.result.storage_path,
+        path.join(selectedParent, "OpenFox"),
+      );
+      assert.equal(
+        (await invoke("getLocalService")).result.storage_path,
+        moved.result.storage_path,
+      );
       const count = (await fs.readFile(operations, "utf8"))
         .trim()
         .split("\n").length;
@@ -164,7 +203,14 @@ process.stdout.write(JSON.stringify(result));
       );
       assert.ok(requests.includes("/api/v1/me"));
     } finally {
-      await application?.close();
+      if (application) {
+        await Promise.all([
+          application.waitForEvent("close"),
+          application.evaluate(({ app }) => {
+            setImmediate(() => app.exit(0));
+          }),
+        ]);
+      }
       server.closeAllConnections();
       await new Promise((resolve) => server.close(resolve));
       await fs.rm(directory, { recursive: true, force: true });

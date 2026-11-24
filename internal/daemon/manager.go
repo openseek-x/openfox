@@ -43,10 +43,14 @@ func DefaultManager() (Manager, error) {
 	if err != nil {
 		return Manager{}, fmt.Errorf("resolve home directory: %w", err)
 	}
+	root := filepath.Join(home, "Library", "Application Support", "OpenFox")
+	if _, err := storageLocation(root); err != nil {
+		return Manager{}, err
+	}
 	return Manager{
-		SocketPath:      filepath.Join(home, "Library", "Application Support", "OpenFox", "daemon.sock"),
+		SocketPath:      filepath.Join(root, "daemon.sock"),
 		LaunchAgentPath: filepath.Join(home, "Library", "LaunchAgents", LaunchAgentLabel+".plist"),
-		ManualAgentPath: filepath.Join(home, "Library", "Application Support", "OpenFox", "daemon-service.plist"),
+		ManualAgentPath: filepath.Join(root, "daemon-service.plist"),
 		LogPath:         filepath.Join(home, "Library", "Logs", "OpenFox", "daemon.log"),
 		RunCommand:      defaultCommandRunner,
 		UserID:          os.Getuid(),
@@ -223,4 +227,12 @@ func launchAgentPlistLabel(arguments []string, logPath, label string) ([]byte, e
 </plist>
 `, escapedLabel, program.String(), logs)
 	return []byte(contents), nil
+}
+
+func (m Manager) StorageLocation() (string, error) {
+	return storageLocation(filepath.Dir(m.SocketPath))
+}
+
+func (m Manager) LockStorageRun(paths ...string) (*os.File, error) {
+	return lockStorageRun(filepath.Dir(m.SocketPath), paths)
 }

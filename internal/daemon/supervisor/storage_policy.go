@@ -178,7 +178,7 @@ func (s *Supervisor) dueStoragePolicy(ctx context.Context) error {
 			return nil
 		}
 		size := storage.NewWalker(time.Now()).Size(ctx, w.Path)
-		err := s.config.Workdir.RemoveExpiredWorktree(ctx, w.Path, w.RepositoryRoot, check)
+		err := s.config.Workdir.RemoveExpiredWorktree(ctx, j.StoragePaths.Current(w.Path), j.StoragePaths.Current(w.RepositoryRoot), check)
 		if errors.Is(err, ErrCleanupChanged) {
 			return nil
 		}

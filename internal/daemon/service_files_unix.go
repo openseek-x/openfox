@@ -32,7 +32,7 @@ func (m Manager) withServiceLock(fn func() error) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
-	if info, err := os.Lstat(filepath.Dir(path)); err != nil || !info.IsDir() {
+	if !checkedDirectory(filepath.Dir(path)) {
 		return ErrUnsafeFile
 	}
 	lock, err := lockIdentityFile(path)
@@ -58,11 +58,15 @@ func serviceFileIdentity(file *os.File) (string, error) {
 
 // Closing the descriptor releases the lock, including after process termination.
 func lockIdentityFile(path string) (*os.File, error) {
+	return lockServiceFile(path, unix.LOCK_EX)
+}
+
+func lockServiceFile(path string, mode int) (*os.File, error) {
 	file, err := openServiceFile(path, unix.O_CREAT|unix.O_RDWR)
 	if err != nil {
 		return nil, err
 	}
-	if err := unix.Flock(int(file.Fd()), unix.LOCK_EX|unix.LOCK_NB); err != nil {
+	if err := unix.Flock(int(file.Fd()), mode|unix.LOCK_NB); err != nil {
 		file.Close()
 		return nil, ErrServiceBusy
 	}

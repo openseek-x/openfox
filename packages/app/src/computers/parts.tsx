@@ -756,7 +756,7 @@ export function InfoRow({
   children,
 }: {
   label: string;
-  description?: string;
+  description?: ReactNode;
   children: ReactNode;
 }) {
   return (

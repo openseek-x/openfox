@@ -31,8 +31,30 @@ function sameTarget(registration, target) {
   );
 }
 
+async function authorizeLocalService(input, io) {
+  if (!sameTarget(await io.registration(), input)) throw Error("wrong_device");
+  const [center, device, me] = await Promise.all([
+    io.request(`/api/v1/organizations/${input.orgId}/devices/center`),
+    io.request(
+      `/api/v1/organizations/${input.orgId}/devices/${input.deviceId}`,
+    ),
+    io.request("/api/v1/me"),
+  ]);
+  io.ensureCurrent();
+  if (
+    centerKey(center.center_url) !== centerKey(input.centerUrl) ||
+    device.id !== input.deviceId ||
+    !me.id ||
+    device.owner_user_id !== me.id
+  )
+    throw Error("forbidden");
+  // Registration can change while the session requests are in flight.
+  if (!sameTarget(await io.registration(), input)) throw Error("wrong_device");
+  io.ensureCurrent();
+}
+
 function createLocalService() {
-  let changing = false;
+  const changing = new Set();
   return async function localService(operation, input, io) {
     if (io.platform !== "darwin") throw Error("unsupported");
     if (
@@ -45,6 +67,10 @@ function createLocalService() {
     if (
       ![
         "service-status",
+        "keep-running",
+        "open-storage",
+        "move-storage",
+        "timed-awake",
         "startup",
         "logs",
         "action",
@@ -53,6 +79,13 @@ function createLocalService() {
       ].includes(operation)
     )
       throw Error("unsupported");
+    if (
+      operation === "timed-awake" &&
+      ![0, 60, 120, 240, 480].includes(input.minutes)
+    )
+      throw Error("invalid_request");
+    if (operation === "keep-running" && typeof input.enabled !== "boolean")
+      throw Error("invalid_request");
     if (operation === "startup" && !["login", "manual"].includes(input.mode))
       throw Error("invalid_request");
     if (
@@ -70,37 +103,32 @@ function createLocalService() {
       throw Error("invalid_request");
     const mutation = [
       "startup",
+      "keep-running",
+      "move-storage",
+      "timed-awake",
       "action",
       "proxy-status",
       "proxy-save",
     ].includes(operation);
-    if (changing) throw Error("busy");
-    if (mutation) changing = true;
+    const group = operation.startsWith("proxy-") ? "proxy" : "service";
+    if (changing.has(group)) throw Error("busy");
+    if (mutation) changing.add(group);
     try {
-      if (!sameTarget(await io.registration(), input))
-        throw Error("wrong_device");
-      const [center, device, me] = await Promise.all([
-        io.request(`/api/v1/organizations/${input.orgId}/devices/center`),
-        io.request(
-          `/api/v1/organizations/${input.orgId}/devices/${input.deviceId}`,
-        ),
-        io.request("/api/v1/me"),
-      ]);
-      io.ensureCurrent();
-      if (
-        centerKey(center.center_url) !== centerKey(input.centerUrl) ||
-        device.id !== input.deviceId ||
-        !me.id ||
-        device.owner_user_id !== me.id
-      )
-        throw Error("forbidden");
-      // Registration can change while the session requests are in flight.
-      if (!sameTarget(await io.registration(), input))
-        throw Error("wrong_device");
-      io.ensureCurrent();
+      await authorizeLocalService(input, io);
+      let storageParent;
+      if (operation === "move-storage") {
+        storageParent = await io.chooseStorage();
+        io.ensureCurrent();
+        if (!storageParent) return null;
+        await authorizeLocalService(input, io);
+      }
       const args = [
         "daemon",
-        operation === "action" ? "service-action" : operation,
+        operation === "action"
+          ? "service-action"
+          : ["keep-running", "open-storage", "timed-awake"].includes(operation)
+            ? "service-status"
+            : operation,
         "--organization-id",
         input.orgId,
         "--device-id",
@@ -157,6 +185,7 @@ function createLocalService() {
         io.ensureCurrent();
         return io.status();
       }
+      if (operation === "move-storage") args.push("--parent", storageParent);
       if (operation === "startup") args.push("--mode", input.mode);
       if (operation === "logs" && input.cursor)
         args.push("--cursor", input.cursor);
@@ -182,9 +211,18 @@ function createLocalService() {
         (result.installed && !["login", "manual"].includes(result.startup))
       )
         throw Error("unavailable");
-      return result;
+      if (operation === "logs") return result;
+      if (["open-storage", "keep-running", "timed-awake"].includes(operation)) {
+        if (!result.installed) throw Error("unavailable");
+        if (operation === "open-storage")
+          return io.openStorage(result.storage_path);
+        if (operation === "timed-awake") io.setAwakeMinutes(input.minutes);
+        else await io.setKeepRunning(input.enabled);
+        io.ensureCurrent();
+      }
+      return { ...result, ...io.serviceDetails() };
     } finally {
-      if (mutation) changing = false;
+      if (mutation) changing.delete(group);
     }
   };
 }

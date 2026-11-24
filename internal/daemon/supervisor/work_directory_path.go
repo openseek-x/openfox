@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"openfox/internal/daemon/workdir"
 	"openfox/internal/workdirpath"
 )
 
@@ -19,7 +20,7 @@ func (j *Journal) recordWorkDirectory(ctx context.Context, device string, run Ru
 		(device_id,organization_id,space_id,conversation_id,agent_id,run_id,generation,path)
 		VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(device_id,organization_id,space_id,conversation_id,agent_id)
 		DO UPDATE SET run_id=excluded.run_id,generation=excluded.generation,path=excluded.path`,
-		device, run.OrganizationID, run.SpaceID, run.ConversationID, run.AgentID, run.RunID, run.Generation, canonical)
+		device, run.OrganizationID, run.SpaceID, run.ConversationID, run.AgentID, run.RunID, run.Generation, j.StoragePaths.Stored(canonical))
 	if err != nil {
 		return workdirpath.ErrUnavailable
 	}
@@ -34,6 +35,7 @@ func (j *Journal) WorkDirectoryPath(ctx context.Context, scope workdirpath.Scope
 	err := j.db.QueryRowContext(ctx, `SELECT path FROM conversation_directory_facts
 		WHERE device_id=? AND organization_id=? AND space_id=? AND conversation_id=? AND agent_id=? AND run_id=? AND generation=?`,
 		scope.DeviceID, scope.OrganizationID, scope.SpaceID, scope.ConversationID, scope.AgentID, scope.RunID, scope.Generation).Scan(&path)
+	path = j.StoragePaths.Current(path)
 	if err != nil || !filepath.IsAbs(path) || !workdirpath.ValidPath(path) {
 		return "", workdirpath.ErrUnavailable
 	}
@@ -55,7 +57,7 @@ func (s *Supervisor) WorkDirectoryPath(ctx context.Context, scope workdirpath.Sc
 	return s.config.Journal.WorkDirectoryPath(ctx, scope)
 }
 
-func ReadWorkDirectoryPath(ctx context.Context, database string, scope workdirpath.Scope) (string, error) {
+func ReadWorkDirectoryPath(ctx context.Context, database string, scope workdirpath.Scope, locations workdir.StoragePaths) (string, error) {
 	if !filepath.IsAbs(database) {
 		return "", workdirpath.ErrUnavailable
 	}
@@ -70,5 +72,5 @@ func ReadWorkDirectoryPath(ctx context.Context, database string, scope workdirpa
 	}
 	defer db.Close()
 	db.SetMaxOpenConns(1)
-	return (&Journal{db: db}).WorkDirectoryPath(ctx, scope)
+	return (&Journal{db: db, StoragePaths: locations}).WorkDirectoryPath(ctx, scope)
 }

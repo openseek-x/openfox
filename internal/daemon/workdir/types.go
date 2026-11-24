@@ -86,6 +86,7 @@ func (r Request) validate() error {
 }
 
 type GuardPolicy struct {
+	StoragePaths   StoragePaths
 	ManagedRoot    string
 	AllowedRoots   []string
 	ProtectedRoots []string

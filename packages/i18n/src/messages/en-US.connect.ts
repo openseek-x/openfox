@@ -110,7 +110,10 @@ export const connectEn: Messages["connect"] = {
     argsHint:
       "Enter one allowed -c option and its value per line. Agent arguments follow the runtime arguments.",
     memory: "Available memory protection",
-    minimum: "Minimum available memory (MiB)",
+    minimum: "Minimum available memory",
+    memoryUnit: "Minimum available memory unit",
+    protectionHint:
+      "Adjust session lifetimes, available memory and system load thresholds.",
     load: "System load protection",
     policy: "Protection policy",
     conservative: "Conservative",
