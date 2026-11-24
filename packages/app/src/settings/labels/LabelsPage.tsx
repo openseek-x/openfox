@@ -752,7 +752,7 @@ export function LabelsPage({ space }: { space?: LabelSpaceScope } = {}) {
   };
 
   return (
-    <div className="mx-auto flex max-w-[1004px] flex-col gap-5 px-12 pt-10 pb-16">
+    <div className="mx-auto flex w-full max-w-[1004px] flex-col gap-5 px-12 pt-10 pb-16">
       <ConfigPageHeader
         title={t("settings.labels.title")}
         subtitle={
@@ -769,10 +769,10 @@ export function LabelsPage({ space }: { space?: LabelSpaceScope } = {}) {
           )
         }
       />
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <TextInput
           type="search"
-          className="w-[300px]"
+          className="w-[300px] max-w-full"
           aria-label={t("settings.labels.search")}
           placeholder={t("settings.labels.search")}
           leading={<Icon name="search" />}

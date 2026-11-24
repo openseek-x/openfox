@@ -5,6 +5,7 @@ import type { Iteration } from "@openfox/api";
 import { useI18n, useT } from "@openfox/i18n";
 import { Button, Icon, Segmented, Spinner } from "@openfox/ui";
 
+import { SpacePageTitle } from "../spaces/SpacePageTitle";
 import { useSpaceDetail } from "../spaces/queries";
 import {
   BackBar,
@@ -81,10 +82,11 @@ export function IterationsPage() {
   const nextPlanned = iterations.find((item) => item.status === "planned");
   return (
     <div className="flex h-full flex-col">
-      <header className="flex h-11 shrink-0 items-center gap-2 border-b border-line-default px-4">
-        <h1 className="font-medium">
-          {space.data.name} · {t("spaces.iteration.title")}
-        </h1>
+      <header className="flex min-h-11 shrink-0 flex-wrap items-center gap-2 border-b border-line-default px-4 py-1">
+        <SpacePageTitle
+          space={space.data.name}
+          title={t("spaces.iteration.title")}
+        />
         <Segmented
           label={t("spaces.iteration.title")}
           value={scope}

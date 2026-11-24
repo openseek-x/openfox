@@ -225,9 +225,9 @@ function GetStartedBody({
   };
 
   return (
-    <SettingsColumn wide>
-      <div className="flex items-start gap-8">
-        <aside className="sticky top-12 flex w-[340px] shrink-0 flex-col items-center gap-4 self-start">
+    <SettingsColumn wide className="@container">
+      <div className="flex flex-col gap-8 @[700px]:flex-row @[700px]:items-start">
+        <aside className="flex shrink-0 flex-col items-center gap-4 @[700px]:sticky @[700px]:top-12 @[700px]:w-[340px]">
           <ProgressRing score={progress.score} total={progress.total} />
           {/* OrgIcon 没有 48 的尺寸，取最接近的 40 */}
           {org && <OrgIcon org={org} size={40} />}

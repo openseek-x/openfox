@@ -338,7 +338,7 @@ function PackRail({
   return (
     <section
       aria-label={t("market.packs.title")}
-      className="flex flex-col gap-2"
+      className="@container flex flex-col gap-2"
     >
       <div className="flex items-center gap-2">
         <h2 className="flex-1 text-body font-medium">
@@ -359,7 +359,7 @@ function PackRail({
           onClick={() => setPage(page + 1)}
         />
       </div>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 gap-3 @[500px]:grid-cols-2 @[760px]:grid-cols-3">
         {visible.map((pack) => (
           <article
             key={pack.id}
@@ -453,7 +453,7 @@ function SkillCard({
           </span>
         </span>
       </span>
-      <span className="line-clamp-2 min-h-10 text-body-sm text-fg-secondary">
+      <span className="line-clamp-2 min-h-[2lh] text-body-sm text-fg-secondary">
         {pickText(skill.description, locale)}
       </span>
       <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-caption text-fg-muted">
@@ -501,7 +501,7 @@ function TemplateCard({
           </span>
         </span>
       </span>
-      <span className="line-clamp-2 min-h-10 text-body-sm text-fg-secondary">
+      <span className="line-clamp-2 min-h-[2lh] text-body-sm text-fg-secondary">
         {pickText(template.tagline, locale) ||
           pickText(template.description, locale)}
       </span>

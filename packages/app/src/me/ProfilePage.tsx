@@ -54,7 +54,7 @@ export function ProfilePage() {
 function ProfileBody({ orgId, me }: { orgId: string; me: Me }) {
   const t = useT();
   return (
-    <SettingsColumn narrow>
+    <SettingsColumn narrow className="@container">
       <SettingsSection
         title={t("settings.items.profile")}
         description={t("me.profile.description")}
@@ -491,7 +491,7 @@ function BioRow({ orgId, me }: { orgId: string; me: Me }) {
       <SettingRow
         title={t("me.profile.bio.title")}
         control={
-          <div className="flex max-w-[360px] items-center gap-1">
+          <div className="flex max-w-[min(360px,65cqw)] items-center gap-1">
             <span
               className={cn(
                 "truncate text-body-sm",

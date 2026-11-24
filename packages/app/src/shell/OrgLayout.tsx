@@ -604,7 +604,7 @@ function Navigation({
   return (
     <nav
       aria-label={t("shell.a11y.navigation")}
-      className="group/panel flex min-w-0 flex-1 flex-col overflow-y-auto px-1.5 pt-1.5 pb-3"
+      className="group/panel relative flex min-w-0 flex-1 flex-col overflow-y-auto px-1.5 pt-1.5 pb-3"
     >
       <div className="flex h-11 shrink-0 items-center gap-1 pr-1 pl-2.5">
         <h2 className="min-w-0 flex-1 truncate text-title font-bold">

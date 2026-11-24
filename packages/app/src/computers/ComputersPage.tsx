@@ -162,79 +162,81 @@ function ComputerSection({
           {empty}
         </p>
       ) : (
-        <Table>
-          <TableHead>
-            <tr className="bg-surface-muted">
-              <TableHeaderCell className="w-[38%] rounded-l-lg pl-14">
-                {t("computers.columns.name")}
-              </TableHeaderCell>
-              <TableHeaderCell className="w-[22%]">
-                {t("computers.columns.runtime")}
-              </TableHeaderCell>
-              <TableHeaderCell className="w-[12%]">
-                {t("computers.columns.status")}
-              </TableHeaderCell>
-              <TableHeaderCell className="w-[12%]">
-                {t("computers.columns.visibility")}
-              </TableHeaderCell>
-              <TableHeaderCell className="rounded-r-lg">
-                {t("computers.columns.owner")}
-              </TableHeaderCell>
-            </tr>
-          </TableHead>
-          <TableBody>
-            {devices.map((device) => (
-              <TableRow
-                key={device.id}
-                onClick={() => open(device.id)}
-                className="h-14"
-              >
-                <TableCell>
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      open(device.id);
-                    }}
-                    className="flex min-w-0 items-center gap-3 text-left"
-                  >
-                    <OsBadge os={device.operating_system} />
-                    <span className="flex min-w-0 flex-col">
-                      <span className="truncate text-body font-medium text-fg-default">
-                        {device.name}
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHead>
+              <tr className="bg-surface-muted">
+                <TableHeaderCell className="w-[38%] rounded-l-lg pl-14">
+                  {t("computers.columns.name")}
+                </TableHeaderCell>
+                <TableHeaderCell className="w-[22%]">
+                  {t("computers.columns.runtime")}
+                </TableHeaderCell>
+                <TableHeaderCell className="w-[12%]">
+                  {t("computers.columns.status")}
+                </TableHeaderCell>
+                <TableHeaderCell className="w-[12%]">
+                  {t("computers.columns.visibility")}
+                </TableHeaderCell>
+                <TableHeaderCell className="rounded-r-lg">
+                  {t("computers.columns.owner")}
+                </TableHeaderCell>
+              </tr>
+            </TableHead>
+            <TableBody>
+              {devices.map((device) => (
+                <TableRow
+                  key={device.id}
+                  onClick={() => open(device.id)}
+                  className="h-14"
+                >
+                  <TableCell>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        open(device.id);
+                      }}
+                      className="flex min-w-0 items-center gap-3 text-left"
+                    >
+                      <OsBadge os={device.operating_system} />
+                      <span className="flex min-w-0 flex-col">
+                        <span className="truncate text-body font-medium text-fg-default">
+                          {device.name}
+                        </span>
+                        <span className="truncate text-caption text-fg-muted">
+                          {systemText(device)}
+                        </span>
                       </span>
-                      <span className="truncate text-caption text-fg-muted">
-                        {systemText(device)}
+                    </button>
+                  </TableCell>
+                  <TableCell>
+                    <RuntimeIcons runtimes={device.runtimes} />
+                  </TableCell>
+                  <TableCell>
+                    <span className="inline-flex items-center gap-2">
+                      <ComputerStatusLabel device={device} />
+                      <ReconcilingBadge device={device} />
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-body-sm text-fg-secondary">
+                    {visibilityText(device, t)}
+                  </TableCell>
+                  <TableCell>
+                    {device.owner_email ? (
+                      <span className="flex min-w-0 items-center gap-2 text-body-sm text-fg-secondary">
+                        <Avatar name={device.owner_email} size={20} />
+                        <span className="truncate">{device.owner_email}</span>
                       </span>
-                    </span>
-                  </button>
-                </TableCell>
-                <TableCell>
-                  <RuntimeIcons runtimes={device.runtimes} />
-                </TableCell>
-                <TableCell>
-                  <span className="inline-flex items-center gap-2">
-                    <ComputerStatusLabel device={device} />
-                    <ReconcilingBadge device={device} />
-                  </span>
-                </TableCell>
-                <TableCell className="text-body-sm text-fg-secondary">
-                  {visibilityText(device, t)}
-                </TableCell>
-                <TableCell>
-                  {device.owner_email ? (
-                    <span className="flex min-w-0 items-center gap-2 text-body-sm text-fg-secondary">
-                      <Avatar name={device.owner_email} size={20} />
-                      <span className="truncate">{device.owner_email}</span>
-                    </span>
-                  ) : (
-                    <span className="text-fg-muted">—</span>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                    ) : (
+                      <span className="text-fg-muted">—</span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
     </section>
   );

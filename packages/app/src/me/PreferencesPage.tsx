@@ -115,14 +115,14 @@ function PreferencesBody({ prefs }: { prefs: UserPreferences }) {
             />
           ))}
         </div>
-        <SettingsCard>
+        <SettingsCard className="@container">
           <SettingRow
             title={t("me.preferences.outline.title")}
             control={
               <div
                 role="radiogroup"
                 aria-label={t("me.preferences.outline.title")}
-                className="flex gap-1.5"
+                className="flex max-w-[65cqw] flex-wrap justify-end gap-1.5"
               >
                 {Array.from({ length: OUTLINE_COLORS.length + 1 }, (_, n) => (
                   <OutlineSwatch
