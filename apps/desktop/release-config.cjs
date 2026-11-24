@@ -1,4 +1,4 @@
-// macOS arm64 release package for the system Installer.
+// Ship a DMG for Finder and a PKG of the same app for the system Installer.
 const { execFileSync } = require("node:child_process");
 const { createHash } = require("node:crypto");
 const { createReadStream } = require("node:fs");
@@ -22,7 +22,7 @@ module.exports = {
   ...build,
   extraMetadata: { openfoxAutoUpdate: true },
   directories: { ...build.directories, output: "dist/release" },
-  mac: { ...build.mac, target: ["dir"], notarize: false },
+  mac: { ...build.mac, target: ["dmg"], notarize: false },
   async afterAllArtifactBuild({ outDir }) {
     const filename = `OpenFox-${version}-arm64.pkg`;
     const pkg = path.join(outDir, filename);

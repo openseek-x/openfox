@@ -28,20 +28,21 @@ assets with `pnpm --filter @openfox/web build` and publish `apps/web/dist`.
 
 ## Desktop updates
 
-A `desktop-vX.Y.Z` tag triggers the GitHub Actions desktop release workflow.
-An unpublished release can be retried from a corrected commit with a suffix
-such as `desktop-vX.Y.Z-r2`. Both tags identify the same application version.
-The tag must match `apps/desktop/package.json`. The macOS arm64 job runs the
-tests, builds the web workbench and bundled CLI, and creates a macOS Installer
-PKG containing OpenFox.app. The app uses ad hoc signing. The PKG has no Developer
-ID signature or notarization ticket. Installation depends on the user's macOS
-security policy. The client opens Installer only after explicit consent.
+Push a `vX.Y.Z` Git tag matching the version in `apps/desktop/package.json`.
+GitHub Actions builds the arm64 app, verifies the DMG contains the same app as
+the PKG, and deploys the web workbench. Its final job attaches both installers
+to a draft GitHub Release, checks both SHA-256 digests and publishes the release.
+Rerun failed jobs on the original run to reuse its verified build artifacts.
+
+From 0.1.3, the app checks the latest stable GitHub Release in `openseek-x/openfox`.
+The tag supplies the version. People installing manually use the DMG. The release
+app downloads the PKG with a 512 MiB limit and 20-minute timeout, checks its
+GitHub digest and opens macOS Installer only on explicit consent. The app uses
+ad hoc signing and installation is subject to the user's macOS security policy.
 
 Configure repository variable `OPENFOX_PUBLIC_URL` with the HTTPS workbench
-origin. The workflow embeds that origin and generates `desktop/latest.json` with
-the version, same-origin PKG URL and SHA-256. Existing manual-update clients can
-use the PKG for the first install. Clients download at most 512 MiB in 20 minutes.
-Older approved installer files are removed when the installed version starts.
+origin. The workflow also publishes the same PKG and `desktop/latest.json` on
+that origin so existing 0.1.2 installations can receive the GitHub-enabled app.
 
 The `desktop-production` GitHub environment permits release tags. It contains
 `OPENFOX_DEPLOY_KEY` (secret), `OPENFOX_DEPLOY_TARGET` (user@host) and
