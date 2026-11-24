@@ -272,6 +272,32 @@ test("HTML static sandbox blocks script, navigation and all network resources un
   expect(page.frames()[1]!.url()).toBe("about:srcdoc");
 });
 
+test("HTML preview uses thin scrollbars for the page and nested content", async ({
+  page,
+}) => {
+  await mockArtifacts(
+    page,
+    "light",
+    '<div id="table" style="width:120px;overflow:auto"><table style="width:600px"><tr><td>内容</td></tr></table></div><p style="height:200vh">正文</p>',
+  );
+  await page.goto("/o/o1/chat/c1?artifact=html");
+  const frame = page.frameLocator("iframe");
+  const root = frame.locator("html");
+  const table = frame.locator("#table");
+  await expect(root).toHaveCSS("scrollbar-width", "thin");
+  await expect(table).toHaveCSS("scrollbar-width", "thin");
+  await table.hover();
+  await page.mouse.wheel(180, 0);
+  await expect
+    .poll(() => table.evaluate((el) => el.scrollLeft))
+    .toBeGreaterThan(0);
+  await frame.getByText("正文").hover({ position: { x: 5, y: 5 } });
+  await page.mouse.wheel(0, 180);
+  await expect
+    .poll(() => root.evaluate((el) => el.scrollTop))
+    .toBeGreaterThan(0);
+});
+
 test("artifact reader: dark HTML, light Markdown, narrow panel and source switching", async ({
   page,
 }, testInfo) => {
