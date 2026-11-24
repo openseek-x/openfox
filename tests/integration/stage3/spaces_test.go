@@ -37,7 +37,7 @@ func (e *s3Env) ensureDevice(scope, scopeSpaceID string) string {
 		e.exec(`INSERT INTO openfox.device_grants (organization_id, device_id, scope, scope_space_id) VALUES ($1::uuid, $2::uuid, 'SPACE', $3::uuid)`,
 			e.org, id, scopeSpaceID)
 	} else {
-		e.exec(`INSERT INTO openfox.device_grants (organization_id, device_id) VALUES ($1::uuid, $2::uuid)`, e.org, id)
+		e.exec(`INSERT INTO openfox.device_grants (organization_id, device_id, allow_workflows) VALUES ($1::uuid, $2::uuid, true)`, e.org, id)
 	}
 	s3Devices[key] = id
 	return id

@@ -33,7 +33,7 @@ func (d taskDraft) resolve(ctx context.Context, tx pgx.Tx, org string) (string, 
 	if err != nil {
 		return "", runParams{}, err
 	}
-	reason, p, err := agentRunParams(ctx, tx, agent, d.actor.UserID, d.space)
+	reason, p, err := agentRunParams(ctx, tx, agent, d.actor.UserID, d.space, false)
 	if err != nil {
 		return "", p, err
 	}

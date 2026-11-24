@@ -11907,7 +11907,7 @@ paths:
           $ref: "#/components/responses/Error"
     patch:
       operationId: updateDevice
-      summary: 修改电脑名称与并发上限（仅电脑所有者；settings_version 乐观锁）
+      summary: 修改电脑名称、并发上限及本组织工作流权限（仅电脑所有者；settings_version 乐观锁）
       description: |
         非所有者、电脑不在当前组织的有效授权内，一律 404 NOT_FOUND。settings_version 不一致返回 409 RECONCILIATION_CONFLICT。
         并发上限低于当前已占用数时允许保存，只影响后续派发。心跳不改变 settings_version。
@@ -28435,6 +28435,9 @@ components:
           type: integer
           minimum: 1
           description: 名称与并发上限的乐观锁版本（PATCH 用）
+        allow_workflows:
+          type: boolean
+          description: 此组织的工作流是否可以使用该电脑，默认关闭。
         grant_scope:
           $ref: "#/components/schemas/DeviceGrantScope"
         grant_user_id:
@@ -28529,6 +28532,7 @@ components:
       properties:
         name: { type: string, minLength: 1, maxLength: 100 }
         max_slots: { type: integer, minimum: 1, maximum: 256 }
+        allow_workflows: { type: boolean }
         settings_version: { type: integer, minimum: 1 }
     DeviceRemovalBlockers:
       type: object
@@ -29223,7 +29227,9 @@ components:
           enum:
             - USER
             - TASK_ASSIGNMENT
-          description: TASK_ASSIGNMENT = 任务指派给 Agent 时由服务端自动创建
+            - IM
+            - AUTOMATION
+          description: AUTOMATION 表示组织工作流会话。TASK_ASSIGNMENT = 任务指派给 Agent 时由服务端自动创建
         version:
           type: integer
           minimum: 1
@@ -30223,7 +30229,7 @@ components:
       properties:
         name: { type: string, minLength: 1, maxLength: 255 }
         install_id: { type: string, maxLength: 255 }
-        max_slots: { type: integer, minimum: 0, maximum: 1024, description: 0 或缺省 = 1 }
+        max_slots: { type: integer, minimum: 0, maximum: 1024, description: 0 或缺省 = 5 }
         scope:
           $ref: '#/components/schemas/DeviceRegistrationScope'
           description: 省略时 OWNER / ADMIN = ORGANIZATION，其他成员 = PERSONAL
@@ -30695,7 +30701,7 @@ components:
         acceptance: { type: string }
         status_name: { type: string }
         status_category: { type: string }
-        origin: { type: string, enum: [USER, TASK_ASSIGNMENT], description: 本次 Run 所在会话的来源 }
+        origin: { type: string, enum: [USER, TASK_ASSIGNMENT, IM, AUTOMATION], description: 本次 Run 所在会话的来源 }
         comments:
           type: array
           maxItems: 20

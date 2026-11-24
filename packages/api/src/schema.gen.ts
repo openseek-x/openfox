@@ -8474,7 +8474,7 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * 修改电脑名称与并发上限（仅电脑所有者；settings_version 乐观锁）
+         * 修改电脑名称、并发上限及本组织工作流权限（仅电脑所有者；settings_version 乐观锁）
          * @description 非所有者、电脑不在当前组织的有效授权内，一律 404 NOT_FOUND。settings_version 不一致返回 409 RECONCILIATION_CONFLICT。
          *     并发上限低于当前已占用数时允许保存，只影响后续派发。心跳不改变 settings_version。
          */
@@ -19752,6 +19752,8 @@ export interface components {
             version: number;
             /** @description 名称与并发上限的乐观锁版本（PATCH 用） */
             settings_version: number;
+            /** @description 此组织的工作流是否可以使用该电脑，默认关闭。 */
+            allow_workflows?: boolean;
             grant_scope: components["schemas"]["DeviceGrantScope"];
             /** Format: uuid */
             grant_user_id: string | null;
@@ -19809,6 +19811,7 @@ export interface components {
         DeviceUpdateRequest: {
             name?: string;
             max_slots?: number;
+            allow_workflows?: boolean;
             settings_version: number;
         };
         DeviceRemovalBlockers: {
@@ -20313,10 +20316,10 @@ export interface components {
             /** @enum {string} */
             handoff: "NONE" | "WAITING_REPLY" | "WAITING_REVIEW";
             /**
-             * @description TASK_ASSIGNMENT = 任务指派给 Agent 时由服务端自动创建
+             * @description AUTOMATION 表示组织工作流会话。TASK_ASSIGNMENT = 任务指派给 Agent 时由服务端自动创建
              * @enum {string}
              */
-            origin: "USER" | "TASK_ASSIGNMENT";
+            origin: "USER" | "TASK_ASSIGNMENT" | "IM" | "AUTOMATION";
             /** @description 完成 / 重新打开 / 交接的乐观锁；发消息、绑定任务会递增，置顶 / 已读 / 重命名 / 归档不变 */
             version: number;
             /** Format: date-time */
@@ -21024,7 +21027,7 @@ export interface components {
         DeviceRegistrationTokenRequest: {
             name: string;
             install_id?: string;
-            /** @description 0 或缺省 = 1 */
+            /** @description 0 或缺省 = 5 */
             max_slots?: number;
             /** @description 省略时 OWNER / ADMIN = ORGANIZATION，其他成员 = PERSONAL */
             scope?: components["schemas"]["DeviceRegistrationScope"];
@@ -21382,7 +21385,7 @@ export interface components {
              * @description 本次 Run 所在会话的来源
              * @enum {string}
              */
-            origin: "USER" | "TASK_ASSIGNMENT";
+            origin: "USER" | "TASK_ASSIGNMENT" | "IM" | "AUTOMATION";
             /** @description 最近的评论（按时间正序），正文截断到 2000 字符 */
             comments: {
                 /**

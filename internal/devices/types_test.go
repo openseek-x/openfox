@@ -37,7 +37,7 @@ func TestRuntimeModelsDefaultReasoning(t *testing.T) {
 
 func TestRegistrationInputBounds(t *testing.T) {
 	name, installID, slots, err := normalizeRegistrationInput(RegistrationTokenInput{Name: "Mac", InstallID: "install-1"})
-	if err != nil || name != "Mac" || installID != "install-1" || slots != 1 {
+	if err != nil || name != "Mac" || installID != "install-1" || slots != 5 {
 		t.Fatalf("normalized registration = %q/%q/%d, err=%v", name, installID, slots, err)
 	}
 	if _, _, _, err := normalizeRegistrationInput(RegistrationTokenInput{Name: "\n"}); err == nil {

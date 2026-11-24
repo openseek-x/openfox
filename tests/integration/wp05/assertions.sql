@@ -12,11 +12,11 @@ SET LOCAL ROLE openfox_app;
 
 INSERT INTO openfox.device_registration_tokens (
     organization_id, issued_by_user_id, token_hash, name, install_id,
-    max_slots, expires_at
+    expires_at
 ) VALUES (
     '00000000-0000-0000-0000-0000000000a1',
     '00000000-0000-0000-0000-000000000001',
-    decode(repeat('11', 32), 'hex'), 'WP05 device', 'install-wp05', 2,
+    decode(repeat('11', 32), 'hex'), 'WP05 device', 'install-wp05',
     clock_timestamp() + interval '5 minutes'
 )
 RETURNING id::text AS registration_id
@@ -30,7 +30,7 @@ SELECT device_id::text
 
 SELECT 1 / ((count(*) = 1)::int) AS registration_row_check
   FROM openfox.physical_devices
- WHERE id = :'registered_device_id'::uuid;
+ WHERE id = :'registered_device_id'::uuid AND max_slots = 5;
 SELECT 1 / (((SELECT owner_user_id::text FROM openfox.physical_devices WHERE id = :'registered_device_id'::uuid)
                  = '00000000-0000-0000-0000-000000000001')::int) AS registration_owner_check;
 SELECT 1 / (((SELECT name FROM openfox.physical_devices WHERE id = :'registered_device_id'::uuid)

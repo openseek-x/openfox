@@ -31,6 +31,7 @@ import {
   MenuLabel,
   MenuSeparator,
   Skeleton,
+  Switch,
   TextInput,
   useToast,
 } from "@openfox/ui";
@@ -577,6 +578,23 @@ export function ComputerDetailBody({
               />
             </InfoRow>
           )}
+          <InfoRow
+            label={t("computers.detail.allowWorkflows")}
+            description={t("computers.detail.allowWorkflowsHint")}
+          >
+            <Switch
+              label={t("computers.detail.allowWorkflows")}
+              checked={device.allow_workflows === true}
+              disabled={
+                !isOwner ||
+                device.allow_workflows === undefined ||
+                update.isPending
+              }
+              onCheckedChange={(allow_workflows) =>
+                update.mutate({ allow_workflows })
+              }
+            />
+          </InfoRow>
         </InfoCard>
       </section>
 

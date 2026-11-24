@@ -91,6 +91,15 @@ func TestRegistrationSurvivesLostResponseAndRestart(t *testing.T) {
 	if len(first) != 1 {
 		t.Fatalf("after lost response: %d records", len(first))
 	}
+	if first[0].MaxSlots != 5 {
+		t.Fatalf("new device max_slots = %d, want 5", first[0].MaxSlots)
+	}
+	limit := 1
+	if _, err := store.UpdateSettings(ctx, selection, devices.Viewer{Role: "OWNER"}, first[0].ID, devices.SettingsInput{
+		ExpectedVersion: first[0].SettingsVersion, MaxSlots: &limit,
+	}); err != nil {
+		t.Fatal(err)
+	}
 	configFile := filepath.Join(configDir, daemon.DeviceConfigFileName)
 	if _, err := os.Stat(configFile); !os.IsNotExist(err) {
 		t.Fatalf("partial config: %v", err)
@@ -106,6 +115,9 @@ func TestRegistrationSurvivesLostResponseAndRestart(t *testing.T) {
 		found := devicesNamed()
 		if len(found) != 1 || found[0].GrantID != first[0].GrantID {
 			t.Fatal("retry created a device or grant")
+		}
+		if found[0].MaxSlots != limit {
+			t.Fatalf("reconnect changed saved max_slots to %d, want %d", found[0].MaxSlots, limit)
 		}
 	}
 	if err := register(filepath.Join(dir, "second"), false); err != nil {

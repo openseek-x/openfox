@@ -540,6 +540,28 @@ describe("电脑详情整页", () => {
     );
   });
 
+  it("工作流授权只在设备所有者保存成功后生效", async () => {
+    const calls = renderSettings(path, (call) => {
+      if (call.path !== "/v1/organizations/o1/devices/d1") return undefined;
+      if (call.method === "PATCH")
+        return json(
+          200,
+          device({ allow_workflows: true, settings_version: 3 }),
+        );
+      return json(200, { ...detail(), allow_workflows: false });
+    });
+    const toggle = await screen.findByRole("switch", {
+      name: "允许在此机器上运行工作流",
+    });
+    expect(toggle).not.toBeChecked();
+    await userEvent.click(toggle);
+    await waitFor(() => expect(toggle).toBeChecked());
+    expect(calls.find((c) => c.method === "PATCH")?.body).toEqual({
+      allow_workflows: true,
+      settings_version: 2,
+    });
+  });
+
   it("移除机器：有阻断 Agent 时列出名字并禁用确认", async () => {
     const calls = renderSettings(path, (call) => {
       if (call.path === "/v1/organizations/o1/devices/d1/removal-blockers")

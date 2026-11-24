@@ -1747,6 +1747,9 @@ export const zhCN = {
       notAvailable: "—",
       runSettings: "任务运行设置",
       maxSlots: "最大并发运行任务数",
+      allowWorkflows: "允许在此机器上运行工作流",
+      allowWorkflowsHint:
+        "开启后，此组织的工作流可通过指派到这台电脑的 Agent 使用本机网络、文件和 CLI。仅电脑所有者可修改。",
       maxSlotsHint: "1–256，只影响之后派发的任务",
       maxSlotsInvalid: "请输入 1–256 之间的整数",
       storage: "存储",

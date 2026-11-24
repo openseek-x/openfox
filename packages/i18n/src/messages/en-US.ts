@@ -1814,6 +1814,9 @@ export const enUS: Messages = {
       notAvailable: "—",
       runSettings: "Task run settings",
       maxSlots: "Max concurrent tasks",
+      allowWorkflows: "Allow workflows to run on this computer",
+      allowWorkflowsHint:
+        "Workflows in this organization can use the local network, files and CLI through an assigned Agent. Only the computer owner can change this setting.",
       maxSlotsHint: "1–256, applies to tasks dispatched afterwards",
       maxSlotsInvalid: "Enter a whole number from 1 to 256",
       storage: "Storage",

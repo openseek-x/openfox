@@ -329,6 +329,7 @@ func (h *DeviceManagementHandler) get(w http.ResponseWriter, r *http.Request) {
 type deviceSettingsRequest struct {
 	Name            *string `json:"name"`
 	MaxSlots        *int    `json:"max_slots"`
+	AllowWorkflows  *bool   `json:"allow_workflows"`
 	SettingsVersion int64   `json:"settings_version"`
 }
 
@@ -343,7 +344,7 @@ func (h *DeviceManagementHandler) updateSettings(w http.ResponseWriter, r *http.
 		return
 	}
 	device, err := h.store.UpdateSettings(r.Context(), selection, viewer, r.PathValue("deviceID"), devices.SettingsInput{
-		Name: input.Name, MaxSlots: input.MaxSlots, ExpectedVersion: input.SettingsVersion,
+		Name: input.Name, MaxSlots: input.MaxSlots, AllowWorkflows: input.AllowWorkflows, ExpectedVersion: input.SettingsVersion,
 	})
 	if err != nil {
 		writeDeviceManagementError(w, r, err)

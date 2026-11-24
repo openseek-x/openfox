@@ -19,6 +19,7 @@ import (
 	"openfox/internal/deviceauth"
 	"openfox/internal/identity"
 	"openfox/internal/platform/postgres"
+	"openfox/internal/runtimepolicy"
 	"openfox/internal/secrets"
 	"openfox/internal/tenancy"
 )
@@ -433,7 +434,7 @@ func normalizeRegistrationInput(input RegistrationTokenInput) (string, string, i
 	}
 	maxSlots := input.MaxSlots
 	if maxSlots == 0 {
-		maxSlots = 1
+		maxSlots = runtimepolicy.DefaultDeviceMaxRuns
 	}
 	if maxSlots < 1 || maxSlots > 1024 {
 		return "", "", 0, ErrInvalidRequest

@@ -17,6 +17,7 @@ import (
 	"unicode"
 
 	"openfox/internal/identity"
+	"openfox/internal/runtimepolicy"
 	"openfox/internal/tenancy"
 )
 
@@ -313,7 +314,7 @@ func (s Service) RegisterDevice(ctx context.Context, registration Registration) 
 	}
 	maxSlots := registration.MaxSlots
 	if maxSlots == 0 {
-		maxSlots = 1
+		maxSlots = runtimepolicy.DefaultDeviceMaxRuns
 	}
 	if maxSlots < 1 || maxSlots > 1024 {
 		return "", ErrInvalidRequest
