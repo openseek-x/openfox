@@ -33,4 +33,4 @@
 
 0.1.3 从官方仓库的最新正式 Release 读取 vX.Y.Z 标签、对应架构的附件地址和 SHA-256。生产客户端后台下载 PKG，默认暂缓，选择「打开系统安装器」后才进入系统安装界面。手动下载使用 DMG。Electron 的 session.fetch 会取消手动重定向，因此使用同一代理会话的 net.request 检查 GitHub 附件跳转，再从官方 CDN 下载并核对摘要。API 限流或无法访问时保留当前版本，可再次检查。
 
-配置变更包括桌面 package.json 版本、release-config.cjs 的 DMG 目标、desktop-release.yml 的 v* 标签条件与正式 Release 发布任务。desktop-production 环境已允许 v* 标签，发布任务单独使用 contents: write 权限。OPENFOX_PUBLIC_URL 用于工作台地址及向已安装的 0.1.2 提供同一 PKG。新版客户端的下载来源固定为官方 GitHub 仓库。构建验证 DMG 与 PKG 内容一致，部署成功后才公开两项 GitHub 附件。发布失败可在同一运行上重试失败作业。修复已安装的版本需发布更高版本；静态服务可按上文恢复原目录。无 SQL 或数据库迁移。
+配置变更包括桌面 package.json 版本、release-config.cjs 的 DMG 目标、desktop-release.yml 的 v* 标签条件与正式 Release 发布任务。desktop-production 环境已允许 v* 标签，发布任务单独使用 contents: write 权限。OPENFOX_PUBLIC_URL 用于工作台地址及向已安装的 0.1.2 提供同一 PKG。新版客户端的下载来源固定为官方 GitHub 仓库。构建验证 DMG 与 PKG 内容一致，附件摘要核对后公开 GitHub Release，随后部署工作台和旧客户端的更新入口。发布失败可在同一运行上重试失败作业。修复已安装的版本需发布更高版本；静态服务可按上文恢复原目录。无 SQL 或数据库迁移。
