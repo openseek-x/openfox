@@ -800,6 +800,35 @@ describe("桌面应用偏好与关于页", () => {
     expect(await screen.findByText("已跳过 0.2.0")).toBeInTheDocument();
   });
 
+  it("签名更新准备完成后可以重启安装", async () => {
+    const user = userEvent.setup();
+    const about = {
+      version: "0.1.1",
+      last_check: null,
+      update: {
+        version: "0.2.0",
+        sha256: "a".repeat(64),
+        phase: "ready",
+        mandatory: false,
+      },
+      skipped_version: null,
+    };
+    const checkForUpdate = vi.fn(async () => ({
+      status: "update_available",
+      about,
+    }));
+    install({ getAbout: vi.fn(async () => about), checkForUpdate });
+    renderApp(`/o/${ORG}/settings/about`);
+    expect(
+      await screen.findByText("更新已下载，等待你确认安装。"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "跳过此版本" }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "打开系统安装器" }));
+    expect(checkForUpdate).toHaveBeenCalledTimes(1);
+  });
+
   it("关于页手动检查：显示结果", async () => {
     const user = userEvent.setup();
     const about = {

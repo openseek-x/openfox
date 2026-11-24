@@ -187,7 +187,18 @@ export interface DesktopAbout {
     version: string | null;
   } | null;
   /** 有可用新版本时给出版本号与 sha256（下载地址只在主进程里，不暴露给页面） */
-  update: { version: string; sha256: string } | null;
+  update: {
+    version: string;
+    sha256: string;
+    phase:
+      | "manual"
+      | "downloading"
+      | "ready"
+      | "installing"
+      | "installer_opened"
+      | "failed";
+    mandatory: boolean;
+  } | null;
   skipped_version: string | null;
 }
 

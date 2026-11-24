@@ -26,36 +26,51 @@ workbench; like HiFox, it loads the web URL served here (set
 `OPENFOX_DESKTOP_WEB_URL` or `web_url` in the desktop settings file). Build the
 assets with `pnpm --filter @openfox/web build` and publish `apps/web/dist`.
 
-## Desktop update manifest (optional)
+## Desktop updates
 
-The desktop app checks `<web origin>/desktop/latest.json` (https only) and
-prompts the user to download; it never downloads or installs by itself because
-the installer is not signed or notarized. Without the file (404) the app simply
-reports "no update". To publish an update:
+Every push to `master`, including a merged pull request, queues a release of the
+push's head commit. GitHub Actions takes the major and minor from
+`apps/desktop/package.json` and uses this workflow's run number for the patch.
+The runner sets that version in its checkout for the app, CLI and installers.
+Reruns retain their version. After tests pass, Actions creates the `vX.Y.Z`
+tag on the exact commit it built and checks any existing tag before reusing it.
 
-1. Put the DMG and the manifest under `/srv/openfox/desktop/` (the
-   `location /desktop/` block in `nginx-web.example.conf` serves them; keep it
-   above the SPA fallback so a missing file is a real 404).
-2. Write `/srv/openfox/desktop/latest.json`:
+GitHub Actions builds the arm64 app, verifies the DMG contains the same app as
+the PKG, and attaches both installers to a draft GitHub Release. After the
+SHA-256 digests match, the workflow publishes the release and then deploys
+the web workbench and the update feed used by older clients.
+Rerun failed jobs on the original run to reuse its verified build artifacts.
 
-   ```json
-   {
-     "version": "0.2.0",
-     "download_url": "https://<same host>/desktop/OpenFox-0.2.0-arm64.dmg",
-     "notes": "What changed (plain text, max 2000 chars).",
-     "sha256": "<64 hex chars of the DMG, from: shasum -a 256 OpenFox-0.2.0-arm64.dmg>",
-     "min_version": "0.1.0"
-   }
-   ```
+From 0.1.3, the app checks the latest stable GitHub Release in `openseek-x/openfox`.
+The tag supplies the version. People installing manually use the DMG. The release
+app downloads the PKG with a 512 MiB limit and 20-minute timeout, checks its
+GitHub digest and opens macOS Installer only on explicit consent. The app uses
+ad hoc signing and installation is subject to the user's macOS security policy.
 
-   `min_version` is optional; users below it get a prompt that cannot be skipped.
+Configure repository variable `OPENFOX_PUBLIC_URL` with the HTTPS workbench
+origin. The workflow also publishes the same PKG and `desktop/latest.json` on
+that origin so existing 0.1.2 installations can receive the GitHub-enabled app.
 
-3. `download_url` must be https and on the same origin as the web URL. To host
-   the DMG elsewhere, list the host in the desktop app's environment variable
-   `OPENFOX_DESKTOP_UPDATE_HOSTS` (comma separated host names). Anything else
-   is ignored by the app.
-4. Rollback: delete `latest.json` (clients treat it as "no update") or restore
-   the previous one. Users who already skipped a version keep skipping it.
+The `desktop-production` GitHub environment permits the `master` branch. It contains
+`OPENFOX_DEPLOY_KEY` (secret), `OPENFOX_DEPLOY_TARGET` (user@host) and
+`OPENFOX_KNOWN_HOSTS` (pinned SSH host keys). The build job has no deployment key.
+On the server, install `publish-static.py` in a root-owned location and restrict
+this dedicated SSH public key to the following forced command, supplying the live
+web root, shared release lock and public HTTPS origin for that environment.
+
+```text
+restrict,command="/usr/local/libexec/openfox-publish-static --web-root <web-root> --lock <lock> --origin <https-origin>" ssh-ed25519 <public-key>
+```
+
+The deployment job sends the GitHub artifact's short-lived download URL over
+SSH. The server fetches parallel HTTPS ranges from Actions storage, verifies
+the ZIP against the SHA-256 emitted by the upload action, then checks the bundle
+and package. It keeps old hashed web assets and atomically
+switches the web root's `current` link. A failed public check restores the prior
+target. The job logs both targets. To roll back manually, take the same lock and
+atomically restore the previous symlink. Users already on the new version need
+a higher-version repair release or a manual reinstall. Database and service
+changes use the separate center deployment procedure.
 
 ## Explicit migrations
 

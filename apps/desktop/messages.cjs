@@ -28,15 +28,22 @@ const MESSAGES = {
     "quit.cancel": "取消",
     "update.available.message": "发现新版本 {version}",
     "update.available.detail":
-      "当前版本 {current}。\n\n{notes}\n\n安装包未签名，下载后请核对 SHA-256：\n{sha256}",
+      "当前版本 {current}。\n\n{notes}\n\n下载后请核对 SHA-256：\n{sha256}",
     "update.available.mandatory": "当前版本低于最低要求 {min}，请尽快升级。",
+    "update.ready.message": "使用 macOS 安装器安装更新 {version}？",
+    "update.ready.detail":
+      "更新包已下载。请在系统安装器中确认安装，完成后重新打开 OpenFox。",
+    "update.restart": "打开系统安装器",
+    "update.installFailed.message": "未能准备桌面更新",
+    "update.installFailed.detail":
+      "请从可写位置运行已安装的 OpenFox，然后重新检查更新。若仍失败，请联系发布方核对发布的安装包。",
     "update.download": "前往下载",
     "update.skip": "跳过此版本",
     "update.later": "稍后",
     "update.upToDate.message": "已是最新版本",
     "update.upToDate.detail": "当前版本 {current}。",
     "update.noInfo.message": "暂无更新信息",
-    "update.noInfo.detail": "当前连接的服务没有发布桌面端更新。",
+    "update.noInfo.detail": "GitHub 上还没有正式发布的 OpenFox 桌面版本。",
     "update.failed.message": "检查更新失败",
     "update.failed.detail": "请稍后重试。",
     "update.unsupported.message": "无法检查更新",
@@ -77,9 +84,16 @@ const MESSAGES = {
     "quit.cancel": "Cancel",
     "update.available.message": "Version {version} is available",
     "update.available.detail":
-      "Current version {current}.\n\n{notes}\n\nThe installer is not signed. Verify its SHA-256 after downloading:\n{sha256}",
+      "Current version {current}.\n\n{notes}\n\nVerify its SHA-256 after downloading:\n{sha256}",
     "update.available.mandatory":
       "Your version is below the minimum required {min}. Please upgrade soon.",
+    "update.ready.message": "Open macOS Installer for update {version}?",
+    "update.ready.detail":
+      "The update is downloaded. Confirm installation in macOS Installer and reopen OpenFox when it finishes.",
+    "update.restart": "Open macOS Installer",
+    "update.installFailed.message": "Could not prepare the desktop update",
+    "update.installFailed.detail":
+      "Run the installed app from a writable location and check again. If this persists, ask the publisher to verify the published installer package.",
     "update.download": "Download",
     "update.skip": "Skip This Version",
     "update.later": "Later",
@@ -87,7 +101,7 @@ const MESSAGES = {
     "update.upToDate.detail": "Current version {current}.",
     "update.noInfo.message": "No update information",
     "update.noInfo.detail":
-      "The connected server does not publish desktop updates.",
+      "There is no published stable OpenFox desktop release on GitHub.",
     "update.failed.message": "Update check failed",
     "update.failed.detail": "Please try again later.",
     "update.unsupported.message": "Cannot check for updates",
