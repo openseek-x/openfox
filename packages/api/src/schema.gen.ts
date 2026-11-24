@@ -13473,28 +13473,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/organizations/{organizationID}/audit-events": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                organizationID: components["parameters"]["OrganizationID"];
-            };
-            cookie?: never;
-        };
-        /**
-         * 组织审计日志（仅组织 OWNER/ADMIN）
-         * @description 阶段 12e。按 (created_at, id) 倒序，游标分页（不支持 OFFSET）。时间范围左闭右开：from <= created_at < to；同时给出 from 与 to 时要求 from < to 且跨度不超过 366 天。只返回审计表里的非敏感字段，元数据按白名单过滤。Run 生命周期不在审计日志里（见 Run 事件）。参数不合法返回 400 INVALID_REQUEST。
-         */
-        get: operations["listAuditEvents"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/v1/organizations/{organizationID}/runtime-config": {
         parameters: {
             query?: never;
@@ -13528,8 +13506,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * 组织配额的当前用量（组织成员可读排队数与是否已满；上限仅 OWNER/ADMIN）
-         * @description 阶段 12e。组织级聚合计数的快照，仅用于展示与「组织队列已满」提示，不参与准入判定。非管理员只得到排队数与队列是否已满，不含各项上限、活动数与平台槽位。
+         * 组织队列状态（排队上限仅 OWNER/ADMIN 可见）
+         * @description 向对话返回当前排队数以及是否已满。
          */
         get: operations["getRuntimeUsage"];
         put?: never;
@@ -22555,32 +22533,11 @@ export interface components {
             /** @description 可据此证据对所属开放案执行 RESULT_ACCEPTED */
             can_accept_result: boolean;
         };
-        /** @description 一条审计记录（阶段 12e）。不含 request_id、授权版本等内部字段 */
-        AuditEvent: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            actor_id: string;
-            /** @description 操作人姓名；没有姓名时为邮箱，都没有时为 ID 前缀 */
-            actor_name: string;
-            actor_email: string;
-            action: string;
-            decision: string;
-            reason: string;
-            resource_kind: string;
-            resource_id: string;
-            /** @description 白名单内的非敏感元数据（字符串值） */
-            metadata: {
-                [key: string]: string;
-            };
-            /** Format: date-time */
-            created_at: string;
-        };
         /** @description 组织运行策略；修改时整份提交 */
         RuntimePolicy: {
             /** @description 排队 Run 上限 */
             queue_max: number;
-            /** @description 活动运行上限（实际生效值还受平台槽位限制，见 RuntimeUsage） */
+            /** @description 活动运行上限（实际生效值还受平台槽位限制） */
             active_max: number;
             queue_timeout_hours: number;
             /** Format: int64 */
@@ -22611,21 +22568,13 @@ export interface components {
             /** Format: date-time */
             applied_at?: string;
         };
-        /** @description 组织成员只得到 organization_id、queued、queue_full；其余字段只返回给组织 OWNER/ADMIN */
+        /** @description 当前排队数与是否已满。仅组织 OWNER/ADMIN 收到 queue_max。 */
         RuntimeUsage: {
             /** Format: uuid */
             organization_id: string;
-            config_version?: number;
             /** @description 排队中的 Run 数 */
             queued: number;
             queue_max?: number;
-            /** @description 占用活动槽位的运行数 */
-            active?: number;
-            active_max?: number;
-            /** @description 平台槽位上限 */
-            capacity_max?: number;
-            /** @description 实际生效的活动运行上限 = min(active_max, capacity_max) */
-            effective_active_max?: number;
             /** @description 队列已满；新消息会保持等待，直到队列有空位 */
             queue_full: boolean;
         };
@@ -48225,48 +48174,6 @@ export interface operations {
             503: components["responses"]["Error"];
         };
     };
-    listAuditEvents: {
-        parameters: {
-            query?: {
-                limit?: number;
-                /** @description 上一页返回的 next_cursor（不透明） */
-                cursor?: string;
-                actor_id?: string;
-                /** @description 动作，精确匹配；以 * 结尾表示前缀匹配（例如 device.*） */
-                action?: string;
-                resource_kind?: string;
-                /** @description 起始时间（含） */
-                from?: string;
-                /** @description 结束时间（不含） */
-                to?: string;
-            };
-            header?: never;
-            path: {
-                organizationID: components["parameters"]["OrganizationID"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 一页审计记录 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        events: components["schemas"]["AuditEvent"][];
-                        /** @description 没有更多时为 null */
-                        next_cursor: string | null;
-                    };
-                };
-            };
-            400: components["responses"]["Error"];
-            401: components["responses"]["Error"];
-            403: components["responses"]["Error"];
-            503: components["responses"]["Error"];
-        };
-    };
     getRuntimeConfig: {
         parameters: {
             query?: never;
@@ -48338,7 +48245,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 配额用量 */
+            /** @description 组织队列状态 */
             200: {
                 headers: {
                     [name: string]: unknown;

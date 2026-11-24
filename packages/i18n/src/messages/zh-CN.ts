@@ -1815,7 +1815,6 @@ export const zhCN = {
   attachments: attachmentsZh,
   quickReplies: quickRepliesZh,
   share: shareZh,
-  // 阶段 12e · 审计日志、资源配额、共享电脑信任说明、待核对处理
   governance: governanceZh,
   // 阶段 12e · 电脑运维：密钥轮换、允许的组织、并发上限、配置状态、受保护目录
   ops: opsZh,

@@ -1,6 +1,6 @@
 package stage12e2
 
-// 阶段 12e2（审计查询、组织配额、核对界面所需接口）集成测试夹具（由 stage12g 夹具改写）：真实 HTTP 处理器（认证、CSRF、组织选择、策略、租户事务）。
+// 阶段 12e2（运行策略与核对接口）集成测试夹具（由 stage12g 夹具改写）：真实 HTTP 处理器（认证、CSRF、组织选择、策略、租户事务）。
 // + 本地存储（图标上传）。每个测试新建两个组织（env.org 与 env.otherOrg），用户 ID 固定、组织与空间随机，可在同一个库上重复运行。
 //
 // 角色（env.org）：owner 组织 OWNER；member、peer、spaceAdmin 组织 MEMBER（spaceAdmin 在测试空间里是 EDITOR，

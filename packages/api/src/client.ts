@@ -16,7 +16,6 @@ import { createAttachmentsApi } from "./attachments";
 import { createQuickCommandsApi } from "./quickCommands";
 import { createQuickRepliesApi } from "./quickReplies";
 import { createShareSnapshotsApi } from "./shareSnapshots";
-import { createGovernanceApi } from "./governance";
 import { createDocsApi } from "./docs";
 import { createSearchApi } from "./search";
 import { createSkillsApi } from "./skills";
@@ -113,8 +112,6 @@ export function createApi(http = new HttpClient()) {
     ...createQuickRepliesApi(http),
     // 阶段 12g · 分享快照
     ...createShareSnapshotsApi(http),
-    // 阶段 12e · 审计日志与资源配额：auditEvents / runtimeConfig
-    ...createGovernanceApi(http),
     // 阶段 9f · 任务快捷指令
     ...createQuickCommandsApi(http),
     // 阶段 8e · 全局搜索（命令面板）

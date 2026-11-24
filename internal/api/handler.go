@@ -217,7 +217,6 @@ func NewWithDispatch(auth identity.Service, pool *postgres.Pool, secureCookies b
 	h.registerDispatchRoutes(mux)
 	h.registerReconciliationRoutes(mux)
 	h.registerResourcePolicyRoutes(mux)
-	h.registerAuditEventRoutes(mux)
 	h.registerOnboardingRoutes(mux)
 	h.registerSessionRoutes(mux)
 	h.registerProfileRoutes(mux)

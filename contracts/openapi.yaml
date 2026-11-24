@@ -19254,86 +19254,6 @@ paths:
           $ref: "#/components/responses/Error"
         "503":
           $ref: "#/components/responses/Error"
-  /v1/organizations/{organizationID}/audit-events:
-    parameters:
-      - $ref: "#/components/parameters/OrganizationID"
-    get:
-      operationId: listAuditEvents
-      summary: 组织审计日志（仅组织 OWNER/ADMIN）
-      description: >-
-        阶段 12e。按 (created_at, id) 倒序，游标分页（不支持 OFFSET）。时间范围左闭右开：from <= created_at < to；同时给出 from 与 to
-        时要求 from < to 且跨度不超过 366 天。只返回审计表里的非敏感字段，元数据按白名单过滤。Run 生命周期不在审计日志里（见 Run 事件）。参数不合法返回 400
-        INVALID_REQUEST。
-      parameters:
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 50
-        - name: cursor
-          in: query
-          schema:
-            type: string
-            maxLength: 128
-          description: 上一页返回的 next_cursor（不透明）
-        - name: actor_id
-          in: query
-          schema:
-            type: string
-            format: uuid
-        - name: action
-          in: query
-          schema:
-            type: string
-            maxLength: 129
-          description: 动作，精确匹配；以 * 结尾表示前缀匹配（例如 device.*）
-        - name: resource_kind
-          in: query
-          schema:
-            type: string
-            maxLength: 64
-        - name: from
-          in: query
-          schema:
-            type: string
-            format: date-time
-          description: 起始时间（含）
-        - name: to
-          in: query
-          schema:
-            type: string
-            format: date-time
-          description: 结束时间（不含）
-      responses:
-        "200":
-          description: 一页审计记录
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - events
-                  - next_cursor
-                properties:
-                  events:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/AuditEvent"
-                  next_cursor:
-                    type:
-                      - string
-                      - "null"
-                    description: 没有更多时为 null
-        "400":
-          $ref: "#/components/responses/Error"
-        "401":
-          $ref: "#/components/responses/Error"
-        "403":
-          $ref: "#/components/responses/Error"
-        "503":
-          $ref: "#/components/responses/Error"
   /v1/organizations/{organizationID}/runtime-config:
     parameters:
       - $ref: "#/components/parameters/OrganizationID"
@@ -19398,11 +19318,11 @@ paths:
       - $ref: "#/components/parameters/OrganizationID"
     get:
       operationId: getRuntimeUsage
-      summary: 组织配额的当前用量（组织成员可读排队数与是否已满；上限仅 OWNER/ADMIN）
-      description: 阶段 12e。组织级聚合计数的快照，仅用于展示与「组织队列已满」提示，不参与准入判定。非管理员只得到排队数与队列是否已满，不含各项上限、活动数与平台槽位。
+      summary: 组织队列状态（排队上限仅 OWNER/ADMIN 可见）
+      description: 向对话返回当前排队数以及是否已满。
       responses:
         "200":
-          description: 配额用量
+          description: 组织队列状态
           content:
             application/json:
               schema:
@@ -32301,51 +32221,6 @@ components:
         can_accept_result:
           type: boolean
           description: 可据此证据对所属开放案执行 RESULT_ACCEPTED
-    AuditEvent:
-      type: object
-      description: 一条审计记录（阶段 12e）。不含 request_id、授权版本等内部字段
-      required:
-        - id
-        - actor_id
-        - actor_name
-        - actor_email
-        - action
-        - decision
-        - reason
-        - resource_kind
-        - resource_id
-        - metadata
-        - created_at
-      properties:
-        id:
-          type: string
-          format: uuid
-        actor_id:
-          type: string
-          format: uuid
-        actor_name:
-          type: string
-          description: 操作人姓名；没有姓名时为邮箱，都没有时为 ID 前缀
-        actor_email:
-          type: string
-        action:
-          type: string
-        decision:
-          type: string
-        reason:
-          type: string
-        resource_kind:
-          type: string
-        resource_id:
-          type: string
-        metadata:
-          type: object
-          description: 白名单内的非敏感元数据（字符串值）
-          additionalProperties:
-            type: string
-        created_at:
-          type: string
-          format: date-time
     RuntimePolicy:
       type: object
       description: 组织运行策略；修改时整份提交
@@ -32372,7 +32247,7 @@ components:
           type: integer
           minimum: 1
           maximum: 100
-          description: 活动运行上限（实际生效值还受平台槽位限制，见 RuntimeUsage）
+          description: 活动运行上限（实际生效值还受平台槽位限制）
         queue_timeout_hours:
           type: integer
           minimum: 1
@@ -32437,7 +32312,7 @@ components:
           format: date-time
     RuntimeUsage:
       type: object
-      description: 组织成员只得到 organization_id、queued、queue_full；其余字段只返回给组织 OWNER/ADMIN
+      description: 当前排队数与是否已满。仅组织 OWNER/ADMIN 收到 queue_max。
       required:
         - organization_id
         - queued
@@ -32446,24 +32321,11 @@ components:
         organization_id:
           type: string
           format: uuid
-        config_version:
-          type: integer
         queued:
           type: integer
           description: 排队中的 Run 数
         queue_max:
           type: integer
-        active:
-          type: integer
-          description: 占用活动槽位的运行数
-        active_max:
-          type: integer
-        capacity_max:
-          type: integer
-          description: 平台槽位上限
-        effective_active_max:
-          type: integer
-          description: 实际生效的活动运行上限 = min(active_max, capacity_max)
         queue_full:
           type: boolean
           description: 队列已满；新消息会保持等待，直到队列有空位

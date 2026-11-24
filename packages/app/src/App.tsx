@@ -60,8 +60,6 @@ import { LabelsPage } from "./settings/labels/LabelsPage";
 import { RelationTypesPage } from "./settings/relation-types/RelationTypesPage";
 import { SettingsLayout } from "./settings/SettingsLayout";
 import { GitSettingsPage } from "./settings/GitSettingsPage";
-import { AuditLogPage } from "./settings/governance/AuditLogPage";
-import { QuotaPage } from "./settings/governance/QuotaPage";
 import { SpaceSettingsPage } from "./spaces/settings/SpaceSettingsPage";
 import { SpacesListPage } from "./spaces/settings/SpacesListPage";
 import { StatusesPage } from "./settings/statuses/StatusesPage";
@@ -236,9 +234,6 @@ export function AppRoutes() {
           />
           {/* 阶段 6c · 导入与导出（向导在页内展开） */}
           <Route path="import-export" element={<ImportExportPage />} />
-          {/* 阶段 12e · 资源配额与审计日志（仅所有者与管理员，页面内判断） */}
-          <Route path="quotas" element={<QuotaPage />} />
-          <Route path="audit-log" element={<AuditLogPage />} />
           {/* 阶段 4b · 个人资料、偏好设置与快捷键 */}
           <Route
             path="daemon"
