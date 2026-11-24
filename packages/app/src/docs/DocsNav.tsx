@@ -104,6 +104,7 @@ export function DocsNav({
   spaceId,
   selectedId,
   width,
+  maxWidth,
   onWidthChange,
 }: {
   orgId: string;
@@ -111,6 +112,7 @@ export function DocsNav({
   /** 当前打开的节点，用于选中态 */
   selectedId?: string;
   width: number;
+  maxWidth: number;
   onWidthChange: (width: number) => void;
 }) {
   const t = useT();
@@ -260,7 +262,13 @@ export function DocsNav({
           </div>
         </DropIndicatorContext.Provider>
       </DndContext>
-      <WidthHandle width={width} onWidthChange={onWidthChange} />
+      {maxWidth > DOC_NAV_WIDTH.min && (
+        <WidthHandle
+          width={width}
+          maxWidth={maxWidth}
+          onWidthChange={onWidthChange}
+        />
+      )}
     </aside>
   );
 }
@@ -608,18 +616,27 @@ function DocRow({
 /** 导航宽度的拖动手柄：240–480，松开后由调用方保存。 */
 function WidthHandle({
   width,
+  maxWidth,
   onWidthChange,
 }: {
   width: number;
+  maxWidth: number;
   onWidthChange: (width: number) => void;
 }) {
   const t = useT();
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     event.preventDefault();
     const startX = event.clientX;
-    const startWidth = width;
-    const move = (next: PointerEvent) =>
-      onWidthChange(clampNavWidth(startWidth + next.clientX - startX));
+    let lastWidth = width;
+    const move = (next: PointerEvent) => {
+      const value = Math.min(
+        maxWidth,
+        clampNavWidth(width + next.clientX - startX),
+      );
+      if (value === lastWidth) return;
+      lastWidth = value;
+      onWidthChange(value);
+    };
     const up = () => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
@@ -633,7 +650,7 @@ function WidthHandle({
       aria-orientation="vertical"
       aria-label={t("docs.nav.resize")}
       aria-valuemin={DOC_NAV_WIDTH.min}
-      aria-valuemax={DOC_NAV_WIDTH.max}
+      aria-valuemax={maxWidth}
       aria-valuenow={width}
       onPointerDown={onPointerDown}
       className="absolute inset-y-0 -right-1 z-10 w-2 cursor-col-resize hover:bg-primary/20"

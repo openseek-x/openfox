@@ -143,7 +143,7 @@ export function Menu({
         placement={placement}
         role="menu"
         aria-label={label}
-        className={cn("min-w-[200px]", className)}
+        className={cn("of-menu min-w-[200px]", className)}
       >
         <div
           onKeyDown={handleMenuKeyDown}

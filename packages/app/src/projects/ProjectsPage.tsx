@@ -18,6 +18,7 @@ import {
   useToast,
 } from "@openfox/ui";
 
+import { SpacePageTitle } from "../spaces/SpacePageTitle";
 import { canWriteSpace, useSpaceDetail } from "../spaces/queries";
 import { RetiredBanner } from "../spaces/settings/parts";
 import { formatMonthDay } from "../tasks/primitives/dates";
@@ -92,9 +93,7 @@ export function ProjectsPage() {
   return (
     <div className="flex h-full flex-col">
       <header className="flex h-11 shrink-0 items-center gap-2 border-b border-line-default px-4">
-        <h1 className="font-medium">
-          {space.data.name} · {t("projects.title")}
-        </h1>
+        <SpacePageTitle space={space.data.name} title={t("projects.title")} />
         {projects.length > 0 && <div className="ml-auto">{create}</div>}
       </header>
       {space.data.status === "retired" && (

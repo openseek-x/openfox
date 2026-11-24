@@ -214,12 +214,14 @@ function SpaceTasksContent({
       <header className="flex h-11 shrink-0 items-center gap-1.5 border-b border-line-default px-4">
         <nav
           aria-label={t("tasks.breadcrumb")}
-          className="flex items-center gap-1.5 text-body"
+          className="flex min-w-0 items-center gap-1.5 text-body"
         >
           <SpaceIcon icon={space.icon} />
-          <span className="text-fg-muted">{space.name}</span>
+          <span className="truncate text-fg-muted" title={space.name}>
+            {space.name}
+          </span>
           <Icon name="chevron-right" size={12} className="text-fg-subtle" />
-          <h1 className="font-medium">{t("tasks.title")}</h1>
+          <h1 className="shrink-0 font-medium">{t("tasks.title")}</h1>
         </nav>
       </header>
       <div className="flex min-h-9 flex-wrap items-center gap-2 border-b border-line-default px-4 text-body-sm">

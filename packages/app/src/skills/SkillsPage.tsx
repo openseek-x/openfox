@@ -151,10 +151,12 @@ export function SkillsPage() {
   return (
     <div className="flex h-full flex-col">
       <header className="flex h-11 shrink-0 items-center gap-2 border-b border-line-default px-4">
-        <h1 className="flex items-center gap-1.5 font-medium">
-          <span className="text-fg-muted">{space.data?.name}</span>
+        <h1 className="flex min-w-0 items-center gap-1.5 font-medium">
+          <span className="truncate text-fg-muted" title={space.data?.name}>
+            {space.data?.name}
+          </span>
           <Icon name="chevron-right" className="text-fg-muted" />
-          <span>{t("skills.title")}</span>
+          <span className="shrink-0">{t("skills.title")}</span>
         </h1>
         {addMenu && <div className="ml-auto">{addMenu}</div>}
       </header>

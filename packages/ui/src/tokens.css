@@ -125,6 +125,12 @@
 }
 
 @layer components {
+  .of-menu {
+    max-height: calc(100dvh - 16px);
+    max-width: calc(100vw - 16px);
+    overflow: auto;
+  }
+
   /* 默认铺满表单；页面的 w-* 工具类可覆盖，不与 w-full 竞争顺序。 */
   .of-control {
     width: 100%;

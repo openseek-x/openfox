@@ -695,7 +695,7 @@ function ProviderRow({
           </span>
         )}
       </div>
-      <div className="flex shrink-0 items-center gap-3">
+      <div className="flex max-w-1/2 shrink-0 flex-wrap items-center justify-end gap-3">
         {provider.availability === "coming_soon" ? (
           <span className="text-body-sm text-fg-muted">
             {t("accountBinding.comingSoon")}

@@ -267,7 +267,7 @@ export function Gantt({
       <div
         role="toolbar"
         aria-label={t("tasks.gantt.label")}
-        className="flex items-center gap-2 px-4 pb-2"
+        className="flex flex-wrap items-center gap-2 px-4 pb-2"
       >
         <div
           role="radiogroup"

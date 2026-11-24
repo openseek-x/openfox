@@ -181,7 +181,7 @@ export function AddToTypesDialog({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
-          <div className="flex max-h-[320px] flex-col gap-2 overflow-y-auto">
+          <div className="relative flex max-h-[320px] flex-col gap-2 overflow-y-auto">
             {visible.length === 0 && (
               <p className="py-4 text-center text-body-sm text-fg-muted">
                 {t("settings.customFields.addToTypes.noMatch")}

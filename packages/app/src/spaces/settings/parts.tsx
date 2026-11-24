@@ -10,7 +10,9 @@ export function SettingsColumn({
   children,
   wide = false,
   narrow = false,
+  className,
 }: {
+  className?: string;
   children: ReactNode;
   /** 标签页不限 768，最大 1100 */
   wide?: boolean;
@@ -22,6 +24,7 @@ export function SettingsColumn({
       className={cn(
         "mx-auto flex w-full flex-col gap-6 px-6 pt-12 pb-12",
         wide ? "max-w-[1100px]" : narrow ? "max-w-[720px]" : "max-w-[768px]",
+        className,
       )}
     >
       {children}

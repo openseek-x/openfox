@@ -53,7 +53,7 @@ type Filter = "active" | "retired";
 
 // 列：拖拽柄 20 / 名称 / 任务 96 / 成员 96 / 创建人 128 / 创建时间 112 / 操作 32
 const GRID =
-  "grid grid-cols-[20px_minmax(0,1fr)_96px_96px_128px_112px_32px] items-center gap-4";
+  "grid min-w-[760px] grid-cols-[20px_minmax(0,1fr)_96px_96px_128px_112px_32px] items-center gap-4";
 
 /**
  * 管理 → 空间（Figma 页 14 第 2 节）：活跃 / 已停用空间列表，是已停用空间的唯一入口。
@@ -143,7 +143,11 @@ export function SpacesListPage() {
           )}
         </p>
       ) : (
-        <div role="table" aria-label={t("spaces.list.title")}>
+        <div
+          role="table"
+          aria-label={t("spaces.list.title")}
+          className="relative overflow-x-auto"
+        >
           <div
             role="row"
             className={cn(

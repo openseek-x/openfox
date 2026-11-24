@@ -63,11 +63,10 @@ export function IterationMenu({
             ref={ref}
             variant="outline"
             size="28"
+            aria-label={t("spaces.iteration.title")}
             onClick={toggle}
             leading={<Icon name="more" />}
-          >
-            <span className="sr-only">{t("spaces.iteration.title")}</span>
-          </Button>
+          />
         )}
       >
         {manual && iteration.status === "planned" && (

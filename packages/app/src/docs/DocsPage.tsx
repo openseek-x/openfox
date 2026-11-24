@@ -16,6 +16,7 @@ import {
 } from "@openfox/ui";
 
 import { keys, useApi } from "../context";
+import { usePanelWidth } from "../shell/panelWidth";
 import { localKeys, readLocal, writeLocal } from "../storage";
 import { DocActionsProvider } from "./DocActions";
 import { DocEditor } from "./DocEditor";
@@ -29,7 +30,6 @@ import { DocsNav } from "./DocsNav";
 import { FileView } from "./FileView";
 import { FolderView } from "./FolderView";
 import {
-  clampNavWidth,
   DOC_NAV_WIDTH,
   locationOf,
   rootLocation,
@@ -42,11 +42,6 @@ import { DocHistoryDialog } from "./DocHistoryDialog";
 
 // 阶段 5b · 文档库页面（Figma 3.1–3.8）：二级导航 + 内容区。
 // 地址 /docs 为我的文档根，/docs/:nodeId 打开文件夹、文档、表格或文件。
-
-function readNavWidth(): number {
-  const stored = Number(readLocal(localKeys.docsNavWidth));
-  return stored ? clampNavWidth(stored) : DOC_NAV_WIDTH.default;
-}
 
 export function DocsPage() {
   const t = useT();
@@ -82,13 +77,16 @@ export function DocsPage() {
       setOpeningHistory(false);
     }
   };
-  const [navWidth, setNavWidth] = useState(readNavWidth);
+  const nav = usePanelWidth({
+    storageKey: localKeys.docsNavWidth,
+    initial: DOC_NAV_WIDTH.default,
+    min: DOC_NAV_WIDTH.min,
+    max: DOC_NAV_WIDTH.max,
+    remaining: 320,
+  });
   const [navCollapsed, setNavCollapsed] = useState(
     () => readLocal(localKeys.docsNavCollapsed) === "1",
   );
-  useEffect(() => {
-    writeLocal(localKeys.docsNavWidth, String(navWidth));
-  }, [navWidth]);
   useEffect(() => {
     writeLocal(localKeys.docsNavCollapsed, navCollapsed ? "1" : null);
   }, [navCollapsed]);
@@ -107,14 +105,15 @@ export function DocsPage() {
       current={current}
       beforeCurrentChange={() => flushCurrent()}
     >
-      <div className="flex h-full min-h-0">
+      <div ref={nav.containerRef} className="flex h-full min-h-0">
         {!navCollapsed && (
           <DocsNav
             orgId={orgId}
             spaceId={spaceId}
             selectedId={nodeId}
-            width={navWidth}
-            onWidthChange={setNavWidth}
+            width={nav.width}
+            maxWidth={nav.max}
+            onWidthChange={nav.onWidthChange}
           />
         )}
         <section className="flex min-w-0 flex-1 flex-col">
