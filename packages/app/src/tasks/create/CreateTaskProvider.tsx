@@ -151,10 +151,10 @@ export function NewTaskButton({ orgId }: { orgId: string }) {
       <IconButton
         ref={anchor}
         label={t("shell.newTask")}
-        icon={<Icon name="plus" className="text-fg-inverse" />}
+        icon={<Icon name="plus" />}
         size="28"
-        variant="secondary"
-        className="bg-primary hover:bg-primary/90"
+        variant="outline"
+        className="aria-expanded:bg-surface-active focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-line-focus"
         aria-expanded={open}
         aria-haspopup="menu"
         onClick={() => setOpen((v) => !v)}
