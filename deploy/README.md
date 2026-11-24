@@ -30,8 +30,9 @@ assets with `pnpm --filter @openfox/web build` and publish `apps/web/dist`.
 
 Push a `vX.Y.Z` Git tag matching the version in `apps/desktop/package.json`.
 GitHub Actions builds the arm64 app, verifies the DMG contains the same app as
-the PKG, and deploys the web workbench. Its final job attaches both installers
-to a draft GitHub Release, checks both SHA-256 digests and publishes the release.
+the PKG, and attaches both installers to a draft GitHub Release. After the
+SHA-256 digests match, the workflow publishes the release and then deploys
+the web workbench and the update feed used by older clients.
 Rerun failed jobs on the original run to reuse its verified build artifacts.
 
 From 0.1.3, the app checks the latest stable GitHub Release in `openseek-x/openfox`.

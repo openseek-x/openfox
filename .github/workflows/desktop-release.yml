@@ -91,7 +91,7 @@ jobs:
           retention-days: 7
 
   deploy:
-    needs: build
+    needs: [build, github-release]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: desktop-production
@@ -123,7 +123,7 @@ jobs:
             "$DEPLOY_TARGET" "publish-artifact $RELEASE_VERSION $GITHUB_SHA ${ARTIFACT_DIGEST#sha256:}"
 
   github-release:
-    needs: [build, deploy]
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -155,5 +155,13 @@ jobs:
               'any(.assets[]; .name == $name and .state == "uploaded" and .digest == $digest)' <<< "$assets"
           done
           if [[ "$draft" == true ]]; then
-            gh release edit "$tag" --repo "$repo" --draft=false --latest
+            # A delayed retry of an older tag must not demote the current release.
+            if ! latest=$(gh api "repos/$repo/releases/latest" --jq .tag_name 2>lookup-error); then
+              grep -q 'HTTP 404' lookup-error || { cat lookup-error >&2; exit 1; }
+              latest="$tag"
+            fi
+            highest=$(printf '%s\n' "$tag" "$latest" | sort -V | tail -1)
+            make_latest=false
+            if [[ "$highest" == "$tag" ]]; then make_latest=true; fi
+            gh release edit "$tag" --repo "$repo" --draft=false --latest="$make_latest"
           fi
