@@ -116,7 +116,8 @@ func TestDeployedCenterDispatchesToLocalCodex(t *testing.T) {
 		CenterEpoch int64  `json:"center_epoch"`
 	}
 	anonymous.call("POST", "/v1/device/register", map[string]string{
-		"token": registration.Token, "key_id": "live", "public_key": deviceauth.EncodeBase64URL(publicKey),
+		"signature": deviceauth.EncodeBase64URL(ed25519.Sign(privateKey, deviceauth.RegistrationPayload(registration.Token, "live"))),
+		"token":     registration.Token, "key_id": "live", "public_key": deviceauth.EncodeBase64URL(publicKey),
 	}, &registered, 201)
 	device := registered.DeviceID
 	// 无论成败都撤销临时电脑的授权，避免在测试中心留下可调度的电脑。

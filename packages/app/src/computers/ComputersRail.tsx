@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
 import type { Device } from "@openfox/api";
@@ -7,12 +7,11 @@ import { Avatar, Button, Drawer, Icon, Popover, cn } from "@openfox/ui";
 
 import { isDesktop } from "../desktop";
 import { ConnectComputerDialog } from "./ConnectComputer";
+import { useComputerGroups } from "./localRegistration";
 import { localOs, localState } from "./LocalComputerCard";
 import {
-  computerPartition,
   computerStatus,
   railStatus,
-  sortComputers,
   statusLabel,
   systemText,
   visibilityText,
@@ -30,13 +29,7 @@ import {
   StatusDot,
   formatDateTime,
 } from "./parts";
-import {
-  isNotFound,
-  useDevice,
-  useDevices,
-  useLocalStatus,
-  useMe,
-} from "./queries";
+import { isNotFound, useDevice, useDevices, useLocalStatus } from "./queries";
 
 /** 悬停打开 / 离开关闭的延迟（与 HiFox HoverCard 一致） */
 export const HOVER_OPEN_MS = 250;
@@ -190,16 +183,9 @@ function ComputerListPopover({
   onConnect: () => void;
 }) {
   const t = useT();
-  const me = useMe();
   const desktop = isDesktop();
   const fade = useScrollFade();
-  const { shared, personal } = useMemo(() => {
-    const sorted = sortComputers(devices, me.data?.id);
-    return {
-      shared: sorted.filter((item) => computerPartition(item) === "shared"),
-      personal: sorted.filter((item) => computerPartition(item) === "private"),
-    };
-  }, [devices, me.data?.id]);
+  const { local, shared, personal } = useComputerGroups(orgId, devices);
   const empty = !desktop && shared.length === 0 && personal.length === 0;
 
   return (
@@ -240,7 +226,14 @@ function ComputerListPopover({
           <>
             {desktop && (
               <PopoverGroup label={t("computers.sections.thisMachine")}>
-                <LocalPopoverCard orgId={orgId} onNavigate={onNavigate} />
+                {local ? (
+                  <PopoverRow
+                    device={local}
+                    onClick={() => onOpenDevice(local.id)}
+                  />
+                ) : (
+                  <LocalPopoverCard orgId={orgId} onNavigate={onNavigate} />
+                )}
               </PopoverGroup>
             )}
             {shared.length > 0 && (
@@ -317,7 +310,7 @@ function PopoverRow({
   );
 }
 
-/** 本机卡片：本机与远程电脑无法对应到同一条设备记录，点击进入设置页的本机管理。「防止休眠」2c 接入。 */
+/** 尚无可见注册记录时，提供本机服务的管理入口。 */
 function LocalPopoverCard({
   orgId,
   onNavigate,

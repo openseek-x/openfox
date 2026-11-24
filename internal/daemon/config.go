@@ -218,6 +218,17 @@ func readPrivateFile(path string, limit int64) ([]byte, error) {
 	return os.ReadFile(path)
 }
 
+// LockDeviceIdentity serializes registration and rotation across local processes.
+func LockDeviceIdentity(dir string) (*os.File, error) {
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return nil, err
+	}
+	if info, err := os.Lstat(dir); err != nil || !info.IsDir() {
+		return nil, ErrUnsafeFile
+	}
+	return lockIdentityFile(filepath.Join(dir, "device-identity.lock"))
+}
+
 // GenerateDeviceKey 生成 ed25519 密钥对，返回私钥与 key_id（公钥 sha256 前 16 字节 hex）。
 func GenerateDeviceKey() (ed25519.PrivateKey, string, error) {
 	_, privateKey, err := ed25519.GenerateKey(nil)

@@ -779,7 +779,8 @@ func (e *s3Env) registerSkillDevice(client *s3Client, org, scope string) skillDe
 	}
 	keyID := "skill-key-" + s3Suffix(e.t)
 	registered := e.rawJSON(http.MethodPost, "/v1/device/register", "", map[string]string{
-		"token": token.Token, "key_id": keyID, "public_key": deviceauth.EncodeBase64URL(public)})
+		"signature": deviceauth.EncodeBase64URL(ed25519.Sign(private, deviceauth.RegistrationPayload(token.Token, keyID))),
+		"token":     token.Token, "key_id": keyID, "public_key": deviceauth.EncodeBase64URL(public)})
 	if registered.Status != http.StatusCreated {
 		e.t.Fatalf("register = %d %s", registered.Status, registered.Body)
 	}

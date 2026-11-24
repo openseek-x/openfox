@@ -200,7 +200,7 @@ function RepairButton({
 }
 
 /**
- * 「迁移到这台电脑」：重新连接会产生新的电脑记录，旧记录上的 Agent 还指向旧记录。
+ * 「迁移到这台电脑」：由所有者确认迁移旧电脑记录上的 Agent。
  * 当前查看的是自己名下的离线旧记录，且本机已注册为本组织里的另一条记录时，把 Agent 迁到本机记录。
  */
 function MigrateButton({ orgId, device }: { orgId: string; device: Device }) {

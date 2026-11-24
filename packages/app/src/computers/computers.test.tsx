@@ -222,6 +222,52 @@ describe("电脑设置页 · 列表", () => {
     expect(screen.getByText("还没有私有远程电脑")).toBeInTheDocument();
   });
 
+  it("同一注册只在本机分组出现，同名离线电脑仍可单独查看", async () => {
+    const center = "https://center.test";
+    (globalThis as { openfoxDesktop?: unknown }).openfoxDesktop = {
+      getLocalStatus: async () => ({
+        registration: {
+          registered: true,
+          organization_id: "o2",
+          organization_ids: ["o2", "o1"],
+          device_id: "d1",
+          center_url: center,
+        },
+        daemon: { state: "RUNNING" },
+        runtime: { runtime: "codex", runnable: true },
+      }),
+      daemonAction: async () => ({}),
+      pickDirectory: async () => ({ ok: false }),
+    };
+    const active = device({ name: "MacBook-Pro", grant_scope: "PERSONAL" });
+    const old = { ...active, id: "old", online: false };
+    renderSettings("/o/o1/settings/computers", (call) => {
+      if (call.path.endsWith("/devices/center"))
+        return json(200, { center_url: center });
+      if (call.path.endsWith("/devices/d1")) return json(200, detail(active));
+      return listRoute([active, old])(call);
+    });
+    const local = await screen.findByRole("region", { name: "这台电脑" });
+    expect(await within(local).findByText(active.name)).toBeVisible();
+    const privateGroup = screen.getByRole("region", { name: "私有" });
+    expect(within(privateGroup).getAllByText(active.name)).toHaveLength(1);
+    expect(within(privateGroup).getByText("离线")).toBeVisible();
+    expect(
+      within(local).getByRole("button", { name: "电脑详情" }),
+    ).toBeEnabled();
+
+    await userEvent.click(screen.getByRole("button", { name: /^电脑：/ }));
+    const popover = await screen.findByRole("dialog", { name: "电脑列表" });
+    const localGroup = await within(popover).findByRole("region", {
+      name: "本机",
+    });
+    expect(within(popover).getAllByText(active.name)).toHaveLength(2);
+    await userEvent.click(within(localGroup).getByText(active.name));
+    expect(
+      await screen.findByRole("dialog", { name: "电脑详情" }),
+    ).toBeVisible();
+  });
+
   it("桌面端显示本机卡片，停止服务前确认，调用桥接 stop", async () => {
     const actions: string[] = [];
     const running = {

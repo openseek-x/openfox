@@ -14,6 +14,8 @@ import {
   useToast,
 } from "@openfox/ui";
 
+import { useSearchParams } from "react-router-dom";
+import type { Device } from "@openfox/api";
 import { keys, useApi } from "../context";
 
 import {
@@ -158,7 +160,14 @@ function LocalRegistrationRow({ orgId }: { orgId: string }) {
 }
 
 /** 本机卡片（Figma 页 15 · 3.1 / 3.3–3.6）：仅桌面端，通过桌面桥接读写本机守护进程。 */
-export function LocalComputerCard({ orgId }: { orgId?: string }) {
+export function LocalComputerCard({
+  orgId,
+  device,
+}: {
+  orgId?: string;
+  device?: Device;
+}) {
+  const [, setParams] = useSearchParams();
   const t = useT();
   const toast = useToast();
   const queryClient = useQueryClient();
@@ -224,7 +233,7 @@ export function LocalComputerCard({ orgId }: { orgId?: string }) {
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
             <span className="text-body font-medium text-fg-default">
-              {t("computers.local.name")}
+              {device?.name ?? t("computers.local.name")}
             </span>
             <span className="text-body text-fg-muted">
               {t("computers.local.suffix")}
@@ -271,6 +280,15 @@ export function LocalComputerCard({ orgId }: { orgId?: string }) {
           </span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {device && (
+            <Button
+              variant="outline"
+              size="28"
+              onClick={() => setParams({ computer: device.id })}
+            >
+              {t("computers.drawer.title")}
+            </Button>
+          )}
           {bridge?.setPreventSleep && preventSleep && (
             <div
               className="mr-1 flex items-center gap-2 text-body-sm text-fg-secondary"

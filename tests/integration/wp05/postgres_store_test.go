@@ -21,13 +21,14 @@ const (
 	wp05SpaceA = "00000000-0000-0000-0000-0000000000aa"
 )
 
-func TestPostgresStoreRegistrationHeartbeatAndRotation(t *testing.T) {
+func wp05Database(t *testing.T) (context.Context, *postgres.Pool) {
+	t.Helper()
 	url := os.Getenv("OPENFOX_TEST_DATABASE_URL")
 	if url == "" {
 		t.Skip("OPENFOX_TEST_DATABASE_URL is not configured")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	t.Cleanup(cancel)
 	p, err := postgres.New(ctx, postgres.Config{
 		URL: url, MaxConns: 4, ContextRole: "openfox_context", AppRole: "openfox_app",
 		StatementTimeout: 3 * time.Second, LockTimeout: time.Second,
@@ -35,7 +36,12 @@ func TestPostgresStoreRegistrationHeartbeatAndRotation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer p.Close()
+	t.Cleanup(p.Close)
+	return ctx, p
+}
+
+func TestPostgresStoreRegistrationHeartbeatAndRotation(t *testing.T) {
+	ctx, p := wp05Database(t)
 
 	selection := tenancy.OrganizationSelection{
 		OrganizationID: wp05OrgA, ActorID: wp05OwnerA, AuthorizationVersion: 1,
@@ -139,4 +145,23 @@ func TestPostgresStoreRegistrationHeartbeatAndRotation(t *testing.T) {
 	}, time.Now().UTC()); !errors.Is(err, deviceauth.ErrDeviceUnauthenticated) {
 		t.Fatalf("revoked-session heartbeat error = %v, want device unauthenticated", err)
 	}
+	for _, tc := range []struct {
+		id      string
+		key     ed25519.PublicKey
+		revoked bool
+	}{{"rotated", newPublicKey, false}, {"primary", publicKey, true}} {
+		token, err := management.IssueRegistrationToken(ctx, selection, devices.RegistrationTokenInput{Name: t.Name()}, time.Time{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		again, err := management.RegisterWithToken(ctx, devices.RegistrationExchange{Token: token.Token, KeyID: tc.id, PublicKey: tc.key})
+		if tc.revoked {
+			if err != devices.ErrRegistrationConflict {
+				t.Fatalf("revoked key: %v", err)
+			}
+		} else if err != nil || again.DeviceID != registered.DeviceID || again.KeyGeneration <= registered.KeyGeneration {
+			t.Fatalf("rotated key: %+v, %v", again, err)
+		}
+	}
+
 }

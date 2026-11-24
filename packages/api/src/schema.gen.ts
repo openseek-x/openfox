@@ -9739,7 +9739,8 @@ export interface paths {
         /**
          * 设备用注册令牌兑换身份（无需认证；令牌一次性）
          * @description token 同时接受 v2 安装令牌（ofx_v2_…，中心解出其中的注册令牌明文再算哈希）与旧的纯注册令牌。
-         *     令牌已用 / 已过期 / 已吊销 / 签发人已无签发资格：409 REGISTRATION_CONFLICT；并发兑换同一令牌只有 1 次成功。
+         *     签名须绑定提交的 token 和 key_id。首次登记创建电脑，持有效密钥的同一安装用新令牌重连时复用原设备 ID 和有效授权。
+         *     每枚令牌只能成功兑换一次。无效令牌、所有者不符、设备或密钥已吊销、组织不允许接入时返回 409 REGISTRATION_CONFLICT。
          */
         post: operations["registerDeviceWithToken"];
         delete?: never;
@@ -21069,6 +21070,8 @@ export interface components {
             key_id: string;
             /** @description ed25519 公钥（32 字节）的 base64url（无填充） */
             public_key: string;
+            /** @description 安装私钥对本次 token 与 key_id 的注册签名（64 字节 base64url），编码见 device-auth.md */
+            signature: string;
         };
         DeviceRegisterResult: {
             /** Format: uuid */
@@ -41688,7 +41691,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description 挑战；设备用私钥对 deviceauth.CanonicalPayload(challenge_id, device_id, key_id, nonce, challenge) 签名（nonce / challenge 为 base64url 解码后的字节） */
+            /** @description 设备先用中心公开 API 地址与 nonce 复算 challenge，再用私钥对 deviceauth.CanonicalPayload(challenge_id, device_id, key_id, nonce, challenge) 签名（nonce / challenge 为 base64url 解码后的字节） */
             201: {
                 headers: {
                     [name: string]: unknown;

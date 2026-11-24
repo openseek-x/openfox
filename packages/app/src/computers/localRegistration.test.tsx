@@ -495,111 +495,21 @@ describe("桌面端自动注册本机", () => {
   });
 });
 
-describe("重新连接后把旧记录上的 Agent 迁到新记录（8g）", () => {
-  const REPLACE = "/v1/organizations/o1/devices/d-new/replace";
-  const replaceRoute =
-    (reply: () => Response) =>
-    (call: Call): Response | undefined =>
-      call.method === "POST" && call.path === REPLACE
-        ? reply()
-        : route([device("d-other")])(call);
-  const staleBridge = () =>
-    installBridge(
-      status({ registered: true, organization_id: "o1", device_id: "d-old" }),
-    );
-  const reconnect = async () => {
-    const local = await screen.findByRole("region", { name: "这台电脑" });
-    await userEvent.click(
-      await within(local).findByRole("button", { name: "重新连接" }),
-    );
-  };
-  const replaceCalls = (calls: Call[]) =>
-    calls.filter((call) => call.path.endsWith("/replace"));
-
-  it("强制重连成功后用新旧记录 ID 调用迁移接口，并提示迁走的数量", async () => {
-    const register = staleBridge();
-    const calls = renderSettings(
-      "/o/o1/settings/computers",
-      replaceRoute(() =>
-        json(200, {
-          device_id: "d-new",
-          replaced_device_id: "d-old",
-          moved_agents: 2,
-          canceled_runs: 1,
-        }),
-      ),
-    );
-    await reconnect();
-    await waitFor(() =>
-      expect(register).toHaveBeenCalledWith(TOKEN, { force: true }),
-    );
-    expect(
-      await screen.findByText("已把 2 个 Agent 迁到这台电脑"),
-    ).toBeInTheDocument();
-    expect(replaceCalls(calls)).toHaveLength(1);
-    expect(replaceCalls(calls)[0]!.body).toEqual({
-      replaced_device_id: "d-old",
-    });
-  });
-
-  it("迁走 0 个 Agent：不额外提示", async () => {
-    staleBridge();
-    const calls = renderSettings(
-      "/o/o1/settings/computers",
-      replaceRoute(() =>
-        json(200, {
-          device_id: "d-new",
-          replaced_device_id: "d-old",
-          moved_agents: 0,
-          canceled_runs: 0,
-        }),
-      ),
-    );
-    await reconnect();
-    expect(await screen.findByText("已自动连接这台电脑")).toBeInTheDocument();
-    await waitFor(() => expect(replaceCalls(calls)).toHaveLength(1));
-    expect(screen.queryByText(/个 Agent 迁到这台电脑/)).toBeNull();
-    expect(screen.queryByText(/没有迁过来/)).toBeNull();
-  });
-
-  it("404：旧记录不在这个服务器上或已处理过，静默", async () => {
-    staleBridge();
-    const calls = renderSettings(
-      "/o/o1/settings/computers",
-      replaceRoute(() => apiError(404, "NOT_FOUND")),
-    );
-    await reconnect();
-    expect(await screen.findByText("已自动连接这台电脑")).toBeInTheDocument();
-    await waitFor(() => expect(replaceCalls(calls)).toHaveLength(1));
-    expect(screen.queryByText(/没有迁过来/)).toBeNull();
-  });
-
-  it("409 等其他错误：重新连接仍算成功，另外提示可以去旧电脑详情页迁移", async () => {
-    staleBridge();
-    renderSettings(
-      "/o/o1/settings/computers",
-      replaceRoute(() => apiError(409, "DEVICE_ONLINE")),
-    );
-    await reconnect();
-    expect(await screen.findByText("已自动连接这台电脑")).toBeInTheDocument();
-    expect(
-      await screen.findByText(
-        "旧电脑上的 Agent 没有迁过来，可以在旧电脑的详情页里迁移",
-      ),
-    ).toBeInTheDocument();
-  });
-
-  it("非强制注册（本机尚未注册）：不调用迁移接口", async () => {
-    const register = installBridge(
-      status({ registered: false, reason: "not_registered" }),
-    );
-    const calls = renderSettings("/o/o1/settings/computers", route([]));
-    await waitFor(() =>
-      expect(register).toHaveBeenCalledWith(TOKEN, { force: false }),
-    );
-    await screen.findByText("已自动连接这台电脑");
-    expect(replaceCalls(calls)).toHaveLength(0);
-  });
+it("重新连接成功后保留绑定，迁移旧记录由所有者明确发起", async () => {
+  const register = installBridge(
+    status({ registered: true, organization_id: "o1", device_id: "d-old" }),
+  );
+  const calls = renderSettings(
+    "/o/o1/settings/computers",
+    route([device("d-other")]),
+  );
+  const local = await screen.findByRole("region", { name: "这台电脑" });
+  await userEvent.click(
+    await within(local).findByRole("button", { name: "重新连接" }),
+  );
+  await screen.findByText("已自动连接这台电脑");
+  expect(register).toHaveBeenCalledWith(TOKEN, { force: true });
+  expect(calls.some((call) => call.path.endsWith("/replace"))).toBe(false);
 });
 
 describe("旧电脑详情页「迁移到这台电脑」（8g）", () => {

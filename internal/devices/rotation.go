@@ -142,6 +142,9 @@ func (s PostgresStore) RegisterNextKey(ctx context.Context, principal deviceauth
 			SELECT $1::uuid, $2, $3, COALESCE(max(generation), 0) + 1, $4
 			  FROM openfox.device_keys WHERE device_id = $1::uuid
 			RETURNING generation`, deviceID, keyID, input.PublicKey, principal.KeyID).Scan(&result.KeyGeneration); err != nil {
+			if isDevicePublicKeyConflict(err) {
+				return ErrKeyConflict
+			}
 			return err
 		}
 		result.Created = true

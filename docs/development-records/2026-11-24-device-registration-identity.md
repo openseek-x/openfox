@@ -1,0 +1,43 @@
+# 电脑重连复用安装身份
+
+2026-11-24 · 桌面端、CLI、设备注册 API 和 PostgreSQL
+
+## 现象与定位
+
+用户在桌面端重启、更新或重新登录后看到一台 Mac，私有列表有一条在线和三条同名离线记录，上方另有本机卡片。截图能确认显示结果，无法追溯每条旧记录是在哪次注册中创建的。
+
+原 CLI 每次注册都生成新密钥。中心先提交设备和授权，CLI 随后才安装私钥、取得会话并写配置。如果中心提交成功后响应丢失，下次启动会以新密钥重新注册。强制重连同样会建新记录，之后才尝试迁移 Agent。另有独立的展示问题，设置和侧栏均将本机与全部中心设备分别渲染。
+
+## 实现与边界
+
+1. CLI 在首次联网前保存安装私钥。重试、强制重连和正常启动共用已保存的身份。注册和轮换持有同一把进程间文件锁。重连读取配置中当前的密钥路径，配置丢失时可恢复唯一的安装密钥。凭据损坏或有多个候选时返回错误。同一中心的重连保留已配置的运行时和目录。
+2. 安装令牌兑换增加 Ed25519 持有证明，签名绑定本次令牌和 key ID。中心按完整公钥识别安装，以所有者、组织授权、设备和密钥状态约束复用。有效授权的范围、设备 ID 和 Agent 绑定均保留。自助移出后重接复用同一条授权，管理员移除限制按现有角色规则执行。跨组织接入继续使用显式加入流程。
+3. 复核复用私钥的影响时，增加了登录挑战的中心地址绑定。服务端按配置的公开 API 地址和随机 nonce 生成挑战，客户端在签名前按连接地址复算。注册签名与登录挑战分别使用不同的协议前缀。协议字节布局见[设备认证契约](../../contracts/shared/device-auth.md)。
+4. 桌面桥接只在 CLI 明确报告缺少配置时报告未注册，并保留 CLI 给出的多组织列表。设置页和侧栏按中心、组织和设备 ID 标识本机，同一条注册只展示一次。本机可打开设备详情。同名的其他设备保留独立入口。迁移旧记录及其 Agent 由所有者在离线设备详情中明确发起。
+
+身份的边界是同一安装保留的私钥。清空全部身份文件后无法证明与旧记录的关系。名称、离线状态和 Mac 型号都不足以自动识别要删除的旧记录。此次未修改用户中心的设备数据。
+
+## 数据库、配置和回滚
+
+完整 SQL 和执行顺序见[迁移 000173](../../db/migrations/000173_device_registration_identity.sql)。
+
+- 在迁移事务内切换至 `openfox_migrator`，在 `openfox.device_keys(public_key)` 创建唯一索引，随后替换 `openfox_private.register_device_with_token(bytea,text,bytea)` 的函数体，最后重置角色。索引覆盖已撤销密钥，建索引时会阻塞该表的并发写入。如同一公钥已用于多行，事务失败并回滚，不会自动合并记录。可用下列只读查询预检，输出应为零。
+- 函数锁定一次性令牌，校验签发人和角色，按公钥持有事务级咨询锁后查找设备。首次登记写入设备、密钥和授权。重连锁定现有记录，按需重新激活允许恢复的授权。令牌消费和审计写入位于同一事务。现有数据库角色与函数签名保持一致，无业务数据回填。
+- 环境配置文件和配置项没有变更。设备新增私有锁文件 `device-identity.lock`。现有 `OPENFOX_SERVER_PUBLIC_URL` 仍决定安装令牌中的地址，也决定会话挑战绑定的公开地址。
+- 启用顺序为数据库迁移、中心服务、桌面端及自带 CLI。新旧注册报文有差异，发布时需要协调中心与客户端。回退时暂停新注册，配套回退客户端、中心和网页。如果需恢复数据库旧行为，在迁移事务内重建 [000032 中的原注册函数](../../db/migrations/000032_device_connect_commands.sql)，然后执行 `DROP INDEX openfox.device_keys_public_key_unique;`。只取原函数定义，避免重复执行 000032 的其他语句。已经复用的设备与授权无须拆分。
+
+```sql
+SELECT count(*) FROM (
+    SELECT public_key FROM openfox.device_keys
+    GROUP BY public_key HAVING count(*) > 1
+) AS repeated;
+```
+
+## 验证
+
+- `env -u OPENFOX_TEST_DATABASE_URL TMPDIR=/tmp bash tests/integration/wp05/run.sh` 在一次性 PostgreSQL 集群应用 173 个迁移。SQL 断言和 7 项 Go 集成测试通过。真实 CLI 子进程在中心提交后收到 502，重新启动并使用新令牌后仍为原设备和授权。强制重连同样复用，另一套同名安装获得不同 ID。并发测试使用四枚独立令牌，覆盖跨所有者、已撤销密钥、设备吊销、管理员移除、自助移出和授权范围保留。
+- WP05 脚本初次运行在既有迁移 000129 的 `LOCK TABLE` 处失败。该脚本逐语句自动提交。已改为与其他集成脚本相同的每个迁移文件一个事务，重新从空库执行通过。
+- stage2c 临时 PostgreSQL 上的 `TestComputerRegisterDaemonRunAndRemoteCommands` 通过，覆盖 CLI 注册、后台进程、心跳和远程命令。另在临时集群运行 stage2 的三项 `TestDevRegister` 及 stage12e 的密钥轮换、管理员移除后禁止自助重入测试，全部通过。
+- `go test ./cmd/openfox ./internal/daemon ./internal/api ./internal/devices ./internal/deviceauth` 相关包通过。一次并行检查中无关的 `TestDevelopmentToolFailureBounds/empty` 超过两秒，独立重跑整个 CLI 包通过。`go vet` 已检查上述包和 WP05 集成测试。迁移清单校验通过。CLI 注册回归也通过了 Go 竞态检测，HTTP 层单测覆盖令牌或 key ID 改变后的签名拒绝。
+- `pnpm exec vitest run packages/app/src/computers` 的 132 项测试通过，包含本机与同名离线设备并存、设置页分组及弹层详情导航。`pnpm --filter @openfox/desktop test` 的 126 项测试通过。`pnpm typecheck` 和 `pnpm --filter @openfox/web build` 通过。
+- 本次验证使用本地 macOS 和临时数据库。没有发布安装包，也未在用户的已安装应用上执行真实升级、替换凭据或迁移旧设备。浏览器端运行时集成夹具已更新签名并通过类型检查，未运行依赖完整外部环境的 Playwright 套件。

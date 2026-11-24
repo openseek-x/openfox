@@ -1,3 +1,4 @@
+import { deviceRegistration } from "./fixtures/deviceRegistration";
 import { generateKeyPairSync, sign } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 test.skip(
@@ -54,12 +55,7 @@ async function computer(page: Page) {
     { name: "R05 controlled computer", scope: "ORGANIZATION" },
   );
   const device = await request(page, "/api/v1/device/register", "POST", {
-    token: token.token,
-    key_id: keyID,
-    public_key: keys.publicKey
-      .export({ type: "spki", format: "der" })
-      .subarray(-32)
-      .toString("base64url"),
+    ...deviceRegistration(token.token, keyID, keys),
   });
   const challenge = await request(
     page,
