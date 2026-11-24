@@ -150,8 +150,15 @@ func newQcEnv(t *testing.T) *qcEnv {
 	env.database = database
 	auth := identity.Service{Store: identity.PostgresStore{Pool: database}, PasswordHasher: qcHasher,
 		SessionIdle: time.Hour, SessionAbsolute: 24 * time.Hour, Now: time.Now}
-	env.server = httptest.NewServer(api.NewWithDispatch(auth, database, false, artifacts.Local{Root: t.TempDir()},
-		api.DefaultAuthRateLimits, api.DispatchOptions{}))
+	env.server = httptest.NewUnstartedServer(nil)
+	center := "http://" + env.server.Listener.Addr().String()
+	handler := api.NewWithDispatch(auth, database, false, artifacts.Local{Root: t.TempDir()},
+		api.DefaultAuthRateLimits, api.DispatchOptions{PublicURL: center})
+	mux := http.NewServeMux()
+	mux.Handle("/api/", http.StripPrefix("/api", handler))
+	mux.Handle("/", handler)
+	env.server.Config.Handler = mux
+	env.server.Start()
 	t.Cleanup(env.server.Close)
 	return env
 }

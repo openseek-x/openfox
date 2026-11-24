@@ -14,7 +14,19 @@ use authorization separate:
   owner user. The scope is explicit data, not a role or a generic dictionary.
 - Registration tokens are short-lived, one-time, hashed server-side, and bound
   to the issuing organization/member. A successful exchange consumes the token
-  in the same transaction that creates the device, key, and initial grant.
+  in the transaction that creates the device, key and initial grant or reconnects
+  the existing installation. A consumed token cannot be replayed. A retry
+  uses a freshly issued token and the same saved key. The database enforces
+  uniqueness of the full public key, including revoked keys.
+- Reconnection requires the issuing owner, an active device and key, and a
+  grant in that organization. An active grant keeps its ID, scope and settings.
+  The owner can reconnect a self-removed grant. A manager removal continues to
+  block a non-manager owner. Adding a new organization uses the join workflow.
+  Devices with different keys may have identical display names.
+- The CLI persists its private key before the first exchange. Registration
+  and key rotation take the same process-scoped file lock. A retry reads the
+  configured active key or, after config loss, the sole saved installation key.
+  Ambiguous or damaged credentials require restoring the local configuration.
 - Heartbeats update only device health and capability facts. Server receipt time
   is authoritative; device timestamps do not determine online status.
 - A device hello/heartbeat carries a center epoch and protocol version. An

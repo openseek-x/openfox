@@ -57,7 +57,8 @@ func (e *qcEnv) registerDevice(issuer *qcClient, org string) devDevice {
 		CenterEpoch int64  `json:"center_epoch"`
 	}
 	response := e.anonymous(http.MethodPost, "/v1/device/register", "", map[string]string{
-		"token": token.InstallToken, "key_id": device.KeyID, "public_key": deviceauth.EncodeBase64URL(public),
+		"signature": deviceauth.EncodeBase64URL(ed25519.Sign(private, deviceauth.RegistrationPayload(token.InstallToken, device.KeyID))),
+		"token":     token.InstallToken, "key_id": device.KeyID, "public_key": deviceauth.EncodeBase64URL(public),
 	})
 	if response.Status != http.StatusCreated {
 		e.t.Fatalf("register = %d %s", response.Status, response.Body)
@@ -74,7 +75,7 @@ func (e *qcEnv) registerDevice(issuer *qcClient, org string) devDevice {
 
 // auth 是指向测试服务器的设备认证客户端（测试服务器路由不带 /api 前缀）。
 func (e *qcEnv) auth() daemon.AuthClient {
-	return daemon.AuthClient{BaseURL: e.server.URL, HTTP: &http.Client{Timeout: 20 * time.Second}}
+	return daemon.AuthClient{BaseURL: daemon.APIBaseURL(e.server.URL), HTTP: &http.Client{Timeout: 20 * time.Second}}
 }
 
 func (e *qcEnv) heartbeat(device devDevice, token string, capabilities map[string]any) qcResponse {

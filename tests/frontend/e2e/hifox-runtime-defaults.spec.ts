@@ -1,3 +1,5 @@
+import { generateKeyPairSync } from "node:crypto";
+import { deviceRegistration } from "./fixtures/deviceRegistration";
 import { expect, test, type Page } from "@playwright/test";
 test.skip(
   process.env.OPENFOX_HIFOX_R06_E2E !== "1",
@@ -55,9 +57,11 @@ test("R06 owner saves masked Runtime defaults and the conversation inherits them
     { name: "R06 browser computer", scope: "ORGANIZATION" },
   );
   const registered = await request(page, "/api/v1/device/register", "POST", {
-    token: registration.token,
-    key_id: "r06-browser-key",
-    public_key: Buffer.alloc(32, 7).toString("base64url"),
+    ...deviceRegistration(
+      registration.token,
+      "r06-browser-key",
+      generateKeyPairSync("ed25519"),
+    ),
   });
   const device = await request(page, `${base}/devices/${registered.device_id}`);
   const model = "controlled-r06-model";

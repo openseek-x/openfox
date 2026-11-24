@@ -131,9 +131,11 @@ function parseRegistrationStatus(stdout) {
     return {
       registered: false,
       reason:
-        parsed.reason === "invalid_config"
-          ? "invalid_config"
-          : "not_registered",
+        parsed.registered === false && parsed.reason === "not_registered"
+          ? "not_registered"
+          : parsed.reason === "invalid_config"
+            ? "invalid_config"
+            : "unavailable",
     };
   }
   const result = {
@@ -141,6 +143,14 @@ function parseRegistrationStatus(stdout) {
     organization_id: String(parsed.organization_id || ""),
     device_id: String(parsed.device_id || ""),
   };
+  if (Array.isArray(parsed.organization_ids))
+    result.organization_ids = parsed.organization_ids
+      .slice(0, 100)
+      .filter(
+        (id) =>
+          typeof id === "string" &&
+          /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id),
+      );
   const centerURL = httpURLOrNull(parsed.center_url);
   if (centerURL) result.center_url = centerURL;
   return result;

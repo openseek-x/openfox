@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
@@ -22,7 +23,6 @@ import (
 const (
 	DefaultChallengeTTL    = 5 * time.Minute
 	DefaultSessionAbsolute = 24 * time.Hour
-	challengeBytesSize     = 32
 	nonceSize              = 32
 	maxTokenLength         = 128
 )
@@ -133,6 +133,7 @@ type Store interface {
 }
 
 type Service struct {
+	CenterAPIURL    string // Operator-configured public API base, including /api.
 	Store           Store
 	ChallengeTTL    time.Duration
 	SessionAbsolute time.Duration
@@ -162,10 +163,7 @@ func (s Service) IssueChallenge(ctx context.Context, request ChallengeRequest) (
 	if err != nil {
 		return ChallengeResult{}, err
 	}
-	challengeBytes, err := randomBytes(challengeBytesSize)
-	if err != nil {
-		return ChallengeResult{}, err
-	}
+	challengeBytes := CenterChallenge(s.CenterAPIURL, nonce)
 	now := s.Now().UTC()
 	challenge := Challenge{
 		ID:        id,
@@ -380,6 +378,26 @@ func CanonicalPayload(challengeID, deviceID, keyID string, nonce, challenge []by
 	writeCanonicalString(&payload, keyID)
 	writeCanonicalBytes(&payload, nonce)
 	writeCanonicalBytes(&payload, challenge)
+	return payload.Bytes()
+}
+
+// CenterChallenge binds the random nonce to the canonical API endpoint before the
+// device signs. An installation may reconnect at a new center address with its key.
+func CenterChallenge(apiURL string, nonce []byte) []byte {
+	var payload bytes.Buffer
+	payload.WriteString("openfox-device-center-v1")
+	writeCanonicalString(&payload, strings.TrimRight(apiURL, "/"))
+	writeCanonicalBytes(&payload, nonce)
+	sum := sha256.Sum256(payload.Bytes())
+	return sum[:]
+}
+
+// RegistrationPayload binds proof of possession to this one-time registration request.
+func RegistrationPayload(token, keyID string) []byte {
+	var payload bytes.Buffer
+	payload.WriteString("openfox-device-registration-v1")
+	writeCanonicalString(&payload, token)
+	writeCanonicalString(&payload, keyID)
 	return payload.Bytes()
 }
 

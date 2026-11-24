@@ -52,7 +52,7 @@ createdb "$PGDATABASE"
 database_url="user=postgres host=$PGHOST port=$PGPORT dbname=$PGDATABASE sslmode=disable"
 
 for migration in "$repo_root"/db/migrations/[0-9]*.sql; do
-    run_sql "$migration"
+    psql "$database_url" -X --single-transaction -v ON_ERROR_STOP=1 -f "$migration"
 done
 run_sql "$repo_root/tests/integration/wp02_wp03/fixture.sql"
 run_sql "$script_dir/assertions.sql"

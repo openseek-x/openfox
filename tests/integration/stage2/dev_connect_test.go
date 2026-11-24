@@ -118,7 +118,8 @@ func (e *agEnv) tryRegister(token string) (agResponse, devDevice) {
 	}
 	device := devDevice{KeyID: "dev-key-" + agSuffix(e.t), private: private}
 	response := e.anonymous(http.MethodPost, "/v1/device/register", "", map[string]string{
-		"token": token, "key_id": device.KeyID, "public_key": deviceauth.EncodeBase64URL(public),
+		"signature": deviceauth.EncodeBase64URL(ed25519.Sign(private, deviceauth.RegistrationPayload(token, device.KeyID))),
+		"token":     token, "key_id": device.KeyID, "public_key": deviceauth.EncodeBase64URL(public),
 	})
 	if response.Status == http.StatusCreated {
 		var result struct {
@@ -310,12 +311,14 @@ func TestDevRegisterConcurrentExchangeOnce(t *testing.T) {
 		wait.Add(1)
 		go func(index int) {
 			defer wait.Done()
-			public, _, err := ed25519.GenerateKey(rand.Reader)
+			public, private, err := ed25519.GenerateKey(rand.Reader)
 			if err != nil {
 				return
 			}
+			keyID := "race-" + agNewID(t)[:8]
 			encoded, _ := json.Marshal(map[string]string{
-				"token": token.InstallToken, "key_id": "race-" + agNewID(t)[:8], "public_key": deviceauth.EncodeBase64URL(public),
+				"signature": deviceauth.EncodeBase64URL(ed25519.Sign(private, deviceauth.RegistrationPayload(token.InstallToken, keyID))),
+				"token":     token.InstallToken, "key_id": keyID, "public_key": deviceauth.EncodeBase64URL(public),
 			})
 			<-start
 			response, err := http.Post(e.server.URL+"/v1/device/register", "application/json", bytes.NewReader(encoded))

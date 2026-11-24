@@ -7,8 +7,18 @@ and retained by the device; the server stores only the public key, key ID,
 status, generation, and timestamps. A device may have more than one key during
 rotation, but only active keys can answer a challenge.
 
-The server creates a random challenge with a five-minute expiry and a unique
-nonce. The device signs a canonical payload containing the challenge ID, device
+For the install-token exchange the device signs the ASCII domain
+`openfox-device-registration-v1` followed by the submitted token and key ID.
+Each field uses its UTF-8 bytes prefixed with its unsigned four-byte big-endian
+length. The HTTP request carries the unpadded base64url signature.
+
+The server creates a fresh 32-byte random nonce with a five-minute challenge
+expiry. The challenge bytes are SHA-256 of the ASCII domain
+`openfox-device-center-v1`, followed by the configured public API base URL
+(including `/api`, without trailing slashes) and the raw nonce, both
+length-prefixed as above. The CLI recomputes this value using its configured
+endpoint before signing. This binds the proof to the receiving center when
+the installation reconnects at a different address. The device signs a canonical payload containing the challenge ID, device
 ID, key ID, and challenge bytes. Verification consumes the challenge in the
 same transaction before issuing an opaque device session token. A challenge
 cannot be accepted twice, with a different device/key, or after expiry.

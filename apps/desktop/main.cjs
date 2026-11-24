@@ -355,15 +355,15 @@ async function registerComputer(input) {
   if (!isValidInstallToken(token))
     return { ok: false, reason: "invalid_token" };
   if (registering) return { ok: false, reason: "busy" };
-  if (cliReady) await cliReady;
-  let binary;
-  try {
-    binary = resolveBinary();
-  } catch {
-    return { ok: false, reason: "unavailable" };
-  }
   registering = true;
   try {
+    if (cliReady) await cliReady;
+    let binary;
+    try {
+      binary = resolveBinary();
+    } catch {
+      return { ok: false, reason: "unavailable" };
+    }
     const reason = await new Promise((resolve) => {
       // --install-token - 让 CLI 从 stdin 读一行令牌：令牌不出现在进程参数里（ps 看不到）
       const child = execFile(

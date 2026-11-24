@@ -421,6 +421,19 @@ describe("parseRegistrationStatus", () => {
     );
   });
 
+  it("保留 CLI 报告的额外组织，用于匹配共享到其他组织的本机", () => {
+    const org = "00000000-0000-4000-8000-000000000002";
+    const registration = parseRegistrationStatus(
+      JSON.stringify({
+        registered: true,
+        device_id: "d1",
+        organization_id: "o1",
+        organization_ids: [org, null, "bad"],
+      }),
+    );
+    assert.deepEqual(registration.organization_ids, [org]);
+  });
+
   it("旧版 CLI 没有 center_url 或地址不合法时不传", () => {
     for (const center_url of [
       undefined,
@@ -443,10 +456,22 @@ describe("parseRegistrationStatus", () => {
   });
 
   it("未注册只返回原因", () => {
-    assert.deepEqual(parseRegistrationStatus('{"registered":false}'), {
-      registered: false,
-      reason: "not_registered",
-    });
+    for (const input of [
+      "{}",
+      '{"registered":false}',
+      '{"registered":false,"reason":"unavailable"}',
+    ])
+      assert.deepEqual(parseRegistrationStatus(input), {
+        registered: false,
+        reason: "unavailable",
+      });
+    assert.deepEqual(
+      parseRegistrationStatus('{"registered":false,"reason":"not_registered"}'),
+      {
+        registered: false,
+        reason: "not_registered",
+      },
+    );
     assert.deepEqual(
       parseRegistrationStatus('{"registered":false,"reason":"invalid_config"}'),
       { registered: false, reason: "invalid_config" },

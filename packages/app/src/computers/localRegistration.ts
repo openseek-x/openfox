@@ -5,7 +5,7 @@ import {
 } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 
-import { isApiError } from "@openfox/api";
+import type { Device } from "@openfox/api";
 import { useT } from "@openfox/i18n";
 import { useToast } from "@openfox/ui";
 
@@ -17,8 +17,14 @@ import {
   type DesktopLocalStatus,
   type DesktopRegisterResult,
 } from "../desktop";
+import { computerPartition, sortComputers } from "./model";
 import { useOrgRole } from "../spaces/queries";
-import { useDevices, useLocalStatus, useServerCenterUrl } from "./queries";
+import {
+  useDevices,
+  useLocalStatus,
+  useServerCenterUrl,
+  useMe,
+} from "./queries";
 
 // 桌面端自动注册本机（参照 HiFox）：打开组织时本机还没注册，就用当前登录身份签发个人安装令牌，
 // 交给主进程执行 openfox computer register（令牌经 stdin 传给 CLI），并安装后台服务。
@@ -74,6 +80,23 @@ function centerKey(value: string): string | null {
   }
 }
 
+function canonicalCenter(value: string | undefined) {
+  try {
+    const url = new URL(value ?? "");
+    if (
+      !["http:", "https:"].includes(url.protocol) ||
+      url.username ||
+      url.password ||
+      url.search ||
+      url.hash
+    )
+      return null;
+    return url.origin + url.pathname.replace(/\/+$/, "");
+  } catch {
+    return null;
+  }
+}
+
 /** Strict control identity; unlike sameCenter, missing/invalid URLs never match. */
 export function isLocalDevice(
   status: DesktopLocalStatus | undefined,
@@ -88,24 +111,38 @@ export function isLocalDevice(
     registration.device_id !== deviceId
   )
     return false;
-  const canonical = (value: string | undefined) => {
-    try {
-      const url = new URL(value ?? "");
-      if (
-        !["http:", "https:"].includes(url.protocol) ||
-        url.username ||
-        url.password ||
-        url.search ||
-        url.hash
-      )
-        return null;
-      return url.origin + url.pathname.replace(/\/+$/, "");
-    } catch {
-      return null;
-    }
+  const local = canonicalCenter(registration.center_url);
+  return local !== null && local === canonicalCenter(serverCenterUrl);
+}
+
+/** Place the visible registration in exactly one group. Names are display-only. */
+export function useComputerGroups(orgId: string, devices: Device[]) {
+  const registration = useLocalStatus().data?.registration;
+  const inOrg =
+    registration?.registered && registrationHasOrg(registration, orgId);
+  const center = useServerCenterUrl(
+    orgId,
+    Boolean(inOrg && registration.center_url),
+  );
+  const localCenter = inOrg ? canonicalCenter(registration.center_url) : null;
+  const local =
+    inOrg &&
+    localCenter &&
+    localCenter === canonicalCenter(center.data?.center_url)
+      ? devices.find((device) => device.id === registration.device_id)
+      : undefined;
+  const me = useMe();
+  const others = sortComputers(
+    devices.filter((device) => device !== local),
+    me.data?.id,
+  );
+  return {
+    local,
+    shared: others.filter((device) => computerPartition(device) === "shared"),
+    personal: others.filter(
+      (device) => computerPartition(device) === "private",
+    ),
   };
-  const local = canonical(registration.center_url);
-  return local !== null && local === canonical(serverCenterUrl);
 }
 
 /** 两个中心地址是否指向同一个服务；任一方缺失或无法解析时不判定为不同。 */
@@ -148,10 +185,7 @@ export function registrationView(
 export const ONLINE_POLL_MS = 2000;
 export const ONLINE_POLL_LIMIT = 30;
 
-/** 重新连接后迁移旧记录上 Agent 的结果；迁移不影响重新连接本身是否成功。 */
-type ReplaceOutcome = { moved: number } | { failed: true } | null;
-
-/** 注册本机：签发个人安装令牌 → 主进程执行 CLI 注册；强制重连时再把旧记录上的 Agent 迁到新记录。 */
+/** Initial registration and reconnection use the installation key held by the CLI. */
 export function useLocalRegister(orgId: string) {
   const t = useT();
   const api = useApi();
@@ -193,11 +227,7 @@ export function useLocalRegister(orgId: string) {
   };
   return useMutation({
     mutationKey: registerKey(orgId),
-    mutationFn: async ({
-      force,
-    }: {
-      force: boolean;
-    }): Promise<ReplaceOutcome> => {
+    mutationFn: async ({ force }: { force: boolean }): Promise<void> => {
       const bridge = desktopBridge();
       if (!bridge?.registerComputer) throw new RegisterError("unavailable");
       const status = queryClient.getQueryData<DesktopLocalStatus>(
@@ -217,57 +247,11 @@ export function useLocalRegister(orgId: string) {
           (error as { status?: number }).status === 403;
         throw new RegisterError(forbidden ? "forbidden" : "issue_failed");
       }
-      // 强制重连会让服务器新建一条电脑记录：记下重连前属于本组织的旧记录，成功后把 Agent 迁过来
-      const previous =
-        force &&
-        status?.registration?.registered === true &&
-        registrationHasOrg(status.registration, orgId)
-          ? status.registration.device_id
-          : undefined;
       const result = await bridge.registerComputer(token, { force });
       if (!result.ok) throw new RegisterError(result.reason);
-      if (!previous) return null;
-      try {
-        const fresh = await queryClient.fetchQuery({
-          queryKey: desktopLocalStatusKey,
-          queryFn: () => bridge.getLocalStatus(),
-          staleTime: 0,
-        });
-        const next = fresh.registration;
-        if (
-          !next?.registered ||
-          !registrationHasOrg(next, orgId) ||
-          next.device_id === previous
-        )
-          return null;
-        const replaced = await api.devices.replace(
-          orgId,
-          next.device_id,
-          previous,
-        );
-        return { moved: replaced.moved_agents };
-      } catch (error) {
-        // 404：旧记录不在这个服务器上或已经处理过，静默
-        if (isApiError(error) && error.status === 404) return null;
-        return { failed: true };
-      }
     },
-    onSuccess: (outcome) => {
+    onSuccess: () => {
       toast(t("connect.auto.done"));
-      if (outcome && "failed" in outcome)
-        toast(t("connect.auto.moveFailed"), { tone: "error" });
-      else if (outcome && outcome.moved > 0) {
-        toast(t("connect.auto.moved", { count: outcome.moved }));
-        void queryClient.invalidateQueries({ queryKey: keys.agents(orgId) });
-        void queryClient.invalidateQueries({ queryKey: keys.contacts(orgId) });
-        void queryClient.invalidateQueries({ queryKey: keys.assistant(orgId) });
-        void queryClient.invalidateQueries({
-          queryKey: keys.agentDirectory(orgId),
-        });
-        void queryClient.invalidateQueries({
-          queryKey: ["org", orgId, "space-agents"],
-        });
-      }
       // Registration succeeded. A transient status refresh failure must not become
       // an unhandled rejection; the normal status queries can retry on refocus.
       void waitUntilOnline().catch(() => undefined);

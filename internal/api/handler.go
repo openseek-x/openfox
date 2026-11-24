@@ -111,8 +111,9 @@ func NewWithDispatch(auth identity.Service, pool *postgres.Pool, secureCookies b
 		limits.EmailFailuresPerAccount = 20
 	}
 	deviceAuthService := deviceauth.Service{
-		Store: deviceauth.PostgresStore{Pool: pool},
-		Now:   time.Now,
+		CenterAPIURL: centerPublicURL(dispatchOptions.PublicURL) + "/api",
+		Store:        deviceauth.PostgresStore{Pool: pool},
+		Now:          time.Now,
 	}
 	h := &Handler{
 		officePreview:          dispatchOptions.OfficePreview,
