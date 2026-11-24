@@ -1,4 +1,4 @@
-// Ship a DMG for Finder and a PKG of the same app for the system Installer.
+// Both Finder and Sparkle use the DMG. The existing static release payload also uses a PKG.
 const { execFileSync } = require("node:child_process");
 const { createHash } = require("node:crypto");
 const { createReadStream } = require("node:fs");
@@ -18,11 +18,34 @@ if (!/^\d+\.\d+\.\d+$/.test(version))
     "Desktop releases require a numeric major.minor.patch version",
   );
 
+const publicKey = process.env.OPENFOX_UPDATE_PUBLIC_KEY;
+if (!/^[A-Za-z0-9+/]{43}=$/.test(publicKey || ""))
+  throw new Error(
+    "Desktop releases require a base64 Ed25519 OPENFOX_UPDATE_PUBLIC_KEY",
+  );
+
 module.exports = {
   ...build,
-  extraMetadata: { openfoxAutoUpdate: true },
+  extraMetadata: { openfoxAutoUpdate: true, openfoxUpdatePublicKey: publicKey },
+  extraFiles: [
+    {
+      from: "dist/sparkle-cache/OpenFox Update.app",
+      to: "Helpers/OpenFox Update.app",
+    },
+  ],
   directories: { ...build.directories, output: "dist/release" },
-  mac: { ...build.mac, target: ["dmg"], notarize: false },
+  mac: {
+    ...build.mac,
+    target: ["dmg"],
+    notarize: false,
+    bundleVersion: version,
+    extendInfo: {
+      SUPublicEDKey: publicKey,
+      SUEnableAutomaticChecks: true,
+      SUAutomaticallyUpdate: false,
+      SUVerifyUpdateBeforeExtraction: true,
+    },
+  },
   async afterAllArtifactBuild({ outDir }) {
     const filename = `OpenFox-${version}-arm64.pkg`;
     const pkg = path.join(outDir, filename);

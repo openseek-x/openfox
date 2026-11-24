@@ -20,6 +20,7 @@ jobs:
       artifact_id: ${{ steps.upload.outputs.artifact-id }}
       artifact_digest: ${{ steps.upload.outputs.artifact-digest }}
     env:
+      OPENFOX_UPDATE_PUBLIC_KEY: ${{ vars.OPENFOX_UPDATE_PUBLIC_KEY }}
       OPENFOX_DESKTOP_DEFAULT_WEB_URL: ${{ vars.OPENFOX_PUBLIC_URL }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -73,8 +74,16 @@ jobs:
           hdiutil attach -readonly -nobrowse -mountpoint "$mount" "$dmg"
           trap 'hdiutil detach "$mount" >/dev/null' EXIT
           codesign --verify --deep --strict "$mount/OpenFox.app"
+          test -x "$mount/OpenFox.app/Contents/Helpers/OpenFox Update.app/Contents/MacOS/OpenFoxUpdate"
+          test "$(plutil -extract SUPublicEDKey raw "$mount/OpenFox.app/Contents/Info.plist")" = "$OPENFOX_UPDATE_PUBLIC_KEY"
+          test "$(plutil -extract CFBundleVersion raw "$mount/OpenFox.app/Contents/Info.plist")" = "$version"
           diff -qr "$app" "$mount/OpenFox.app"
           COPYFILE_DISABLE=1 tar -czf "$RUNNER_TEMP/openfox-static.tar.gz" -C "$release" web desktop
+      - name: Sign the verified DMG for in-app updates
+        env:
+          OPENFOX_UPDATE_PRIVATE_KEY: ${{ secrets.OPENFOX_UPDATE_PRIVATE_KEY }}
+          RELEASE_VERSION: ${{ steps.inputs.outputs.version }}
+        run: node apps/desktop/sparkle/sign-release.cjs "apps/desktop/dist/release/OpenFox-$RELEASE_VERSION-arm64.dmg"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         id: upload
         with:
@@ -88,6 +97,7 @@ jobs:
           name: mac-installers
           path: |
             apps/desktop/dist/release/OpenFox-*.dmg
+            apps/desktop/dist/release/OpenFox-*.dmg.sig
             apps/desktop/dist/release/OpenFox-*.pkg
           compression-level: 0
           if-no-files-found: error
@@ -146,7 +156,7 @@ jobs:
           set -euo pipefail
           repo="$GITHUB_REPOSITORY"
           tag="v$VERSION"
-          files=("OpenFox-$VERSION-arm64.dmg" "OpenFox-$VERSION-arm64.pkg")
+          files=("OpenFox-$VERSION-arm64.dmg" "OpenFox-$VERSION-arm64.dmg.sig" "OpenFox-$VERSION-arm64.pkg")
           # Reserve the immutable tag at the built master commit. Retries may reuse that exact ref.
           if ! gh api --method POST "repos/$repo/git/refs" -f "ref=refs/tags/$tag" -f "sha=$GITHUB_SHA" >/dev/null; then
             target=$(gh api "repos/$repo/git/ref/tags/$tag" --jq .object.sha)
@@ -154,7 +164,7 @@ jobs:
           fi
           if ! draft=$(gh release view "$tag" --repo "$repo" --json isDraft --jq .isDraft); then
             gh release create "$tag" --repo "$repo" --verify-tag --draft --title "OpenFox $VERSION" \
-              --notes 'Apple 芯片 Mac 请下载 DMG，打开后将 OpenFox 拖入「应用程序」。PKG 用于确认后的系统安装。'
+              --notes 'Apple 芯片 Mac 请下载 DMG，打开后将 OpenFox 拖入「应用程序」。支持应用内更新的版本会在下载完成后提示「安装并重启」。'
             draft=true
           fi
           if [[ "$draft" == true ]]; then

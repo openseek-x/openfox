@@ -22,12 +22,12 @@ const release = () => ({
   draft: false,
   prerelease: false,
   body: "修复若干问题",
-  assets: [asset("pkg"), asset("dmg")],
+  assets: [asset("dmg"), asset("dmg.sig")],
 });
 const run = (body, options = {}, status = 200) =>
   checkForUpdate({
     current: "0.1.3",
-    systemInstaller: true,
+    requireSignature: true,
     ...options,
     fetchText: async (url, limits) => {
       assert.equal(
@@ -74,22 +74,36 @@ test("清单地址只取 https 中心服务的 origin", () => {
   );
 });
 
-test("系统安装器选择 PKG，手动下载选择同一标签的 DMG", async () => {
-  for (const [systemInstaller, ext] of [
-    [true, "pkg"],
-    [false, "dmg"],
-  ]) {
+test("应用内更新必须包含同一标签的 DMG 和签名，手动下载只需 DMG", async () => {
+  for (const requireSignature of [true, false]) {
     const result = await run(release(), {
-      systemInstaller,
+      requireSignature,
       skippedVersion: "0.2.0",
     });
     assert.equal(result.status, "update_available");
-    assert.equal(result.manifest.download_url, asset(ext).browser_download_url);
-    assert.equal(result.manifest.sha256, SHA);
+    assert.equal(
+      result.manifest.download_url,
+      asset("dmg").browser_download_url,
+    );
+    assert.equal(
+      result.manifest.signature_sha256,
+      requireSignature ? SHA : undefined,
+    );
     assert.equal(result.skipped, true);
   }
+  assert.equal(
+    (await run({ ...release(), assets: [asset("dmg")] })).status,
+    "invalid_manifest",
+  );
+  const offsite = {
+    ...asset("dmg.sig"),
+    browser_download_url: "https://other.test/dmg.sig",
+  };
+  assert.equal(
+    (await run({ ...release(), assets: [asset("dmg"), offsite] })).status,
+    "unsafe_manifest",
+  );
 });
-
 test("等于或高于 GitHub 最新正式标签时不下载", async () => {
   for (const current of ["0.2.0", "1.0.0"])
     assert.deepEqual(await run(release(), { current }), {
@@ -105,8 +119,8 @@ test("拒绝草稿、预发布、非正式标签、缺失附件或缺失摘要",
     { tag_name: "v0.2.0-r2" },
     { tag_name: "v00.2.0" },
     { assets: [] },
-    { assets: [{ ...asset("pkg"), digest: null }] },
-    { assets: [{ ...asset("pkg"), state: "starter" }] },
+    { assets: [{ ...asset("dmg"), digest: null }] },
+    { assets: [{ ...asset("dmg"), state: "starter" }] },
   ]) {
     assert.equal(
       (await run({ ...release(), ...fields })).status,
@@ -121,7 +135,7 @@ test("下载 URL 必须精确指向该仓库与标签", async () => {
     repo + "/extra",
     "https://another.test",
   ]) {
-    const pkg = asset("pkg");
+    const pkg = asset("dmg");
     pkg.browser_download_url = pkg.browser_download_url.replace(repo, from);
     assert.equal(
       (await run({ ...release(), assets: [pkg] })).status,

@@ -69,7 +69,7 @@ function manifestURL(centerURL) {
 async function checkForUpdate({
   current,
   skippedVersion,
-  systemInstaller,
+  requireSignature = false,
   fetchText,
 }) {
   let response;
@@ -104,23 +104,27 @@ async function checkForUpdate({
   const version = match[1];
   if (compareVersions(version, current) !== 1)
     return { status: "up_to_date", version };
-  const name = `OpenFox-${version}-arm64.${systemInstaller ? "pkg" : "dmg"}`;
-  const asset = release.assets.find((entry) => entry?.name === name);
-  if (
-    asset?.state !== "uploaded" ||
-    !/^sha256:[a-f0-9]{64}$/.test(asset.digest)
-  )
-    return { status: "invalid_manifest" };
-  const downloadURL = `https://github.com/${REPOSITORY}/releases/download/v${version}/${name}`;
-  if (asset.browser_download_url !== downloadURL)
-    return { status: "unsafe_manifest" };
-
+  const name = `OpenFox-${version}-arm64.dmg`;
+  const base = `https://github.com/${REPOSITORY}/releases/download/v${version}/`;
+  const assets = [];
+  for (const filename of requireSignature ? [name, name + ".sig"] : [name]) {
+    const asset = release.assets.find((entry) => entry?.name === filename);
+    if (
+      asset?.state !== "uploaded" ||
+      !/^sha256:[a-f0-9]{64}$/.test(asset.digest)
+    )
+      return { status: "invalid_manifest" };
+    if (asset.browser_download_url !== base + filename)
+      return { status: "unsafe_manifest" };
+    assets.push(asset);
+  }
   return {
     status: "update_available",
     manifest: {
       version,
-      download_url: downloadURL,
-      sha256: asset.digest.slice(7),
+      download_url: assets[0].browser_download_url,
+      sha256: assets[0].digest.slice(7),
+      ...(requireSignature && { signature_sha256: assets[1].digest.slice(7) }),
       notes:
         typeof release.body === "string" ? release.body.slice(0, 2000) : "",
       min_version: null,

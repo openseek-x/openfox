@@ -1,8 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const path = require("node:path");
-const os = require("node:os");
-const { createHash } = require("node:crypto");
+const { createHash, generateKeyPairSync, sign } = require("node:crypto");
 const fs = require("node:fs/promises");
 
 const {
@@ -12,10 +10,18 @@ const {
 } = require("./update-install.cjs");
 
 const bytes = Buffer.from("an update archive");
+const keys = generateKeyPairSync("ed25519");
+const publicKey = Buffer.from(
+  keys.publicKey.export({ format: "jwk" }).x,
+  "base64url",
+).toString("base64");
+const signature = sign(null, bytes, keys.privateKey).toString("base64") + "\n";
+const digest = (data) => createHash("sha256").update(data).digest("hex");
 const manifest = {
   version: "0.2.0",
-  download_url: "https://center.example/desktop/update.pkg",
-  sha256: createHash("sha256").update(bytes).digest("hex"),
+  download_url: "https://center.example/desktop/OpenFox.dmg",
+  sha256: digest(bytes),
+  signature_sha256: digest(signature),
 };
 const available = {
   status: "update_available",
@@ -24,35 +30,48 @@ const available = {
   mandatory: false,
 };
 
-test("opens only a verified package after confirmation and keeps it readable by Installer", async (t) => {
-  const cache = await fs.mkdtemp(path.join(os.tmpdir(), "openfox-test-pkg-"));
-  t.after(() => fs.rm(cache, { recursive: true, force: true }));
-  const archive = await downloadUpdate(manifest, async (url, options) => {
-    assert.equal(url, manifest.download_url);
-    assert.equal(options.redirect, "error");
-    assert.equal(options.credentials, "omit");
-    return new Response(bytes);
-  });
-  assert.deepEqual(await fs.readdir(cache), []);
-  let opened;
-  await archive.openInstaller(cache, async (file) => {
-    opened = file;
-    return "";
-  });
-  archive.discard();
-  assert.equal(
-    opened,
-    path.join(cache, `OpenFox-${manifest.version}-${manifest.sha256}.pkg`),
+test("stages only the signed DMG and cleans up its private temporary copy", async () => {
+  const archive = await downloadUpdate(
+    manifest,
+    async (url, options) => {
+      assert.equal(options.redirect, "error");
+      assert.equal(options.credentials, "omit");
+      return new Response(url.endsWith(".sig") ? signature : bytes);
+    },
+    publicKey,
   );
-  assert.deepEqual(await fs.readFile(opened), bytes);
-  const { removeInstalledPackages } = require("./update-install.cjs");
-  await removeInstalledPackages(cache, "0.1.0");
-  assert.deepEqual(await fs.readFile(opened), bytes);
-  await removeInstalledPackages(cache, manifest.version);
-  await assert.rejects(fs.stat(opened), { code: "ENOENT" });
+  try {
+    assert.deepEqual(await fs.readFile(archive.file), bytes);
+    assert.equal(archive.size, bytes.length);
+    assert.equal(archive.signature, signature.trim());
+  } finally {
+    archive.discard();
+  }
+  await assert.rejects(fs.stat(archive.file), { code: "ENOENT" });
 });
 
-test("bad digest, excessive length, HTTP error and interrupted download never reach Installer", async () => {
+test("rejects tampering even if the release advertises the modified DMG digest", async () => {
+  const changed = Buffer.from("different DMG");
+  await assert.rejects(
+    downloadUpdate(
+      { ...manifest, sha256: digest(changed) },
+      async (url) => new Response(url.endsWith(".sig") ? signature : changed),
+      publicKey,
+    ),
+    /signature verification/,
+  );
+  for (const invalid of ["invalid", signature.repeat(2)]) {
+    await assert.rejects(
+      downloadUpdate(
+        { ...manifest, signature_sha256: digest(invalid) },
+        async () => new Response(invalid),
+        publicKey,
+      ),
+    );
+  }
+});
+
+test("bad digest, excessive length, HTTP error and interrupted download never become ready", async () => {
   for (const response of [
     new Response("bad digest"),
     new Response(bytes, {
@@ -67,22 +86,15 @@ test("bad digest, excessive length, HTTP error and interrupted download never re
       }),
     ),
   ]) {
-    await assert.rejects(downloadUpdate(manifest, async () => response));
+    await assert.rejects(
+      downloadUpdate(
+        manifest,
+        async (url) =>
+          url.endsWith(".sig") ? new Response(signature) : response,
+        publicKey,
+      ),
+    );
   }
-});
-
-test("reports system Installer launch failures", async (t) => {
-  const cache = await fs.mkdtemp(path.join(os.tmpdir(), "openfox-test-pkg-"));
-  t.after(() => fs.rm(cache, { recursive: true, force: true }));
-  const archive = await downloadUpdate(
-    manifest,
-    async () => new Response(bytes),
-  );
-  t.after(archive.discard);
-  await assert.rejects(
-    archive.openInstaller(cache, async () => "launch failed"),
-    /Installer/,
-  );
 });
 
 function manager(overrides = {}) {
@@ -246,7 +258,7 @@ test("GitHub download accepts only the release asset CDN redirect", async () => 
   const { EventEmitter } = require("node:events");
   const { resolveGitHubDownload } = require("./update-install.cjs");
   const url =
-    "https://github.com/openseek-x/openfox/releases/download/v0.2.0/OpenFox-0.2.0-arm64.pkg";
+    "https://github.com/openseek-x/openfox/releases/download/v0.2.0/OpenFox-0.2.0-arm64.dmg";
   async function redirect(location) {
     const net = {
       request(options) {

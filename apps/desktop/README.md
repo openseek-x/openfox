@@ -69,7 +69,7 @@ web URL (validated like `web_url`; omitted when the variable is unset), then the
 CLI is built for the host architecture and `electron-builder` produces an
 arm64 DMG. The URL order is `OPENFOX_DESKTOP_WEB_URL`, then `web_url` in
 `desktop-settings.json`, then the packaged default. Local builds use an ad hoc
-signature (`identity: "-"`). Each stable GitHub Release includes a DMG for manual installation and a PKG containing the same app for macOS Installer.
+signature (`identity: "-"`). Each stable GitHub Release includes the DMG, its detached Ed25519 signature and a PKG of the same app for existing clients.
 Installation is subject to the Mac’s policy for unidentified developers.
 
 ## Desktop experience (stage 12h)
@@ -89,10 +89,11 @@ Installation is subject to the Mac’s policy for unidentified developers.
 - **Desktop updates on macOS arm64**. The app checks the latest published stable GitHub Release
   in `openseek-x/openfox` 30 seconds after launch, every 24 hours while running
   and on demand. It reads the version from the `vX.Y.Z` tag and verifies the
-  downloaded PKG against the SHA-256 digest on its GitHub release asset. Choose **Open macOS Installer** to hand the verified package to the
-  system. Finish installation there and reopen OpenFox. **Later** is the default.
-  Closing the dialog or quitting leaves the current version installed, including
-  for a required update. Local development builds retain manual downloads.
+  DMG and its signature file against their GitHub SHA-256 digests. The app verifies the
+  DMG signature using its embedded update key before showing **Install and Restart**.
+  Confirming lets Sparkle replace and reopen OpenFox. **Later** or closing the dialog
+  keeps the current version running. A normal quit after deferring does not install.
+  Local development builds retain manual downloads.
   See [publishing and rollback](../../deploy/README.md#desktop-updates).
 - **Bundled CLI after an upgrade**: when the bundled `openfox` replaces the
   installed one, the app restarts the local service only if `daemon status`

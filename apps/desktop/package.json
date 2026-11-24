@@ -12,7 +12,7 @@
     "test:work-directory:electron": "node --test work-directory.electron.test.cjs",
     "test:local-service:electron": "node --test local-service.electron.test.cjs",
     "dist:mac": "node build-defaults.cjs && pnpm build:cli && electron-builder --mac --arm64",
-    "dist:mac:release": "node build-defaults.cjs && pnpm build:cli && electron-builder --config release-config.cjs --mac --arm64 --publish never",
+    "dist:mac:release": "node build-defaults.cjs && pnpm build:cli && bash sparkle/build.sh && electron-builder --config release-config.cjs --mac --arm64 --publish never",
     "test:machine-proxy:electron": "node --test machine-proxy.electron.test.cjs",
     "test:browser:electron": "node --test --test-concurrency=1 browser/surface.electron.test.cjs browser/host.electron.test.cjs browser/input-shield.electron.test.cjs browser/page-control.electron.test.cjs browser/agent-control.electron.test.cjs browser/annotations.electron.test.cjs",
     "test:browser:model": "node browser/model-image.smoke.cjs"
@@ -45,6 +45,7 @@
       "login-item.cjs",
       "update-check.cjs",
       "update-install.cjs",
+      "sparkle-install.cjs",
       "tray.cjs",
       "restart-policy.cjs",
       "quit-flow.cjs",
