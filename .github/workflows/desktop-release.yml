@@ -71,6 +71,12 @@ jobs:
           test "$(plutil -extract CFBundleShortVersionString raw "$app/Contents/Info.plist")" = "$version"
           test "$(plutil -extract CFBundleIdentifier raw "$app/Contents/Info.plist")" = io.openfox.desktop
           codesign --verify --deep --strict "$app"
+          pi="$app/Contents/Resources/pi"
+          mkdir -p "$RUNNER_TEMP/pi-home"
+          env -i HOME="$RUNNER_TEMP/pi-home" PATH=/usr/bin:/bin PI_OFFLINE=1 \
+            "$app/Contents/Resources/bin/openfox" runtime probe --provider pi --executable "$pi/pi" --timeout 30s --json | \
+            jq -e --arg version "$(jq -er '.version' "$pi/package.json")" \
+              '.error == null and .capabilities.runtime == "pi" and .capabilities.version == $version'
           dmg="apps/desktop/dist/release/OpenFox-$version-arm64.dmg"
           hdiutil verify "$dmg"
           mount="$RUNNER_TEMP/dmg-mount"

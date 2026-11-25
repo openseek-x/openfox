@@ -204,6 +204,10 @@ func (s Search) visit(ctx context.Context, tool Tool, accept func(Candidate) boo
 	if dirs(append(bins, s.SystemBins...), "well_known_bin") {
 		return
 	}
+	// 桌面首启发布该私有链接，应用移动后会刷新；保留用户安装的优先级。
+	if tool.Name == "pi" && s.OS == "darwin" && s.Home != "" {
+		try(filepath.Join(s.Home, ".local/share/openfox/desktop-pi/pi"), "macos_app")
+	}
 	if tool.Name == "codex" && s.OS == "darwin" {
 		for _, root := range []string{s.Apps, filepath.Join(s.Home, "Applications")} {
 			if root == "" {

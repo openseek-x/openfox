@@ -66,6 +66,7 @@
       "browser/tool-contract.cjs",
       "renderer/**"
     ],
+    "afterPack": "./build/bundle-pi.cjs",
     "extraResources": [
       {
         "from": "resources",
