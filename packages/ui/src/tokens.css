@@ -178,6 +178,15 @@
   }
 }
 
+@utility of-board-lane {
+  @apply bg-surface-muted/60;
+
+  :root[data-theme="dark"]:is([data-palette="dark"], [data-palette="system"])
+    & {
+    @apply bg-surface-canvas;
+  }
+}
+
 @utility of-input-frame {
   --of-input-indicator: none;
   @apply transition-colors motion-reduce:transition-none;

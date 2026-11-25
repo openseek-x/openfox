@@ -234,7 +234,7 @@ function Column({
   return (
     <section
       aria-label={`${column.name} ${count}`}
-      className="flex w-[280px] shrink-0 flex-col rounded-xl bg-surface-muted/60"
+      className="flex w-[280px] shrink-0 flex-col rounded-xl of-board-lane"
     >
       <header className="flex h-10 items-center gap-2 px-3">
         <StatusIcon category={column.category} color={column.color} />
