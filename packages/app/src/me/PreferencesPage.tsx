@@ -293,10 +293,10 @@ function ThemeTileButton({
 }
 
 const PREVIEW: Record<Exclude<ThemeChoice, "system">, Palette> = {
-  light: { app: "#efeff4", card: "#ffffff", bar: "#d4d4d8" },
-  dark: { app: "#18181b", card: "#27272a", bar: "#52525b" },
-  "magic-blue": { app: "#404665", card: "#222542", bar: "#404665" },
-  "classic-dark": { app: "#303030", card: "#161616", bar: "#303030" },
+  light: { app: "#f0f0f2", card: "#ffffff", bar: "#d4d4d8" },
+  dark: { app: "#1f1f23", card: "#27272a", bar: "#52525b" },
+  "magic-blue": { app: "#1a1d36", card: "#222542", bar: "#404665" },
+  "classic-dark": { app: "#101010", card: "#161616", bar: "#303030" },
 };
 
 interface Palette {

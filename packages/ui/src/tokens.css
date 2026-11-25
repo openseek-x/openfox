@@ -17,7 +17,7 @@
     "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   /* 背景（Figma bg/*） */
-  --color-surface-app: #efeff4;
+  --color-surface-app: #f0f0f2;
   --color-surface-canvas: #fcfcfd;
   --color-surface-card: #ffffff;
   --color-surface-muted: #f4f4f5;
@@ -221,8 +221,8 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --color-surface-app: #18181b;
-  --color-surface-canvas: #09090b;
+  --color-surface-app: #1f1f23;
+  --color-surface-canvas: #232326;
   --color-surface-card: #27272a;
   --color-surface-muted: #3f3f46;
   --color-surface-hover: #33333a;
@@ -275,7 +275,7 @@
 }
 
 :root[data-palette="magic-blue"] {
-  --color-surface-app: oklch(0.12 0.005 285.823);
+  --color-surface-app: #1a1d36;
   --color-surface-canvas: #222542;
   --color-surface-card: #222542;
   --color-surface-sidebar: #222542;
@@ -287,7 +287,7 @@
 }
 
 :root[data-palette="classic-dark"] {
-  --color-surface-app: oklch(0.12 0.005 285.823);
+  --color-surface-app: #101010;
   --color-surface-canvas: #161616;
   --color-surface-card: #161616;
   --color-surface-sidebar: #161616;
