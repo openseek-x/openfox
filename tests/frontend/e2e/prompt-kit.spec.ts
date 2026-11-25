@@ -882,6 +882,8 @@ for (const locale of ["zh-CN", "en-US"] as const) {
     const t = createTranslator(locale);
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
+    // 为面板拖宽 100px 及任务正文预留足够空间。
+    await page.setViewportSize({ width: 1680, height: 900 });
     const sent = await mockChat(page, "light", locale);
     await mockTaskComments(page);
     await page.goto("/o/o1/tasks/OPEN-1?view=chat&conversationId=c1");
@@ -974,11 +976,17 @@ for (const locale of ["zh-CN", "en-US"] as const) {
     );
     await expect(handle).toHaveAttribute(
       "aria-valuenow",
-      String(Math.min(960, parentWidth - 400)),
+      String(Math.min(960, parentWidth - 560)),
     );
     await page.setViewportSize({ width: 900, height: 900 });
     await expect(handle).toBeHidden();
-    await expect(panel).toHaveCSS("position", "absolute");
+    await expect(panel).toBeVisible();
+    await expect(
+      page.getByRole("button", {
+        name: t("tasks.detail.taskView"),
+        exact: true,
+      }),
+    ).toBeVisible();
     expect(
       await panel.evaluate((node) => node.scrollWidth <= node.clientWidth),
     ).toBe(true);
@@ -1354,10 +1362,11 @@ for (const { theme, locale } of [
     expect(
       Math.abs(attach.y + attach.height / 2 - send.y - send.height / 2),
     ).toBeLessThan(3);
-    await expect(composer).toHaveCSS("border-radius", "18px");
+    await expect(composer).toHaveCSS("border-radius", "22px");
+    await expect(composer).not.toHaveCSS("box-shadow", "none");
     await expect(input).toHaveCSS("min-height", "72px");
-    expect(send.width).toBe(28);
-    expect(send.height).toBe(28);
+    expect(send.width).toBe(32);
+    expect(send.height).toBe(32);
     const approval = composer.getByRole("button", {
       name: new RegExp(`^${t("chat.overrides.approval")}[：:]`),
     });
@@ -1389,9 +1398,48 @@ for (const { theme, locale } of [
       await expect(button).toHaveAccessibleName(new RegExp(`^${label}`));
       const buttonBounds = (await button.boundingBox())!;
       expect(buttonBounds.x).toBeGreaterThanOrEqual(previousRight);
-      expect(Math.abs(buttonBounds.y - send.y)).toBeLessThan(1);
+      expect(
+        Math.abs(
+          buttonBounds.y + buttonBounds.height / 2 - send.y - send.height / 2,
+        ),
+      ).toBeLessThan(1);
       previousRight = buttonBounds.x + buttonBounds.width;
     }
+    const sendButton = composer.getByRole("button", {
+      name: t("chat.composer.send"),
+      exact: true,
+    });
+    await expect(sendButton).toBeDisabled();
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const filename = "notes-for-the-next-design-review.txt";
+    await composer.getByTestId("composer-file-input").setInputFiles({
+      name: filename,
+      mimeType: "text/plain",
+      buffer: Buffer.from("review"),
+    });
+    await expect(sendButton).toBeEnabled();
+    const primaryColor = await sendButton.evaluate(
+      (button) => getComputedStyle(button).backgroundColor,
+    );
+    await sendButton.hover();
+    await expect(sendButton).toHaveCSS("background-color", primaryColor);
+    await input.fill(
+      locale === "zh-CN"
+        ? "请看附件里的评审备注。"
+        : "Please review the attached notes.",
+    );
+    await page.mouse.move(0, 0);
+    await page.screenshot({
+      path: testInfo.outputPath("floating-composer.png"),
+    });
+    await composer
+      .getByRole("button", {
+        name: t("attachments.remove", { name: filename }),
+      })
+      .click();
+    await expect(composer.getByText(filename)).toHaveCount(0);
+    await input.fill("");
+    await expect(sendButton).toBeDisabled();
     await page.mouse.move(0, 0);
     await composer.screenshot({ path: testInfo.outputPath("composer.png") });
     expect(errors).toEqual([]);
