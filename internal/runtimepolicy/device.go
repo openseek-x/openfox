@@ -8,6 +8,9 @@ import (
 	"unicode"
 )
 
+// DefaultDeviceMaxRuns applies when registration or the local daemon omits its limit.
+const DefaultDeviceMaxRuns = 5
+
 // DevicePreferences are local to a physical computer, shared by its owner's organizations.
 type DevicePreferences struct {
 	SessionIdleMinutes int      `json:"session_idle_minutes,omitempty"`

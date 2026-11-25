@@ -367,6 +367,26 @@ describe("防止休眠", () => {
     ]);
   });
 
+  it("限时保持唤醒覆盖空闲，期满仍保护活动任务，取消会释放", (t) => {
+    t.mock.timers.enable({ apis: ["setTimeout", "Date"] });
+    const blocker = fakeBlocker();
+    const guard = createSleepGuard(blocker);
+    guard.keepAwakeFor(60);
+    assert.equal(guard.until, Date.now() + 3600000);
+    assert.equal(guard.active, true);
+    assert.equal(guard.protectingRuns, false);
+    guard.update({ enabled: true, activeRuns: 1 });
+    t.mock.timers.tick(3600000);
+    assert.equal(guard.until, 0);
+    assert.equal(guard.active, true);
+    guard.update({ enabled: true, activeRuns: 0 });
+    assert.equal(guard.active, false);
+    guard.keepAwakeFor(120);
+    guard.keepAwakeFor(0);
+    assert.equal(guard.active, false);
+    assert.throws(() => guard.keepAwakeFor(-1));
+  });
+
   it("活动 Run 数：缺失、负数、非整数按 0", () => {
     assert.equal(activeRunCount({ active_runs: 2 }), 2);
     for (const status of [
@@ -421,6 +441,19 @@ describe("parseRegistrationStatus", () => {
     );
   });
 
+  it("保留 CLI 报告的额外组织，用于匹配共享到其他组织的本机", () => {
+    const org = "00000000-0000-4000-8000-000000000002";
+    const registration = parseRegistrationStatus(
+      JSON.stringify({
+        registered: true,
+        device_id: "d1",
+        organization_id: "o1",
+        organization_ids: [org, null, "bad"],
+      }),
+    );
+    assert.deepEqual(registration.organization_ids, [org]);
+  });
+
   it("旧版 CLI 没有 center_url 或地址不合法时不传", () => {
     for (const center_url of [
       undefined,
@@ -443,10 +476,22 @@ describe("parseRegistrationStatus", () => {
   });
 
   it("未注册只返回原因", () => {
-    assert.deepEqual(parseRegistrationStatus('{"registered":false}'), {
-      registered: false,
-      reason: "not_registered",
-    });
+    for (const input of [
+      "{}",
+      '{"registered":false}',
+      '{"registered":false,"reason":"unavailable"}',
+    ])
+      assert.deepEqual(parseRegistrationStatus(input), {
+        registered: false,
+        reason: "unavailable",
+      });
+    assert.deepEqual(
+      parseRegistrationStatus('{"registered":false,"reason":"not_registered"}'),
+      {
+        registered: false,
+        reason: "not_registered",
+      },
+    );
     assert.deepEqual(
       parseRegistrationStatus('{"registered":false,"reason":"invalid_config"}'),
       { registered: false, reason: "invalid_config" },

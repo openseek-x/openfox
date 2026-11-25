@@ -203,6 +203,9 @@ function runOpenFox(args, input, signal) {
         );
         if (
           [
+            "storage_busy",
+            "storage_target_invalid",
+            "storage_different_volume",
             "machine_proxy_invalid",
             "machine_proxy_conflict",
             "machine_proxy_busy",
@@ -238,6 +241,12 @@ async function daemonStatus() {
     return {
       state: String(parsed.state || "UNAVAILABLE"),
       remote_state: parsed.remote_state,
+      started_at:
+        typeof parsed.started_at === "string" &&
+        !parsed.started_at.startsWith("0001-") &&
+        Number.isFinite(Date.parse(parsed.started_at))
+          ? parsed.started_at
+          : undefined,
       pid: Number.isFinite(parsed.pid) ? parsed.pid : undefined,
       center_epoch: Number.isFinite(parsed.center_epoch)
         ? parsed.center_epoch
@@ -279,7 +288,7 @@ function settingsFile() {
 }
 
 function preventSleepState() {
-  return { enabled: settings.prevent_sleep, active: sleepGuard.active };
+  return { enabled: settings.prevent_sleep, active: sleepGuard.protectingRuns };
 }
 
 /** 按设置与本机活动 Run 数更新 blocker；开启时定时复查，关闭时停止定时器。 */
@@ -355,15 +364,15 @@ async function registerComputer(input) {
   if (!isValidInstallToken(token))
     return { ok: false, reason: "invalid_token" };
   if (registering) return { ok: false, reason: "busy" };
-  if (cliReady) await cliReady;
-  let binary;
-  try {
-    binary = resolveBinary();
-  } catch {
-    return { ok: false, reason: "unavailable" };
-  }
   registering = true;
   try {
+    if (cliReady) await cliReady;
+    let binary;
+    try {
+      binary = resolveBinary();
+    } catch {
+      return { ok: false, reason: "unavailable" };
+    }
     const reason = await new Promise((resolve) => {
       // --install-token - 让 CLI 从 stdin 读一行令牌：令牌不出现在进程参数里（ps 看不到）
       const child = execFile(
@@ -1079,6 +1088,41 @@ async function localServiceRequest(operation, event, input) {
       registration: registrationStatus,
       run: (args, payload) => runOpenFox(args, payload, controller.signal),
       desktopProxy: () => networkProxy.view(),
+      serviceDetails: () => ({
+        keep_service_running: localPrefs.get().keep_service_running,
+        awake_until: sleepGuard.until,
+      }),
+      setAwakeMinutes: (minutes) => sleepGuard.keepAwakeFor(minutes),
+      setKeepRunning: (enabled) =>
+        localPrefs.update({ keep_service_running: enabled }),
+      openStorage: async (location) => {
+        const real = await fs.realpath(localStorageDir);
+        if (
+          real !== location ||
+          !(await fs.lstat(real)).isDirectory() ||
+          (await shell.openPath(real))
+        )
+          throw Error("storage_unavailable");
+      },
+      chooseStorage: async () => {
+        const owner = BrowserWindow.fromWebContents(contents);
+        if (!owner) throw Error("unavailable");
+        const picked = await dialog.showOpenDialog(owner, {
+          title: tr("storage.choose"),
+          properties: ["openDirectory", "createDirectory"],
+        });
+        if (picked.canceled || !picked.filePaths[0]) return null;
+        const parent = picked.filePaths[0];
+        const confirmation = await dialog.showMessageBox(owner, {
+          type: "question",
+          message: tr("storage.move"),
+          detail: tr("storage.detail", { path: path.join(parent, "OpenFox") }),
+          buttons: [tr("storage.move"), tr("quit.cancel")],
+          defaultId: 1,
+          cancelId: 1,
+        });
+        return confirmation.response === 0 ? parent : null;
+      },
       status: localStatus,
       ensureCurrent() {
         controller.signal.throwIfAborted();
@@ -1093,6 +1137,17 @@ async function localServiceRequest(operation, event, input) {
     });
   } catch (error) {
     // Do not expose CLI stderr, file paths or session/network error details.
+    if (operation === "move-storage" && error.message === "busy")
+      throw Error("storage_busy");
+    if (
+      operation === "move-storage" &&
+      [
+        "storage_busy",
+        "storage_target_invalid",
+        "storage_different_volume",
+      ].includes(error.code || error.message)
+    )
+      throw Error(error.code || error.message);
     if (
       operation.startsWith("proxy-") &&
       [
@@ -1112,6 +1167,10 @@ async function localServiceRequest(operation, event, input) {
 }
 for (const operation of [
   "service-status",
+  "keep-running",
+  "open-storage",
+  "move-storage",
+  "timed-awake",
   "startup",
   "logs",
   "action",
@@ -1404,6 +1463,12 @@ const UPDATE_STARTUP_DELAY_MS = 30_000;
 const UPDATE_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const UPDATE_TIMEOUT_MS = 10_000;
 const UPDATE_MAX_BYTES = 16 * 1024;
+const localStorageDir = path.join(
+  os.homedir(),
+  "Library",
+  "Application Support",
+  "OpenFox",
+);
 const launchAgentFile = path.join(
   os.homedir(),
   "Library",
@@ -1421,15 +1486,23 @@ function showMainWindow() {
   mainWindow.focus();
 }
 
+async function localServiceInstalled() {
+  for (const file of [
+    launchAgentFile,
+    path.join(localStorageDir, "daemon-service.plist"),
+  ]) {
+    try {
+      if ((await fs.lstat(file)).isFile()) return true;
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
+  }
+  return false;
+}
+
 async function refreshTray() {
   if (!tray) return;
-  let installed = false;
-  try {
-    await fs.access(launchAgentFile);
-    installed = true;
-  } catch {
-    // 未安装本地服务
-  }
+  const installed = await localServiceInstalled().catch(() => false);
   const daemon = installed ? await daemonStatus() : null;
   trayService = serviceStatus({
     installed,
@@ -1692,13 +1765,7 @@ const confirmQuit = createQuitFlow({
   getKeepService: () => localPrefs.get().keep_service_running,
   setKeepService: (value) => localPrefs.update({ keep_service_running: value }),
   getService: async () => {
-    let installed = false;
-    try {
-      await fs.access(launchAgentFile);
-      installed = true;
-    } catch {
-      // 未安装本地服务
-    }
+    const installed = await localServiceInstalled();
     return { installed, daemon: installed ? await daemonStatus() : null };
   },
   showDialog: (options) => {

@@ -61,7 +61,9 @@ func DefaultConfigDir() (string, error) {
 		return "", fmt.Errorf("resolve home directory: %w", err)
 	}
 	if runtime.GOOS == "darwin" {
-		return filepath.Join(home, "Library", "Application Support", "OpenFox"), nil
+		root := filepath.Join(home, "Library", "Application Support", "OpenFox")
+		_, err := storageLocation(root)
+		return root, err
 	}
 	if xdg := strings.TrimSpace(os.Getenv("XDG_CONFIG_HOME")); xdg != "" && filepath.IsAbs(xdg) {
 		return filepath.Join(xdg, "openfox"), nil
@@ -160,7 +162,7 @@ func WritePrivateFile(path string, contents []byte) error {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return fmt.Errorf("create directory: %w", err)
 	}
-	if info, err := os.Lstat(dir); err != nil || !info.IsDir() {
+	if !checkedDirectory(dir) {
 		return fmt.Errorf("%w: parent is not a directory", ErrUnsafeFile)
 	}
 	if info, err := os.Lstat(path); err == nil {
@@ -216,6 +218,17 @@ func readPrivateFile(path string, limit int64) ([]byte, error) {
 		return nil, fmt.Errorf("%w: %s is too large", ErrUnsafeFile, filepath.Base(path))
 	}
 	return os.ReadFile(path)
+}
+
+// LockDeviceIdentity serializes registration and rotation across local processes.
+func LockDeviceIdentity(dir string) (*os.File, error) {
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return nil, err
+	}
+	if !checkedDirectory(dir) {
+		return nil, ErrUnsafeFile
+	}
+	return lockIdentityFile(filepath.Join(dir, "device-identity.lock"))
 }
 
 // GenerateDeviceKey 生成 ed25519 密钥对，返回私钥与 key_id（公钥 sha256 前 16 字节 hex）。

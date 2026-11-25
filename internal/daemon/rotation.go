@@ -115,6 +115,11 @@ func (r *KeyRotator) Rotate(ctx context.Context) (KeyRotationResult, error) {
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	lock, err := LockDeviceIdentity(filepath.Dir(r.ConfigPath))
+	if err != nil {
+		return KeyRotationResult{}, err
+	}
+	defer lock.Close()
 	logger := r.Logger
 	if logger == nil {
 		logger = slog.Default()

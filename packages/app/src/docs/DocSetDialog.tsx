@@ -176,7 +176,7 @@ function NameShell({
   return (
     <div
       className={cn(
-        "flex h-9 items-center gap-2 rounded-lg border bg-surface-card pr-3 pl-1 transition-colors focus-within:shadow-focus [&>button]:size-7 [&>button]:border-0",
+        "of-input-frame flex h-9 items-center gap-2 rounded-lg border bg-surface-card pr-3 pl-1 [&>button]:size-7 [&>button]:border-0",
         tooLong
           ? "border-danger"
           : "border-line-default focus-within:border-line-focus",

@@ -1,6 +1,5 @@
 import { desktopBridge } from "../desktop";
 import { ProxyDialog } from "./ProxyDialog";
-import { useCanManage } from "./common";
 import { Fragment, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 
@@ -19,8 +18,6 @@ interface SettingsItem {
   label: MessageKey;
   /** 阶段 4c · 只有内测账号可见 */
   beta?: boolean;
-  /** 阶段 12e · 只有组织所有者与管理员可见 */
-  adminOnly?: boolean;
 }
 
 interface SettingsGroup {
@@ -49,19 +46,6 @@ export const settingsGroups: SettingsGroup[] = [
         path: "import-export",
         icon: "arrow-left-right",
         label: "settings.items.importExport",
-      },
-      // 阶段 12e · 资源配额与审计日志（仅所有者与管理员）
-      {
-        path: "quotas",
-        icon: "sliders-horizontal",
-        label: "governance.quota.nav",
-        adminOnly: true,
-      },
-      {
-        path: "audit-log",
-        icon: "history",
-        label: "governance.audit.nav",
-        adminOnly: true,
       },
     ],
   },
@@ -154,7 +138,6 @@ export function SettingsNavigation({
   const bridge = desktopBridge();
   const base = `/o/${orgId}/settings`;
   const beta = useBetaTier() === true;
-  const canManage = useCanManage(orgId);
   return (
     <nav
       aria-label={t("settings.a11y.nav")}
@@ -177,10 +160,7 @@ export function SettingsNavigation({
               {t(group.label)}
             </div>
             {group.items
-              .filter(
-                (item) =>
-                  (!item.beta || beta) && (!item.adminOnly || canManage),
-              )
+              .filter((item) => !item.beta || beta)
               .map((item) => (
                 <NavLink
                   key={item.path}
@@ -189,7 +169,7 @@ export function SettingsNavigation({
                   end={item.path === "spaces"}
                   className={({ isActive }) =>
                     cn(
-                      "flex h-[var(--density-nav-row,30px)] items-center gap-2 rounded-lg px-2 text-body hover:bg-surface-hover",
+                      "flex h-[var(--density-nav-row,30px)] items-center gap-2 rounded-lg px-2 text-body transition-colors duration-100 not-aria-[current=page]:hover:bg-surface-hover motion-reduce:transition-none",
                       isActive
                         ? "bg-surface-active font-medium"
                         : "text-fg-default",
@@ -211,7 +191,7 @@ export function SettingsNavigation({
                   to={base + "/daemon"}
                   className={({ isActive }) =>
                     cn(
-                      "flex h-[var(--density-nav-row,30px)] items-center gap-2 rounded-lg px-2 text-body hover:bg-surface-hover",
+                      "flex h-[var(--density-nav-row,30px)] items-center gap-2 rounded-lg px-2 text-body transition-colors duration-100 not-aria-[current=page]:hover:bg-surface-hover motion-reduce:transition-none",
                       isActive && "bg-surface-active font-medium",
                     )
                   }
@@ -224,7 +204,7 @@ export function SettingsNavigation({
                     to={base + "/about"}
                     className={({ isActive }) =>
                       cn(
-                        "flex h-[var(--density-nav-row,30px)] items-center gap-2 rounded-lg px-2 text-body hover:bg-surface-hover",
+                        "flex h-[var(--density-nav-row,30px)] items-center gap-2 rounded-lg px-2 text-body transition-colors duration-100 not-aria-[current=page]:hover:bg-surface-hover motion-reduce:transition-none",
                         isActive && "bg-surface-active font-medium",
                       )
                     }

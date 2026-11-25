@@ -230,6 +230,35 @@ describe("本机注册地址已变更 / 连不上服务器的卡片", () => {
       center_url,
     }) as const;
 
+  it("另一个中心的预览同时显示本机服务与离线样例，只在注册的中心标为可用", async () => {
+    const registeredCenter = "https://team.example/openfox";
+    const register = installBridge(
+      status({
+        registered: true,
+        organization_id: "o9",
+        device_id: "d1",
+        center_url: registeredCenter,
+      }),
+    );
+    renderSettings(
+      "/o/o1/settings/computers",
+      centerRoute("http://127.0.0.1:44174", [
+        { ...device("d1"), name: "Unnamed device", online: false },
+      ]),
+    );
+    const card = await screen.findByRole("region", { name: "这台电脑" });
+    expect(await within(card).findByText("已连接其他服务器")).toBeVisible();
+    expect(within(card).getByText("lin-mbp")).toBeVisible();
+    expect(within(card).queryByText("可用")).toBeNull();
+    expect(within(card).queryByRole("button", { name: "重新连接" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: /^电脑：/ }));
+    const popover = await screen.findByRole("dialog", { name: "电脑列表" });
+    const local = within(popover).getByRole("region", { name: "本机" });
+    expect(await within(local).findByText("已连接其他服务器")).toBeVisible();
+    expect(within(local).queryByText("Unnamed device")).toBeNull();
+    expect(register).not.toHaveBeenCalled();
+  });
+
   it("地址已变更：提示旧地址，点击重新连接走 force: true，且不显示「可用」", async () => {
     const register = installBridge(
       status(registered("http://127.0.0.1:18080")),
@@ -255,17 +284,30 @@ describe("本机注册地址已变更 / 连不上服务器的卡片", () => {
   });
 
   it.each([
-    ["地址一致（末尾斜杠）", "https://203.0.113.25/", "https://203.0.113.25"],
-    ["接口失败", "http://127.0.0.1:18080", null],
-    ["旧版桌面端没有地址", undefined, "https://203.0.113.25"],
-  ])("%s：不提示，仍是可用", async (_name, local, center) => {
-    installBridge(status(registered(local)));
-    renderSettings("/o/o1/settings/computers", centerRoute(center));
-    const card = await screen.findByRole("region", { name: "这台电脑" });
-    expect(await within(card).findByText("可用")).toBeInTheDocument();
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(within(card).queryByText(/旧的服务器地址/)).toBeNull();
-  });
+    [
+      "地址一致（末尾斜杠）",
+      "https://203.0.113.25/",
+      "https://203.0.113.25",
+      "可用",
+    ],
+    ["接口失败", "http://127.0.0.1:18080", null, "尚未确认本机连接"],
+    [
+      "旧版桌面端没有地址",
+      undefined,
+      "https://203.0.113.25",
+      "尚未确认本机连接",
+    ],
+  ] as const)(
+    "%s：依据已核实的连接显示状态",
+    async (_name, local, center, expected) => {
+      installBridge(status(registered(local)));
+      renderSettings("/o/o1/settings/computers", centerRoute(center));
+      const card = await screen.findByRole("region", { name: "这台电脑" });
+      expect(await within(card).findByText(expected)).toBeInTheDocument();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(within(card).queryByText(/旧的服务器地址/)).toBeNull();
+    },
+  );
 
   it.each(["RECONNECTING", "DISCONNECTED"])(
     "本机服务运行但 %s：不显示可用，显示连不上服务器",
@@ -312,6 +354,8 @@ describe("电脑详情页「修复并重连」", () => {
     created_at: ts,
   });
   const detailRoute = (call: Call): Response | undefined => {
+    if (call.path.endsWith("/devices/center"))
+      return json(200, { center_url: "https://team.example" });
     if (
       call.method === "GET" &&
       call.path === "/v1/organizations/o1/devices/d1"
@@ -326,15 +370,32 @@ describe("电脑详情页「修复并重连」", () => {
         registered: true,
         organization_id: "o1",
         device_id: "d1",
+        center_url: "https://team.example",
+      }),
+    );
+    renderSettings("/o/o1/settings/computers?computer=d1", detailRoute);
+    const repair = () => screen.getByRole("button", { name: "修复并重连" });
+    await waitFor(() => expect(repair()).toBeEnabled());
+    await userEvent.click(repair());
+    await waitFor(() =>
+      expect(register).toHaveBeenCalledWith(TOKEN, { force: true }),
+    );
+  });
+
+  it("服务器不同，即使组织和设备 ID 相同也不能修复该记录", async () => {
+    const register = installBridge(
+      status({
+        registered: true,
+        organization_id: "o1",
+        device_id: "d1",
+        center_url: "https://preview.example",
       }),
     );
     renderSettings("/o/o1/settings/computers?computer=d1", detailRoute);
     const button = await screen.findByRole("button", { name: "修复并重连" });
-    await waitFor(() => expect(button).toBeEnabled());
     await userEvent.click(button);
-    await waitFor(() =>
-      expect(register).toHaveBeenCalledWith(TOKEN, { force: true }),
-    );
+    expect(button).toBeDisabled();
+    expect(register).not.toHaveBeenCalled();
   });
 
   it("其他电脑或浏览器里：禁用并提示只能在本机客户端修复", async () => {
@@ -495,111 +556,21 @@ describe("桌面端自动注册本机", () => {
   });
 });
 
-describe("重新连接后把旧记录上的 Agent 迁到新记录（8g）", () => {
-  const REPLACE = "/v1/organizations/o1/devices/d-new/replace";
-  const replaceRoute =
-    (reply: () => Response) =>
-    (call: Call): Response | undefined =>
-      call.method === "POST" && call.path === REPLACE
-        ? reply()
-        : route([device("d-other")])(call);
-  const staleBridge = () =>
-    installBridge(
-      status({ registered: true, organization_id: "o1", device_id: "d-old" }),
-    );
-  const reconnect = async () => {
-    const local = await screen.findByRole("region", { name: "这台电脑" });
-    await userEvent.click(
-      await within(local).findByRole("button", { name: "重新连接" }),
-    );
-  };
-  const replaceCalls = (calls: Call[]) =>
-    calls.filter((call) => call.path.endsWith("/replace"));
-
-  it("强制重连成功后用新旧记录 ID 调用迁移接口，并提示迁走的数量", async () => {
-    const register = staleBridge();
-    const calls = renderSettings(
-      "/o/o1/settings/computers",
-      replaceRoute(() =>
-        json(200, {
-          device_id: "d-new",
-          replaced_device_id: "d-old",
-          moved_agents: 2,
-          canceled_runs: 1,
-        }),
-      ),
-    );
-    await reconnect();
-    await waitFor(() =>
-      expect(register).toHaveBeenCalledWith(TOKEN, { force: true }),
-    );
-    expect(
-      await screen.findByText("已把 2 个 Agent 迁到这台电脑"),
-    ).toBeInTheDocument();
-    expect(replaceCalls(calls)).toHaveLength(1);
-    expect(replaceCalls(calls)[0]!.body).toEqual({
-      replaced_device_id: "d-old",
-    });
-  });
-
-  it("迁走 0 个 Agent：不额外提示", async () => {
-    staleBridge();
-    const calls = renderSettings(
-      "/o/o1/settings/computers",
-      replaceRoute(() =>
-        json(200, {
-          device_id: "d-new",
-          replaced_device_id: "d-old",
-          moved_agents: 0,
-          canceled_runs: 0,
-        }),
-      ),
-    );
-    await reconnect();
-    expect(await screen.findByText("已自动连接这台电脑")).toBeInTheDocument();
-    await waitFor(() => expect(replaceCalls(calls)).toHaveLength(1));
-    expect(screen.queryByText(/个 Agent 迁到这台电脑/)).toBeNull();
-    expect(screen.queryByText(/没有迁过来/)).toBeNull();
-  });
-
-  it("404：旧记录不在这个服务器上或已处理过，静默", async () => {
-    staleBridge();
-    const calls = renderSettings(
-      "/o/o1/settings/computers",
-      replaceRoute(() => apiError(404, "NOT_FOUND")),
-    );
-    await reconnect();
-    expect(await screen.findByText("已自动连接这台电脑")).toBeInTheDocument();
-    await waitFor(() => expect(replaceCalls(calls)).toHaveLength(1));
-    expect(screen.queryByText(/没有迁过来/)).toBeNull();
-  });
-
-  it("409 等其他错误：重新连接仍算成功，另外提示可以去旧电脑详情页迁移", async () => {
-    staleBridge();
-    renderSettings(
-      "/o/o1/settings/computers",
-      replaceRoute(() => apiError(409, "DEVICE_ONLINE")),
-    );
-    await reconnect();
-    expect(await screen.findByText("已自动连接这台电脑")).toBeInTheDocument();
-    expect(
-      await screen.findByText(
-        "旧电脑上的 Agent 没有迁过来，可以在旧电脑的详情页里迁移",
-      ),
-    ).toBeInTheDocument();
-  });
-
-  it("非强制注册（本机尚未注册）：不调用迁移接口", async () => {
-    const register = installBridge(
-      status({ registered: false, reason: "not_registered" }),
-    );
-    const calls = renderSettings("/o/o1/settings/computers", route([]));
-    await waitFor(() =>
-      expect(register).toHaveBeenCalledWith(TOKEN, { force: false }),
-    );
-    await screen.findByText("已自动连接这台电脑");
-    expect(replaceCalls(calls)).toHaveLength(0);
-  });
+it("重新连接成功后保留绑定，迁移旧记录由所有者明确发起", async () => {
+  const register = installBridge(
+    status({ registered: true, organization_id: "o1", device_id: "d-old" }),
+  );
+  const calls = renderSettings(
+    "/o/o1/settings/computers",
+    route([device("d-other")]),
+  );
+  const local = await screen.findByRole("region", { name: "这台电脑" });
+  await userEvent.click(
+    await within(local).findByRole("button", { name: "重新连接" }),
+  );
+  await screen.findByText("已自动连接这台电脑");
+  expect(register).toHaveBeenCalledWith(TOKEN, { force: true });
+  expect(calls.some((call) => call.path.endsWith("/replace"))).toBe(false);
 });
 
 describe("旧电脑详情页「迁移到这台电脑」（8g）", () => {
@@ -615,6 +586,8 @@ describe("旧电脑详情页「迁移到这台电脑」（8g）", () => {
   const routes =
     (old: ReturnType<typeof offlineOld>, list: Device[]) =>
     (call: Call): Response | undefined => {
+      if (call.path.endsWith("/devices/center"))
+        return json(200, { center_url: "https://team.example" });
       if (call.method === "GET" && call.path === "/v1/organizations/o1/devices")
         return json(200, { devices: list, next_cursor: null });
       if (
@@ -633,8 +606,17 @@ describe("旧电脑详情页「迁移到这台电脑」（8g）", () => {
         });
       return undefined;
     };
-  const localNew = (org = "o1", id = "d-new") =>
-    status({ registered: true, organization_id: org, device_id: id });
+  const localNew = (
+    org = "o1",
+    id = "d-new",
+    center = "https://team.example",
+  ) =>
+    status({
+      registered: true,
+      organization_id: org,
+      device_id: id,
+      center_url: center,
+    });
   const open = "/o/o1/settings/computers?computer=d-old";
   const button = () => screen.queryByRole("button", { name: "迁移到这台电脑" });
 
@@ -700,6 +682,12 @@ describe("旧电脑详情页「迁移到这台电脑」（8g）", () => {
   });
 
   it.each([
+    [
+      "同组织和目标设备 ID 出现在另一个中心",
+      localNew("o1", "d-new", "https://preview.example"),
+      offlineOld(),
+      [device("d-old"), device("d-new")],
+    ],
     [
       "本机注册在其他组织",
       localNew("o9"),

@@ -30,15 +30,19 @@ const sizeClass: Record<ButtonSize, string> = {
 };
 
 const variantClass: Record<ButtonVariant, string> = {
-  primary: "bg-primary text-fg-inverse hover:bg-primary/90",
-  secondary: "bg-surface-muted text-fg-default hover:bg-surface-active",
+  primary:
+    "bg-primary text-fg-inverse enabled:not-aria-disabled:hover:bg-primary/90",
+  secondary:
+    "bg-surface-muted text-fg-default enabled:not-aria-disabled:hover:bg-secondary-hover",
   outline:
-    "bg-surface-card text-fg-default border border-line-default hover:bg-surface-hover",
-  ghost: "text-fg-secondary hover:bg-surface-muted",
-  "ghost-muted": "text-fg-muted hover:bg-surface-muted",
-  danger: "bg-danger text-fg-inverse hover:bg-danger/90",
+    "bg-surface-card text-fg-default border border-line-default enabled:not-aria-disabled:hover:bg-surface-hover",
+  ghost: "text-fg-secondary enabled:not-aria-disabled:hover:bg-control-hover",
+  "ghost-muted":
+    "text-fg-muted enabled:not-aria-disabled:hover:bg-control-hover",
+  danger:
+    "bg-danger text-fg-inverse enabled:not-aria-disabled:hover:bg-danger/90",
   "danger-outline":
-    "bg-surface-card text-danger border border-danger-border hover:bg-danger-soft",
+    "bg-surface-card text-danger border border-danger-border enabled:not-aria-disabled:hover:bg-danger-soft",
 };
 
 /** 按钮。loading 时禁用并在文字前显示转圈。 */
@@ -66,7 +70,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={isDisabled}
         aria-busy={loading || undefined}
         className={cn(
-          "inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap transition-colors select-none",
+          "inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap transition-colors duration-100 select-none motion-reduce:transition-none",
           "disabled:cursor-not-allowed disabled:opacity-50",
           variant === "primary" &&
             isDisabled &&

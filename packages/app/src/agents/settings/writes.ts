@@ -9,7 +9,7 @@ import { useT } from "@openfox/i18n";
 import { useToast } from "@openfox/ui";
 
 import { keys, useApi } from "../../context";
-import { configInputFrom } from "../model";
+import { CONFIG_DEFAULTS, configInputFrom } from "../model";
 import { storeAgent, useOptimisticMutation } from "../queries";
 
 type ProfileChanges = Omit<AgentProfilePatch, "profile_version">;
@@ -65,13 +65,28 @@ export function useAgentWrites(orgId: string, agent: SpaceAgent) {
       queryKey,
       mutationFn: (changes) => {
         const current = latest(queryClient, orgId, agent);
-        if (!current.config) throw new Error("agent has no config");
+        const initial = current.config
+          ? configInputFrom(current.config)
+          : current.current_config_version === 0 &&
+              changes.computer_id &&
+              changes.grant_id &&
+              changes.runtime &&
+              changes.model
+            ? {
+                ...CONFIG_DEFAULTS,
+                computer_id: changes.computer_id,
+                grant_id: changes.grant_id,
+                runtime: changes.runtime,
+                model: changes.model,
+              }
+            : null;
+        if (!initial) throw new Error("Select a computer and runtime first");
         return api.agents.createConfigVersion(
           orgId,
           current.space_id,
           current.id,
           {
-            ...configInputFrom(current.config),
+            ...initial,
             ...changes,
             expected_agent_version: current.version,
           },

@@ -144,6 +144,17 @@ func ListNodes(ctx context.Context, tx pgx.Tx, spaceID, userID string, c Contain
 	return collectNodes(rows)
 }
 
+// RecentPersonalFiles returns the 12 most recently modified files across the user's personal tree.
+func RecentPersonalFiles(ctx context.Context, tx pgx.Tx, spaceID, userID string) ([]Node, error) {
+	rows, err := tx.Query(ctx, nodeSelect+` AND n.space_id = $1::uuid AND n.set_id IS NULL
+		AND n.owner_user_id = $2::uuid AND n.kind <> 'folder'
+		ORDER BY n.updated_at DESC, n.id LIMIT 12`, spaceID, userID)
+	if err != nil {
+		return nil, err
+	}
+	return collectNodes(rows)
+}
+
 // SearchNodes 按标题搜索：范围是我的文档加上空间内的文档集节点，最多 50 条。query 应已去除首尾空白。
 func SearchNodes(ctx context.Context, tx pgx.Tx, spaceID, userID, query string) ([]Node, error) {
 	rows, err := tx.Query(ctx, nodeSelect+` AND n.space_id = $1::uuid

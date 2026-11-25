@@ -11907,7 +11907,7 @@ paths:
           $ref: "#/components/responses/Error"
     patch:
       operationId: updateDevice
-      summary: 修改电脑名称与并发上限（仅电脑所有者；settings_version 乐观锁）
+      summary: 修改电脑名称、并发上限及本组织工作流权限（仅电脑所有者；settings_version 乐观锁）
       description: |
         非所有者、电脑不在当前组织的有效授权内，一律 404 NOT_FOUND。settings_version 不一致返回 409 RECONCILIATION_CONFLICT。
         并发上限低于当前已占用数时允许保存，只影响后续派发。心跳不改变 settings_version。
@@ -13449,7 +13449,8 @@ paths:
       summary: 设备用注册令牌兑换身份（无需认证；令牌一次性）
       description: |
         token 同时接受 v2 安装令牌（ofx_v2_…，中心解出其中的注册令牌明文再算哈希）与旧的纯注册令牌。
-        令牌已用 / 已过期 / 已吊销 / 签发人已无签发资格：409 REGISTRATION_CONFLICT；并发兑换同一令牌只有 1 次成功。
+        签名须绑定提交的 token 和 key_id。首次登记创建电脑，持有效密钥的同一安装用新令牌重连时复用原设备 ID 和有效授权。
+        每枚令牌只能成功兑换一次。无效令牌、所有者不符、设备或密钥已吊销、组织不允许接入时返回 409 REGISTRATION_CONFLICT。
       requestBody:
         required: true
         content:
@@ -13479,7 +13480,7 @@ paths:
                 key_id: { type: string, minLength: 1, maxLength: 128 }
       responses:
         '201':
-          description: 挑战；设备用私钥对 deviceauth.CanonicalPayload(challenge_id, device_id, key_id, nonce, challenge) 签名（nonce / challenge 为 base64url 解码后的字节）
+          description: 设备先用中心公开 API 地址与 nonce 复算 challenge，再用私钥对 deviceauth.CanonicalPayload(challenge_id, device_id, key_id, nonce, challenge) 签名（nonce / challenge 为 base64url 解码后的字节）
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DeviceAuthChallenge' }
@@ -15484,8 +15485,9 @@ paths:
       - { name: spaceID, in: path, required: true, schema: { type: string, format: uuid } }
     get:
       operationId: listDocNodes
-      summary: 列出某个容器内某个父节点下的子节点（按 position、title；每次最多 500）
+      summary: 列出目录子节点，或列出个人文档中最近修改的文件
       parameters:
+        - { name: view, in: query, schema: { type: string, enum: [recent] }, description: recent 限个人根目录请求，跨子目录返回最近修改的 12 个非文件夹节点，按 updated_at 降序、id 升序排列。省略时列出指定目录的直接子节点，最多 500 条。 }
         - { name: container, in: query, required: true, schema: { type: string, enum: [personal, set] } }
         - { name: set_id, in: query, schema: { type: string, format: uuid } }
         - { name: parent_id, in: query, schema: { type: string, format: uuid }, description: 缺省 = 容器根 }
@@ -19253,86 +19255,6 @@ paths:
           $ref: "#/components/responses/Error"
         "503":
           $ref: "#/components/responses/Error"
-  /v1/organizations/{organizationID}/audit-events:
-    parameters:
-      - $ref: "#/components/parameters/OrganizationID"
-    get:
-      operationId: listAuditEvents
-      summary: 组织审计日志（仅组织 OWNER/ADMIN）
-      description: >-
-        阶段 12e。按 (created_at, id) 倒序，游标分页（不支持 OFFSET）。时间范围左闭右开：from <= created_at < to；同时给出 from 与 to
-        时要求 from < to 且跨度不超过 366 天。只返回审计表里的非敏感字段，元数据按白名单过滤。Run 生命周期不在审计日志里（见 Run 事件）。参数不合法返回 400
-        INVALID_REQUEST。
-      parameters:
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 50
-        - name: cursor
-          in: query
-          schema:
-            type: string
-            maxLength: 128
-          description: 上一页返回的 next_cursor（不透明）
-        - name: actor_id
-          in: query
-          schema:
-            type: string
-            format: uuid
-        - name: action
-          in: query
-          schema:
-            type: string
-            maxLength: 129
-          description: 动作，精确匹配；以 * 结尾表示前缀匹配（例如 device.*）
-        - name: resource_kind
-          in: query
-          schema:
-            type: string
-            maxLength: 64
-        - name: from
-          in: query
-          schema:
-            type: string
-            format: date-time
-          description: 起始时间（含）
-        - name: to
-          in: query
-          schema:
-            type: string
-            format: date-time
-          description: 结束时间（不含）
-      responses:
-        "200":
-          description: 一页审计记录
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - events
-                  - next_cursor
-                properties:
-                  events:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/AuditEvent"
-                  next_cursor:
-                    type:
-                      - string
-                      - "null"
-                    description: 没有更多时为 null
-        "400":
-          $ref: "#/components/responses/Error"
-        "401":
-          $ref: "#/components/responses/Error"
-        "403":
-          $ref: "#/components/responses/Error"
-        "503":
-          $ref: "#/components/responses/Error"
   /v1/organizations/{organizationID}/runtime-config:
     parameters:
       - $ref: "#/components/parameters/OrganizationID"
@@ -19397,11 +19319,11 @@ paths:
       - $ref: "#/components/parameters/OrganizationID"
     get:
       operationId: getRuntimeUsage
-      summary: 组织配额的当前用量（组织成员可读排队数与是否已满；上限仅 OWNER/ADMIN）
-      description: 阶段 12e。组织级聚合计数的快照，仅用于展示与「组织队列已满」提示，不参与准入判定。非管理员只得到排队数与队列是否已满，不含各项上限、活动数与平台槽位。
+      summary: 组织队列状态（排队上限仅 OWNER/ADMIN 可见）
+      description: 向对话返回当前排队数以及是否已满。
       responses:
         "200":
-          description: 配额用量
+          description: 组织队列状态
           content:
             application/json:
               schema:
@@ -28514,6 +28436,9 @@ components:
           type: integer
           minimum: 1
           description: 名称与并发上限的乐观锁版本（PATCH 用）
+        allow_workflows:
+          type: boolean
+          description: 此组织的工作流是否可以使用该电脑，默认关闭。
         grant_scope:
           $ref: "#/components/schemas/DeviceGrantScope"
         grant_user_id:
@@ -28608,6 +28533,7 @@ components:
       properties:
         name: { type: string, minLength: 1, maxLength: 100 }
         max_slots: { type: integer, minimum: 1, maximum: 256 }
+        allow_workflows: { type: boolean }
         settings_version: { type: integer, minimum: 1 }
     DeviceRemovalBlockers:
       type: object
@@ -29302,7 +29228,9 @@ components:
           enum:
             - USER
             - TASK_ASSIGNMENT
-          description: TASK_ASSIGNMENT = 任务指派给 Agent 时由服务端自动创建
+            - IM
+            - AUTOMATION
+          description: AUTOMATION 表示组织工作流会话。TASK_ASSIGNMENT = 任务指派给 Agent 时由服务端自动创建
         version:
           type: integer
           minimum: 1
@@ -30302,7 +30230,7 @@ components:
       properties:
         name: { type: string, minLength: 1, maxLength: 255 }
         install_id: { type: string, maxLength: 255 }
-        max_slots: { type: integer, minimum: 0, maximum: 1024, description: 0 或缺省 = 1 }
+        max_slots: { type: integer, minimum: 0, maximum: 1024, description: 0 或缺省 = 5 }
         scope:
           $ref: '#/components/schemas/DeviceRegistrationScope'
           description: 省略时 OWNER / ADMIN = ORGANIZATION，其他成员 = PERSONAL
@@ -30321,11 +30249,12 @@ components:
         expires_at: { type: string, format: date-time }
     DeviceRegisterRequest:
       type: object
-      required: [token, key_id, public_key]
+      required: [token, key_id, public_key, signature]
       properties:
         token: { type: string, maxLength: 512, description: v2 安装令牌或旧的纯注册令牌 }
         key_id: { type: string, minLength: 1, maxLength: 128 }
         public_key: { type: string, description: ed25519 公钥（32 字节）的 base64url（无填充） }
+        signature: { type: string, description: 安装私钥对本次 token 与 key_id 的注册签名（64 字节 base64url），编码见 device-auth.md }
     DeviceRegisterResult:
       type: object
       required: [device_id, organization_id, owner_user_id, key_generation, center_epoch]
@@ -30773,7 +30702,7 @@ components:
         acceptance: { type: string }
         status_name: { type: string }
         status_category: { type: string }
-        origin: { type: string, enum: [USER, TASK_ASSIGNMENT], description: 本次 Run 所在会话的来源 }
+        origin: { type: string, enum: [USER, TASK_ASSIGNMENT, IM, AUTOMATION], description: 本次 Run 所在会话的来源 }
         comments:
           type: array
           maxItems: 20
@@ -32299,51 +32228,6 @@ components:
         can_accept_result:
           type: boolean
           description: 可据此证据对所属开放案执行 RESULT_ACCEPTED
-    AuditEvent:
-      type: object
-      description: 一条审计记录（阶段 12e）。不含 request_id、授权版本等内部字段
-      required:
-        - id
-        - actor_id
-        - actor_name
-        - actor_email
-        - action
-        - decision
-        - reason
-        - resource_kind
-        - resource_id
-        - metadata
-        - created_at
-      properties:
-        id:
-          type: string
-          format: uuid
-        actor_id:
-          type: string
-          format: uuid
-        actor_name:
-          type: string
-          description: 操作人姓名；没有姓名时为邮箱，都没有时为 ID 前缀
-        actor_email:
-          type: string
-        action:
-          type: string
-        decision:
-          type: string
-        reason:
-          type: string
-        resource_kind:
-          type: string
-        resource_id:
-          type: string
-        metadata:
-          type: object
-          description: 白名单内的非敏感元数据（字符串值）
-          additionalProperties:
-            type: string
-        created_at:
-          type: string
-          format: date-time
     RuntimePolicy:
       type: object
       description: 组织运行策略；修改时整份提交
@@ -32370,7 +32254,7 @@ components:
           type: integer
           minimum: 1
           maximum: 100
-          description: 活动运行上限（实际生效值还受平台槽位限制，见 RuntimeUsage）
+          description: 活动运行上限（实际生效值还受平台槽位限制）
         queue_timeout_hours:
           type: integer
           minimum: 1
@@ -32435,7 +32319,7 @@ components:
           format: date-time
     RuntimeUsage:
       type: object
-      description: 组织成员只得到 organization_id、queued、queue_full；其余字段只返回给组织 OWNER/ADMIN
+      description: 当前排队数与是否已满。仅组织 OWNER/ADMIN 收到 queue_max。
       required:
         - organization_id
         - queued
@@ -32444,24 +32328,11 @@ components:
         organization_id:
           type: string
           format: uuid
-        config_version:
-          type: integer
         queued:
           type: integer
           description: 排队中的 Run 数
         queue_max:
           type: integer
-        active:
-          type: integer
-          description: 占用活动槽位的运行数
-        active_max:
-          type: integer
-        capacity_max:
-          type: integer
-          description: 平台槽位上限
-        effective_active_max:
-          type: integer
-          description: 实际生效的活动运行上限 = min(active_max, capacity_max)
         queue_full:
           type: boolean
           description: 队列已满；新消息会保持等待，直到队列有空位

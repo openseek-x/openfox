@@ -68,7 +68,9 @@ export const connectEn: Messages["connect"] = {
     connect: "Connect this computer",
     retry: "Retry",
     otherOrg:
-      "This computer is connected to another organization ({name}). A computer can join only one organization.",
+      "This computer is connected to another organization ({name}). Manage it from a connected organization.",
+    otherCenter:
+      "This computer is registered at {url}. Open that server’s workspace to view its details.",
     otherOrgUnknown: "another organization",
     stale:
       "This computer was removed from the organization, but its old connection settings are still here.",
@@ -110,7 +112,10 @@ export const connectEn: Messages["connect"] = {
     argsHint:
       "Enter one allowed -c option and its value per line. Agent arguments follow the runtime arguments.",
     memory: "Available memory protection",
-    minimum: "Minimum available memory (MiB)",
+    minimum: "Minimum available memory",
+    memoryUnit: "Minimum available memory unit",
+    protectionHint:
+      "Adjust session lifetimes, available memory and system load thresholds.",
     load: "System load protection",
     policy: "Protection policy",
     conservative: "Conservative",

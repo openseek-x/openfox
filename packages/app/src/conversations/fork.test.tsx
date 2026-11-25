@@ -44,9 +44,12 @@ describe("conversation fork", () => {
       }),
     );
     const buttons = await screen.findAllByRole("button", {
-      name: "从此处分支",
+      name: "消息操作",
     });
     await userEvent.click(buttons[0]!);
+    await userEvent.click(
+      await screen.findByRole("menuitem", { name: "从此处分支" }),
+    );
     let dialog = screen.getByRole("dialog");
     expect(
       within(dialog).getByRole("button", { name: "创建分支会话" }),
@@ -55,6 +58,9 @@ describe("conversation fork", () => {
     expect(calls.some((c) => c.path.endsWith("/fork"))).toBe(false);
     for (let i = 0; i < 2; i++) {
       await userEvent.click(buttons[1]!);
+      await userEvent.click(
+        await screen.findByRole("menuitem", { name: "从此处分支" }),
+      );
       dialog = screen.getByRole("dialog");
       await waitFor(() =>
         expect(

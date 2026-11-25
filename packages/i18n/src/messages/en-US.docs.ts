@@ -38,6 +38,8 @@ export const docsEn: Messages["docs"] = {
   quickAdd: "Quick add",
   moreActions: "More actions",
   loadFailed: "Failed to load. Refresh and try again.",
+  recentlyModified: "Recently modified",
+  noRecentFiles: "No recently modified files",
   endOfList: "You've reached the end",
   itemCount: "Name ({count} items)",
   columns: {

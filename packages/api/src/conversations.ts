@@ -16,6 +16,7 @@ type JsonBody<K extends keyof operations> =
 export type ConversationWorkspaceSelection =
   S["ConversationWorkspaceSelection"];
 export type ConversationWorkspaceOptions = S["ConversationWorkspaceOptions"];
+export type RuntimeUsage = S["RuntimeUsage"];
 export type Conversation = S["Conversation"];
 export type ConversationSummary = S["ConversationSummary"];
 export type TaskConversationStats = S["TaskConversationStats"];
@@ -73,6 +74,10 @@ function toSeq(value: unknown): number {
 export function createConversationsApi(http: HttpClient) {
   return {
     conversations: {
+      queueStatus: (orgId: string, signal?: AbortSignal) =>
+        http.request<RuntimeUsage>(`${org(orgId)}/runtime-config/usage`, {
+          signal,
+        }),
       fork: (
         orgId: string,
         id: string,

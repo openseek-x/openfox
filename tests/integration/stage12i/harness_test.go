@@ -371,7 +371,7 @@ func (s *stack) childEnv(extra ...string) []string {
 
 func (s *stack) serverEnv() []string {
 	return s.childEnv(
-		"OPENFOX_ENV=test", "OPENFOX_SERVER_LISTEN="+s.listen, "OPENFOX_DATABASE_URL_FILE="+s.urlFile,
+		"OPENFOX_SERVER_PUBLIC_URL="+s.center, "OPENFOX_ENV=test", "OPENFOX_SERVER_LISTEN="+s.listen, "OPENFOX_DATABASE_URL_FILE="+s.urlFile,
 		"OPENFOX_STORAGE_ROOT="+s.storage, "OPENFOX_SCHEDULER_POLL_INTERVAL=200ms",
 		"OPENFOX_RUN_LEASE_RENEW="+leaseRenew, "OPENFOX_RUN_LEASE_TTL="+leaseTTL,
 		"OPENFOX_DATABASE_STATEMENT_TIMEOUT=10s", "OPENFOX_DATABASE_LOCK_TIMEOUT=5s",
@@ -622,7 +622,8 @@ func (s *stack) registerDevice(name string) device {
 	}
 	anonymous := &client{s: s, http: &http.Client{Timeout: 20 * time.Second}}
 	anonymous.must(http.StatusCreated, http.MethodPost, "/api/v1/device/register", map[string]string{
-		"token": token.InstallToken, "key_id": keyID, "public_key": deviceauth.EncodeBase64URL(public),
+		"signature": deviceauth.EncodeBase64URL(ed25519.Sign(private, deviceauth.RegistrationPayload(token.InstallToken, keyID))),
+		"token":     token.InstallToken, "key_id": keyID, "public_key": deviceauth.EncodeBase64URL(public),
 	}, &registered)
 	session, err := (daemon.AuthClient{BaseURL: daemon.APIBaseURL(s.center), HTTP: &http.Client{Timeout: 20 * time.Second}}).Session(s.ctx, registered.DeviceID, keyID, private)
 	if err != nil {

@@ -137,8 +137,8 @@ func (s Service) Create(ctx context.Context, tx pgx.Tx, organizationID string, a
 	if origin == "" {
 		origin = OriginUser
 	}
-	if (origin != OriginUser && origin != OriginTaskAssignment && origin != OriginIM) || (origin == OriginTaskAssignment && input.TaskID == "") ||
-		(origin == OriginIM && input.TaskID != "") {
+	if (origin != OriginUser && origin != OriginTaskAssignment && origin != OriginIM && origin != OriginAutomation) || (origin == OriginTaskAssignment && input.TaskID == "") ||
+		((origin == OriginIM || origin == OriginAutomation) && input.TaskID != "") {
 		return Conversation{}, ErrInvalidRequest
 	}
 	binding, err := s.bindWorkspace(ctx, tx, organizationID, actor, input)

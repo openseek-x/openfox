@@ -133,6 +133,15 @@ function docBackend(options: {
     if (setMatch && method === "DELETE")
       return new Response(null, { status: 204 });
     if (path === docs && method === "GET") {
+      if (query.get("view") === "recent")
+        return json(200, {
+          nodes: nodes
+            .filter(
+              (n) => n.container.kind === "personal" && n.kind !== "folder",
+            )
+            .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
+            .slice(0, 12),
+        });
       const container = query.get("container");
       const setId = query.get("set_id");
       const parent = query.get("parent_id");
@@ -307,11 +316,15 @@ describe("文档库页面", () => {
     });
   });
 
-  it("我的文档首页不重复显示列表，仍能从导航打开文档并返回首页", async () => {
-    renderDocs(base, { nodes: [folder, doc] });
+  it("我的文档首页显示最近修改的文件，包含子目录内容，并保留树导航", async () => {
+    renderDocs(base, { nodes: [folder, doc, child] });
     const nav = await navOf();
     const openDoc = await nav.findByRole("button", { name: "产品需求说明" });
-    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(
+      await within(await screen.findByRole("table")).findByRole("button", {
+        name: "子文档",
+      }),
+    ).toBeInTheDocument();
     expect(screen.queryByText("已经到底了")).not.toBeInTheDocument();
     expect(screen.queryByText("还没有文档")).not.toBeInTheDocument();
     expect(
@@ -323,7 +336,23 @@ describe("文档库页面", () => {
     expect(
       await screen.findByRole("button", { name: "快速添加" }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(
+      await within(await screen.findByRole("table")).findByRole("button", {
+        name: "子文档",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("折叠导航后可以在我的文档列表中打开文件", async () => {
+    renderDocs(base, { nodes: [doc] });
+    await userEvent.click(
+      await screen.findByRole("button", { name: "折叠文档导航" }),
+    );
+    const table = await screen.findByRole("table");
+    await userEvent.click(
+      within(table).getByRole("button", { name: "产品需求说明" }),
+    );
+    expect(await screen.findByText("模拟编辑正文")).toBeInTheDocument();
   });
 
   it("文件夹仍显示名称（N 项）、更新人与「已经到底了」", async () => {
@@ -469,7 +498,7 @@ describe("导航树", () => {
   it("文件夹展开后按需加载子节点，行菜单重命名保存带 version", async () => {
     const { server } = renderDocs(base, { nodes: [folder, doc, child] });
     await (await navOf()).findByRole("button", { name: "产品需求说明" });
-    expect(screen.queryByText("子文档")).not.toBeInTheDocument();
+    expect((await navOf()).queryByText("子文档")).not.toBeInTheDocument();
     await userEvent.click(
       (await navOf()).getByRole("button", { name: "展开" }),
     );

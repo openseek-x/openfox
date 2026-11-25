@@ -56,7 +56,8 @@ export const connectZh = {
     notRegistered: "这台电脑还没有连接到当前组织。",
     connect: "连接这台电脑",
     retry: "重试",
-    otherOrg: "这台电脑已连接到其他组织（{name}），一台电脑只能连接一个组织。",
+    otherOrg: "这台电脑已连接到其他组织（{name}），请在已连接的组织中管理它。",
+    otherCenter: "本机已注册在 {url}。请打开该服务器的工作台查看本机详情。",
     otherOrgUnknown: "其他组织",
     stale: "这台电脑已从组织中移除，本机还保留着旧的连接配置。",
     centerChanged:
@@ -92,7 +93,9 @@ export const connectZh = {
     argsHint:
       "每行填写一个允许的 -c 配置及其值。Agent 参数会追加在 Runtime 参数后面。",
     memory: "可用内存保护",
-    minimum: "最低可用内存（MiB）",
+    minimum: "最低可用内存",
+    memoryUnit: "最低可用内存单位",
+    protectionHint: "调整持久会话时长、可用内存和系统负载阈值。",
     load: "系统负载保护",
     policy: "保护策略",
     conservative: "保守",

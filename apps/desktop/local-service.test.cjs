@@ -29,6 +29,7 @@ function fixture() {
           ? { id: "owner" }
           : { id: target.deviceId, owner_user_id: "owner" },
     ensureCurrent() {},
+    serviceDetails: () => ({ keep_service_running: true }),
     status: async () => ({ daemon: { state: "RUNNING" } }),
     run: async (args) => {
       calls.push(args);
@@ -172,4 +173,22 @@ test("concurrent changes fail busy and recover after the first completes", async
   release();
   await first;
   await service("startup", { ...target, mode: "login" }, io);
+});
+
+test("storage migration uses the native selection and rechecks ownership after the picker", async () => {
+  const { io, calls, registration } = fixture();
+  const service = createLocalService();
+  const input = { ...target, parent: "/renderer-value" };
+  io.chooseStorage = async () => null;
+  assert.equal(await service("move-storage", input, io), null);
+  assert.equal(calls.length, 0);
+  io.chooseStorage = async () => "/native/folder";
+  await service("move-storage", input, io);
+  assert.deepEqual(calls[0].slice(-2), ["--parent", "/native/folder"]);
+  io.chooseStorage = async () => {
+    registration.device_id = "changed";
+    return "/native/other";
+  };
+  await assert.rejects(service("move-storage", input, io), /wrong_device/);
+  assert.equal(calls.length, 1);
 });

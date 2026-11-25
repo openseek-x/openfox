@@ -24,7 +24,6 @@ export * from "./automations";
 export * from "./attachments";
 export * from "./quickReplies";
 export * from "./shareSnapshots";
-export * from "./governance";
 export * from "./quickCommands";
 export * from "./search";
 export * from "./docs";

@@ -607,7 +607,8 @@ export const enUS: Messages = {
     favoriteFailed: "Couldn't update favorite",
     board: {
       label: "Task board",
-      collapsed: "Hidden columns",
+      jumpToColumn: "Jump to column",
+      findColumn: "Search columns",
       instructions:
         "Press space to pick up a card, use the arrow keys to move it, press space again to drop, or Escape to cancel. Press enter to open the task.",
       picked: "Picked up task {task}",
@@ -743,6 +744,7 @@ export const enUS: Messages = {
       backToInbox: "Back to inbox",
       goToSpace: "Go to space tasks",
       aiPanel: "AI panel",
+      taskView: "Task",
       aiPanelClose: "Close AI panel",
       aiPanelResize: "Resize task AI panel",
       aiPanelOpenInChat: "Open in chat",
@@ -1604,12 +1606,36 @@ export const enUS: Messages = {
       startupHint:
         "Changes automatic loading at the next login only. Current service and tasks keep running.",
       keepAliveHint:
-        "Once started, the system keeps the service running and restarts it after a crash, even after the desktop app exits.",
+        "The system restarts the service if it exits unexpectedly.",
+      keepOnQuit: "Keep the service running after quitting",
+      keepOnQuitHint:
+        "Sets the default choice in the quit dialog. You can change it each time you quit.",
+      startedAt: "Service start time",
+      storageLocation: "Local OpenFox data directory",
+      moveStorage: "Change storage location",
+      moved: "Local data moved. You can start the service again.",
+      moveStopFirst:
+        "To change the location, stop the local service in the settings above.",
+      moveBusy:
+        "Stop the local service and wait for current operations to finish before moving.",
+      moveVolume: "Choose a folder on the same macOS data volume.",
+      moveFailed:
+        "Could not move data. Choose a writable parent without a conflicting OpenFox directory and retry.",
+      openStorage: "Show storage location",
+      openFailed: "Could not open the local data directory",
+      timedAwake: "Keep awake temporarily",
+      timedAwakeHint:
+        "Keep this computer awake while the desktop app is open. The display can still sleep.",
+      duration: "Keep-awake duration",
+      hours: "{count} h",
+      until: "Until {time}",
       running: "Running in background",
       notRunning: "Running state not confirmed",
       desktopOnly: "Use the desktop app on this computer.",
       macOnly: "Local service management currently supports macOS only.",
       upgrade: "Update the desktop app and OpenFox CLI to use this feature.",
+      primaryOrgOnly:
+        "Switch to the organization where this computer was registered to manage its local service.",
       notLocal:
         "This device could not be verified as local to the current center. Use the target computer.",
       ownerOnly:
@@ -1670,6 +1696,10 @@ export const enUS: Messages = {
     local: {
       name: "This computer",
       suffix: "(local)",
+      otherCenter: "Connected to another server",
+      notConnected: "Not connected to this organization",
+      unverified: "Local connection unverified",
+      serviceRunning: "The local background service is running.",
       available: "Available",
       stopped: "Stopped",
       starting: "Starting",
@@ -1792,6 +1822,9 @@ export const enUS: Messages = {
       notAvailable: "—",
       runSettings: "Task run settings",
       maxSlots: "Max concurrent tasks",
+      allowWorkflows: "Allow workflows to run on this computer",
+      allowWorkflowsHint:
+        "Workflows in this organization can use the local network, files and CLI through an assigned Agent. Only the computer owner can change this setting.",
       maxSlotsHint: "1–256, applies to tasks dispatched afterwards",
       maxSlotsInvalid: "Enter a whole number from 1 to 256",
       storage: "Storage",
@@ -1810,6 +1843,7 @@ export const enUS: Messages = {
       title: "Computers",
     },
     drawer: {
+      localTitle: "Local computer details",
       title: "Computer details",
     },
     guide: {
@@ -1858,7 +1892,6 @@ export const enUS: Messages = {
   attachments: attachmentsEn,
   quickReplies: quickRepliesEn,
   share: shareEn,
-  // 阶段 12e · 审计日志、资源配额、共享电脑信任说明、待核对处理
   governance: governanceEn,
   // 阶段 12e · 电脑运维：密钥轮换、允许的组织、并发上限、配置状态、受保护目录
   ops: opsEn,

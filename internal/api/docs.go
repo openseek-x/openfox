@@ -302,6 +302,11 @@ func (h *Handler) listDocNodes(w http.ResponseWriter, r *http.Request) {
 		writeCollaborationError(w, r, err)
 		return
 	}
+	view := query.Get("view")
+	if view != "" && (view != "recent" || !container.IsPersonal() || parentID != nil) {
+		writeError(w, r, http.StatusBadRequest, "INVALID_REQUEST", "recent view requires the personal container without a parent")
+		return
+	}
 	var nodes []docs.Node
 	err = call.run(h, r, func(ctx context.Context, tx pgx.Tx, service collaboration.Service) error {
 		access, err := call.docAccess(ctx, tx, service, spaceID, spaceID)
@@ -316,7 +321,11 @@ func (h *Handler) listDocNodes(w http.ResponseWriter, r *http.Request) {
 				return err
 			}
 		}
-		nodes, err = docs.ListNodes(ctx, tx, spaceID, call.selected.Actor.UserID, container, parentID)
+		if view == "recent" {
+			nodes, err = docs.RecentPersonalFiles(ctx, tx, spaceID, call.selected.Actor.UserID)
+		} else {
+			nodes, err = docs.ListNodes(ctx, tx, spaceID, call.selected.Actor.UserID, container, parentID)
+		}
 		if err != nil {
 			return err
 		}

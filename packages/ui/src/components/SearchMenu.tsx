@@ -23,6 +23,7 @@ export interface SearchMenuOption {
   trailing?: ReactNode;
   /** 额外参与搜索的关键字 */
   keywords?: string;
+  disabledReason?: string;
   disabled?: boolean;
   count?: number;
 }
@@ -38,6 +39,8 @@ export interface SearchMenuProps {
   onOpenChange: (open: boolean) => void;
   anchorRef: RefObject<HTMLElement | null>;
   placement?: Placement;
+  matchWidth?: boolean;
+  fitHeight?: boolean;
   groups: SearchMenuGroup[];
   /** 当前选中的值 */
   selected: string[];
@@ -72,6 +75,8 @@ export function SearchMenu({
   onOpenChange,
   anchorRef,
   placement,
+  matchWidth,
+  fitHeight,
   groups,
   selected,
   onSelect,
@@ -116,7 +121,15 @@ export function SearchMenu({
   }, [groups, query]);
 
   const flat = visible.flatMap((group) => group.options);
-  const current = Math.min(active, Math.max(flat.length - 1, 0));
+  const enabled = flat.filter((option) => !option.disabled);
+  const current = Math.min(active, Math.max(enabled.length - 1, 0));
+  const activeId = enabled[current]
+    ? `${baseId}-${enabled[current]!.value}`
+    : undefined;
+  useEffect(() => {
+    if (open && activeId)
+      document.getElementById(activeId)?.scrollIntoView?.({ block: "nearest" });
+  }, [open, activeId]);
 
   const choose = (option: SearchMenuOption | undefined) => {
     if (!option || option.disabled) return;
@@ -125,21 +138,25 @@ export function SearchMenu({
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (flat.length === 0 && event.key !== "Enter") return;
+    if (
+      event.nativeEvent.isComposing ||
+      event.nativeEvent.keyCode === 229 ||
+      enabled.length === 0
+    )
+      return;
     if (event.key === "ArrowDown") {
       event.preventDefault();
-      setActive((current + 1) % flat.length);
+      setActive((current + 1) % enabled.length);
     } else if (event.key === "ArrowUp") {
       event.preventDefault();
-      setActive((current - 1 + flat.length) % flat.length);
+      setActive((current - 1 + enabled.length) % enabled.length);
     } else if (event.key === "Enter") {
       event.preventDefault();
-      choose(flat[current]);
+      choose(enabled[current]);
     }
   };
 
   const optionId = (value: string) => `${baseId}-${value}`;
-  let index = -1;
 
   return (
     <Popover
@@ -147,10 +164,12 @@ export function SearchMenu({
       onOpenChange={onOpenChange}
       anchorRef={anchorRef}
       placement={placement}
+      matchWidth={matchWidth}
+      fitHeight={fitHeight}
       aria-label={label}
       className={cn("w-[260px] p-0", className)}
     >
-      <div className="flex items-center gap-2 border-b border-line-default px-3 py-2">
+      <div className="of-input-frame flex items-center gap-2 border-b border-line-default px-3 py-2 focus-within:border-line-focus">
         <Icon name="search" className="text-fg-muted" />
         <input
           ref={inputRef}
@@ -158,9 +177,7 @@ export function SearchMenu({
           role="combobox"
           aria-expanded
           aria-controls={`${baseId}-list`}
-          aria-activedescendant={
-            flat[current] ? optionId(flat[current]!.value) : undefined
-          }
+          aria-activedescendant={activeId}
           aria-label={placeholder ?? t("ui.searchMenu.placeholder")}
           placeholder={placeholder ?? t("ui.searchMenu.placeholder")}
           value={query}
@@ -196,8 +213,7 @@ export function SearchMenu({
               </div>
             )}
             {group.options.map((option) => {
-              index += 1;
-              const isActive = index === current;
+              const isActive = enabled[current]?.value === option.value;
               const isSelected = selected.includes(option.value);
               return (
                 <div
@@ -206,9 +222,12 @@ export function SearchMenu({
                   role="option"
                   aria-selected={isSelected}
                   aria-disabled={option.disabled || undefined}
+                  title={option.disabled ? option.disabledReason : undefined}
                   // 鼠标按下不抢走搜索框的焦点
                   onMouseDown={(event) => event.preventDefault()}
-                  onMouseMove={() => setActive(flat.indexOf(option))}
+                  onMouseMove={() => {
+                    if (!option.disabled) setActive(enabled.indexOf(option));
+                  }}
                   onClick={() => choose(option)}
                   className={cn(
                     "flex min-h-[34px] cursor-pointer items-center gap-2.5 rounded-lg py-1.5 pr-2 pl-2.5 text-body",

@@ -561,6 +561,26 @@ describe("应用外壳", () => {
     ).toBeInTheDocument();
   });
 
+  it.each(["audit-log", "quotas"])(
+    "已移除的设置页 %s 无法通过直达地址打开",
+    async (path) => {
+      localStorage.setItem("openfox:onboarding:o1", JSON.stringify({}));
+      renderAt(`/o/o1/settings/${path}`, orgHandler);
+      expect(
+        await screen.findByRole("heading", {
+          name: "页面不存在，或该功能暂未开放",
+        }),
+      ).toBeVisible();
+      const nav = within(screen.getByRole("navigation", { name: "设置导航" }));
+      expect(
+        nav.queryByRole("link", { name: "审计日志" }),
+      ).not.toBeInTheDocument();
+      expect(
+        nav.queryByRole("link", { name: "资源配额" }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
   it("侧栏空间可以折叠，折叠状态按组织存在本机", async () => {
     localStorage.setItem("openfox:onboarding:o1", JSON.stringify({}));
     const withSpace: Handler = (url, init) =>

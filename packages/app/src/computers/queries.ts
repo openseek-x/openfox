@@ -1,9 +1,15 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { isApiError, type Device, type DeviceDetail } from "@openfox/api";
 
+import { useT } from "@openfox/i18n";
+import { useToast } from "@openfox/ui";
 import { keys, useApi } from "../context";
-import { desktopBridge, desktopLocalStatusKey } from "../desktop";
+import {
+  desktopBridge,
+  desktopLocalStatusKey,
+  type DesktopLocalStatus,
+} from "../desktop";
 
 /** 在线状态靠心跳判定、没有实时事件，列表每 30 秒刷新一次 */
 export const DEVICE_POLL_MS = 30_000;
@@ -85,3 +91,20 @@ export function useApplyDevice(orgId: string) {
 
 export const isNotFound = (error: unknown) =>
   isApiError(error) && error.status === 404;
+
+export function useTaskSleepPreference() {
+  const bridge = desktopBridge();
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const t = useT();
+  return useMutation({
+    mutationFn: (enabled: boolean) => bridge!.setPreventSleep!(enabled),
+    onSuccess: (prevent_sleep) => {
+      queryClient.setQueryData<DesktopLocalStatus>(
+        desktopLocalStatusKey,
+        (status) => (status ? { ...status, prevent_sleep } : status),
+      );
+    },
+    onError: () => toast(t("connect.sleep.failed"), { tone: "error" }),
+  });
+}

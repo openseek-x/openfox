@@ -20,8 +20,10 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     return (
       <div
         className={cn(
-          "of-control flex min-w-0 gap-2 rounded-lg border bg-surface-card py-2.5 pr-2.5 pl-3 text-body transition-colors focus-within:border-line-focus",
-          isInvalid ? "border-danger" : "border-line-default",
+          "of-control of-input-frame flex min-w-0 gap-2 rounded-lg border bg-surface-card py-2.5 pr-2.5 pl-3 text-body",
+          isInvalid
+            ? "border-danger"
+            : "border-line-default focus-within:border-line-focus",
           "has-[:disabled]:opacity-50",
           className,
         )}

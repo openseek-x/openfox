@@ -119,7 +119,7 @@ function useDrawerParam(name: "agentSettings" | "crewSettings") {
     (
       id: string,
       spaceId?: string,
-      initialTab?: AgentPanelTab | "run-settings",
+      initialTab?: AgentPanelTab | "run-settings" | "runtime-settings",
     ) => {
       if (!allowInstructionNavigation()) return;
       if (spaceId) rememberSpace(id, spaceId);
@@ -133,6 +133,8 @@ function useDrawerParam(name: "agentSettings" | "crewSettings") {
         // 指定页签即以展开状态打开（新地址统一写 agentPanel=full&agentTab=…）
         if (name === "agentSettings" && initialTab) {
           if (initialTab === "run-settings") next.set("agentSection", "run");
+          else if (initialTab === "runtime-settings")
+            next.set("agentSection", "runtime");
           else writeAgentPanel(next, { expanded: true, tab: initialTab });
         }
         return next;
@@ -167,7 +169,9 @@ function useDrawerParam(name: "agentSettings" | "crewSettings") {
     id: value,
     tab,
     panel,
-    initialRunSection: params.get("agentSection") === "run",
+    initialSection: (["run", "runtime"] as const).find(
+      (section) => section === params.get("agentSection"),
+    ),
     open,
     close,
     setPanel,

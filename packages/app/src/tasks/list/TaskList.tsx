@@ -240,7 +240,10 @@ const Row = memo(function Row({
   return (
     <li
       aria-selected={selection ? checked : undefined}
-      className="group relative flex h-[var(--density-list-row,44px)] items-center gap-2 border-b border-line-soft px-4 hover:bg-surface-hover"
+      className={cn(
+        "group relative flex h-[var(--density-list-row,44px)] items-center gap-2 border-b border-line-soft px-4",
+        checked ? "bg-surface-selected" : "hover:bg-surface-hover",
+      )}
     >
       <button
         type="button"
@@ -257,8 +260,7 @@ const Row = memo(function Row({
           }
           className={cn(
             "relative z-[1]",
-            selection.size === 0 &&
-              "opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 focus-visible:opacity-100",
+            selection.size === 0 && "of-row-actions",
           )}
         />
       )}
@@ -327,7 +329,7 @@ const Row = memo(function Row({
             optimistic: statusFields(status),
           })
         }
-        className="relative opacity-0 group-focus-within:opacity-100 group-hover:opacity-100"
+        className="relative of-row-actions"
       />
     </li>
   );

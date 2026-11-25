@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -84,6 +84,34 @@ describe("对话输入框上方的电脑提示", () => {
     open({ agent: { config: undefined } });
     expect(await screen.findByText(NO_COMPUTER)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "查看电脑" })).toBeNull();
+  });
+
+  it("绑定电脑直达可用选项，并使用当前版本写入首次配置", async () => {
+    const user = userEvent.setup();
+    const calls = open({
+      agent: { config: undefined, current_config_version: 0 },
+      extra: (call) =>
+        call.method === "POST" && call.path.endsWith("/config-versions")
+          ? json(200, agent("a1"))
+          : undefined,
+    });
+    await user.click(await screen.findByRole("button", { name: "绑定电脑" }));
+    await user.click(
+      await screen.findByRole("option", { name: /Codex.*电脑 d1/i }),
+    );
+    await waitFor(() =>
+      expect(
+        calls.find(
+          (c) => c.method === "POST" && c.path.endsWith("/config-versions"),
+        )?.body,
+      ).toMatchObject({
+        expected_agent_version: 5,
+        computer_id: "d1",
+        grant_id: "g-d1",
+        runtime: "codex",
+        model: "default",
+      }),
+    );
   });
 
   it("小助手离线：去查看打开绑定电脑的详情，关闭后仍可继续写需求", async () => {

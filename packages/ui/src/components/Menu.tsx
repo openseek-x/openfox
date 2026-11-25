@@ -1,4 +1,10 @@
-import { useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 
 import { cn } from "../cn";
 import { Icon } from "./Icon";
@@ -42,10 +48,13 @@ export function MenuItem({
         if (!disabled) onSelect?.();
       }}
       className={cn(
-        "flex min-h-[34px] w-full items-center gap-2.5 rounded-lg py-1.5 pr-2 pl-2.5 text-left text-body outline-none",
-        "hover:bg-surface-active focus-visible:bg-surface-active focus-visible:shadow-none",
+        "flex min-h-[34px] w-full items-center gap-2.5 rounded-lg py-1.5 pr-2 pl-2.5 text-left text-body outline-none transition-colors duration-100 focus-visible:bg-surface-active focus-visible:shadow-none motion-reduce:transition-none",
         danger ? "text-danger" : "text-fg-default",
-        disabled && "cursor-not-allowed opacity-50 hover:bg-transparent",
+        disabled
+          ? "cursor-not-allowed opacity-50"
+          : danger
+            ? "hover:bg-danger-soft"
+            : "hover:bg-surface-hover",
       )}
     >
       {icon && (
@@ -110,6 +119,7 @@ export interface MenuProps {
     toggle: () => void;
   }) => ReactNode;
   placement?: Placement;
+  focusFirstOnOpen?: boolean;
   label: string;
   className?: string;
   /** 菜单内容；函数形式可拿到 close */
@@ -120,12 +130,25 @@ export interface MenuProps {
 export function Menu({
   trigger,
   placement = "bottom-start",
+  focusFirstOnOpen = false,
   label,
   className,
   children,
 }: MenuProps) {
   const [open, setOpen] = useState(false);
   const anchor = useRef<HTMLElement | null>(null);
+  const itemsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open || !focusFirstOnOpen) return;
+    const frame = requestAnimationFrame(() => {
+      itemsRef.current
+        ?.querySelector<HTMLElement>(
+          '[role^="menuitem"]:not([aria-disabled="true"])',
+        )
+        ?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [open, focusFirstOnOpen]);
   const close = () => setOpen(false);
   return (
     <>
@@ -146,6 +169,7 @@ export function Menu({
         className={cn("of-menu min-w-[200px]", className)}
       >
         <div
+          ref={itemsRef}
           onKeyDown={handleMenuKeyDown}
           onClick={(event) => {
             if (

@@ -127,9 +127,22 @@ func openConversation(ctx context.Context, tx pgx.Tx, organizationID string, a r
 	}
 	conversationService := conversations.Service{}
 	if _, err := conversationService.Create(ctx, savepoint, organizationID, actor, conversations.CreateInput{
-		ID: conversationID, SpaceID: a.SpaceID, AgentID: agentID, Visibility: conversations.VisibilityShared,
+		ID: conversationID, SpaceID: a.SpaceID, AgentID: agentID, Visibility: conversations.VisibilityShared, Origin: conversations.OriginAutomation,
 	}); err != nil {
 		return "", "", err
+	}
+	// Admission uses the same tenant grant as dispatch. A rejected attempt is
+	// recorded as failed without leaving behind a conversation or queued input.
+	var allowed bool
+	if err := savepoint.QueryRow(ctx, `SELECT EXISTS (
+		SELECT 1 FROM openfox.agents a JOIN openfox.device_grants g
+		  ON g.organization_id = a.organization_id AND g.device_id = a.device_id
+		 WHERE a.organization_id = openfox_private.current_organization_id() AND a.id = $1::uuid
+		   AND g.status = 'ACTIVE' AND g.allow_workflows)`, agentID).Scan(&allowed); err != nil {
+		return "", "", err
+	}
+	if !allowed {
+		return "", "", collaboration.NewRuleError(http.StatusForbidden, "WORKFLOW_DEVICE_DISABLED", "电脑所有者尚未允许此组织在该电脑上运行工作流")
 	}
 	for _, userID := range a.NotifyUserIDs {
 		// 会话所有者本来就能看到会话，不能也不需要再加为成员（通知人员默认就是创建者本人）。

@@ -559,7 +559,7 @@ func (s Store) evaluate(ctx context.Context, tx pgx.Tx, organizationID, conversa
 		}
 		return "", runParams{}, err
 	}
-	reason, params, err := agentRunParams(ctx, tx, agentID, actorID, conversation.SpaceID)
+	reason, params, err := agentRunParams(ctx, tx, agentID, actorID, conversation.SpaceID, conversation.Origin == conversations.OriginAutomation)
 	if err != nil || reason != "" {
 		return reason, params, err
 	}
@@ -602,7 +602,7 @@ func (s Store) evaluate(ctx context.Context, tx pgx.Tx, organizationID, conversa
 }
 
 // agentRunParams resolves an agent and checks its device grant independently of any chat.
-func agentRunParams(ctx context.Context, tx pgx.Tx, agentID, actorID, spaceID string) (rejectionReason, runParams, error) {
+func agentRunParams(ctx context.Context, tx pgx.Tx, agentID, actorID, spaceID string, workflow bool) (rejectionReason, runParams, error) {
 	var params runParams
 	var agentStatus, visibility, ownerID, agentDeviceID string
 	var archived bool
@@ -664,7 +664,7 @@ func agentRunParams(ctx context.Context, tx pgx.Tx, agentID, actorID, spaceID st
 	if params.ComputerID != agentDeviceID {
 		return rejectAgent, runParams{}, nil
 	}
-	if reason, version, err := grantAllows(ctx, tx, params.GrantID, params.ComputerID, actorID, spaceID); err != nil || reason != "" {
+	if reason, version, err := grantAllows(ctx, tx, params.GrantID, params.ComputerID, actorID, spaceID, workflow); err != nil || reason != "" {
 		return reason, runParams{}, err
 	} else {
 		params.GrantVersion = version
@@ -687,14 +687,15 @@ func loadConversationOverrides(ctx context.Context, tx pgx.Tx, conversationID st
 
 // grantAllows 检查设备授权仍 ACTIVE、指向配置的电脑，并且 PERSONAL 授权只允许
 // 授权所属用户本人发起，避免共享 Agent 把他人的私人电脑暴露给其他成员。
-func grantAllows(ctx context.Context, tx pgx.Tx, grantID, computerID, actorID, spaceID string) (rejectionReason, int64, error) {
+func grantAllows(ctx context.Context, tx pgx.Tx, grantID, computerID, actorID, spaceID string, workflow bool) (rejectionReason, int64, error) {
+	var allowWorkflows bool
 	var status, scope, scopeUser, scopeSpace, deviceID string
 	var version int64
 	err := tx.QueryRow(ctx, `
-		SELECT status, scope, COALESCE(scope_user_id::text, ''), COALESCE(scope_space_id::text, ''), device_id::text, permission_version
+		SELECT status, scope, COALESCE(scope_user_id::text, ''), COALESCE(scope_space_id::text, ''), device_id::text, permission_version, allow_workflows
 		  FROM openfox.device_grants
 		 WHERE organization_id = openfox_private.current_organization_id() AND id = $1::uuid`, grantID).
-		Scan(&status, &scope, &scopeUser, &scopeSpace, &deviceID, &version)
+		Scan(&status, &scope, &scopeUser, &scopeSpace, &deviceID, &version, &allowWorkflows)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return rejectGrant, 0, nil
 	}
@@ -704,7 +705,7 @@ func grantAllows(ctx context.Context, tx pgx.Tx, grantID, computerID, actorID, s
 	if status != "ACTIVE" || deviceID != computerID {
 		return rejectGrant, 0, nil
 	}
-	if scope == "PERSONAL" && scopeUser != actorID || scope == "SPACE" && scopeSpace != spaceID {
+	if (workflow && !allowWorkflows) || (scope == "PERSONAL" && scopeUser != actorID) || (scope == "SPACE" && scopeSpace != spaceID) {
 		return rejectAuthorization, 0, nil
 	}
 	return "", version, nil
@@ -982,18 +983,19 @@ func runStillAuthorized(ctx context.Context, tx pgx.Tx, organizationID string, r
 	if err != nil || !variantAllowed {
 		return false, err
 	}
-	reason, version, err := grantAllows(ctx, tx, run.GrantID, run.ComputerID, run.ActorID, run.SpaceID)
+	conversation, err := (conversations.Service{}).AuthorizeInvocation(ctx, tx, organizationID, run.ConversationID, run.ActorID)
+	if err != nil {
+		if errors.Is(err, conversations.ErrForbidden) || errors.Is(err, conversations.ErrNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+	reason, version, err := grantAllows(ctx, tx, run.GrantID, run.ComputerID, run.ActorID, run.SpaceID, conversation.Origin == conversations.OriginAutomation)
 	if err != nil {
 		return false, err
 	}
 	if reason != "" || version != run.GrantVersion {
 		return false, nil
-	}
-	if _, err := (conversations.Service{}).AuthorizeInvocation(ctx, tx, organizationID, run.ConversationID, run.ActorID); err != nil {
-		if errors.Is(err, conversations.ErrForbidden) || errors.Is(err, conversations.ErrNotFound) {
-			return false, nil
-		}
-		return false, err
 	}
 	if err := conversations.CheckSlackRun(ctx, tx, run.ConversationID, run.ActorID, run.ID); err != nil {
 		if errors.Is(err, conversations.ErrForbidden) {

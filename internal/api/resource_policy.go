@@ -61,17 +61,6 @@ func (h *Handler) getRuntimeConfig(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, config)
 }
 
-// runtimeUsageSummary 是给非管理员成员的用量摘要：只有排队数与队列是否已满，
-// 不含各项上限、活动数与平台槽位（这些只给组织 OWNER/ADMIN）。
-type runtimeUsageSummary struct {
-	OrganizationID string `json:"organization_id"`
-	Queued         int    `json:"queued"`
-	QueueFull      bool   `json:"queue_full"`
-}
-
-// getRuntimeUsage 返回组织配额的当前用量（阶段 12e）。
-// 组织成员可读排队数与队列是否已满（对话里据此提示「组织队列已满」）；
-// 具体上限、活动数与平台槽位只返回给组织 OWNER/ADMIN。
 func (h *Handler) getRuntimeUsage(w http.ResponseWriter, r *http.Request) {
 	_, selection, role, ok := h.conversationAuth(w, r)
 	if !ok {
@@ -88,10 +77,7 @@ func (h *Handler) getRuntimeUsage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if normalized := strings.ToUpper(strings.TrimSpace(role)); normalized != "OWNER" && normalized != "ADMIN" {
-		writeJSON(w, http.StatusOK, runtimeUsageSummary{
-			OrganizationID: usage.OrganizationID, Queued: usage.Queued, QueueFull: usage.QueueFull,
-		})
-		return
+		usage.QueueMax = 0
 	}
 	writeJSON(w, http.StatusOK, usage)
 }

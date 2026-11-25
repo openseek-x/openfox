@@ -37,7 +37,10 @@ import {
   visibilityText,
   type ComputerStatus,
 } from "./model";
-import { useLocalRegister } from "./localRegistration";
+import {
+  useLocalRegister,
+  useRegisteredLocalDeviceId,
+} from "./localRegistration";
 import { useDevices, useLocalStatus, useMe } from "./queries";
 
 export function StatusDot({
@@ -159,7 +162,7 @@ export function CommandChip({ children }: { children: string }) {
 }
 
 /**
- * 「修复并重连」：当前查看的就是本机（本机注册的 device_id 与电脑 ID 一致）且桌面端支持注册时可用，
+ * 「修复并重连」：当前查看的电脑与本机注册身份匹配且桌面端支持注册时可用，
  * 执行与「这台电脑」卡片相同的强制重新注册；其他电脑或浏览器里禁用并提示。
  */
 function RepairButton({
@@ -170,13 +173,10 @@ function RepairButton({
   deviceId: string;
 }) {
   const t = useT();
-  const local = useLocalStatus();
+  const localId = useRegisteredLocalDeviceId(orgId);
   const register = useLocalRegister(orgId);
-  const registration = local.data?.registration;
   const isLocal =
-    Boolean(desktopBridge()?.registerComputer) &&
-    registration?.registered === true &&
-    registration.device_id === deviceId;
+    Boolean(desktopBridge()?.registerComputer) && localId === deviceId;
   if (!isLocal)
     return (
       <Tooltip content={t("computers.detail.repairOnlyLocal")}>
@@ -200,7 +200,7 @@ function RepairButton({
 }
 
 /**
- * 「迁移到这台电脑」：重新连接会产生新的电脑记录，旧记录上的 Agent 还指向旧记录。
+ * 「迁移到这台电脑」：由所有者确认迁移旧电脑记录上的 Agent。
  * 当前查看的是自己名下的离线旧记录，且本机已注册为本组织里的另一条记录时，把 Agent 迁到本机记录。
  */
 function MigrateButton({ orgId, device }: { orgId: string; device: Device }) {
@@ -210,6 +210,7 @@ function MigrateButton({ orgId, device }: { orgId: string; device: Device }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const local = useLocalStatus();
+  const registeredId = useRegisteredLocalDeviceId(orgId);
   const me = useMe();
   const [open, setOpen] = useState(false);
   const registration = local.data?.registration;
@@ -217,8 +218,8 @@ function MigrateButton({ orgId, device }: { orgId: string; device: Device }) {
     Boolean(desktopBridge()?.registerComputer) &&
     registration?.registered === true &&
     registration.organization_id === orgId &&
-    registration.device_id !== device.id
-      ? registration.device_id
+    registeredId !== device.id
+      ? registeredId
       : undefined;
   const mine = me.data?.id !== undefined && device.owner_user_id === me.data.id;
   const devices = useDevices(orgId, Boolean(localId) && mine && !device.online);
@@ -485,13 +486,10 @@ export function RuntimeList({ device }: { device: Device }) {
   const { orgId = "" } = useParams();
   const me = useMe();
   const local = useLocalStatus();
+  const localId = useRegisteredLocalDeviceId(orgId);
   const [expanded, setExpanded] = useState<string | null>(null);
-  const registration = local.data?.registration;
   const sameDevice =
-    me.data?.id === device.owner_user_id &&
-    registration?.registered &&
-    registration.device_id === device.id &&
-    registration.organization_id === orgId;
+    me.data?.id === device.owner_user_id && localId === device.id;
   const [guide, setGuide] = useState<string | null>(null);
   const reported = new Set(
     device.runtimes.map((runtime) => runtime.provider.toLowerCase()),
@@ -756,7 +754,7 @@ export function InfoRow({
   children,
 }: {
   label: string;
-  description?: string;
+  description?: ReactNode;
   children: ReactNode;
 }) {
   return (

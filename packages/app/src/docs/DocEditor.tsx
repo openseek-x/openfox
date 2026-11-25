@@ -8,7 +8,7 @@ import {
   type ArtifactReviewFile,
 } from "@openfox/api";
 import { useT } from "@openfox/i18n";
-import { Button, Skeleton } from "@openfox/ui";
+import { Button, Icon, Skeleton } from "@openfox/ui";
 
 import { useApi } from "../context";
 import { docPageWidths, type DocPageWidth } from "./pagePreferences";
@@ -154,40 +154,48 @@ function DocEditorContent({
       style={{ maxWidth: docPageWidths[pageWidth] }}
       className="mx-auto flex min-w-0 w-full flex-col gap-4 py-6 pr-6 pl-16"
     >
-      <input
-        aria-label={t("docs.editor.titlePlaceholder")}
-        value={title}
-        readOnly={!editable}
-        maxLength={DOC_TITLE_MAX}
-        placeholder={t("docs.editor.titlePlaceholder")}
-        onFocus={() => {
-          titleFocused.current = true;
-        }}
-        onBlur={() => {
-          titleFocused.current = false;
-        }}
-        onChange={(event) => {
-          setTitle(event.target.value);
-          if (editable) save.schedule({ title: event.target.value.trim() });
-        }}
-        className="w-full bg-transparent text-[24px] leading-8 font-bold outline-none placeholder:text-fg-muted read-only:cursor-default"
-      />
-      {node.can_edit && !review && (
-        <Button
-          variant="ghost"
-          size="28"
-          disabled={reviewBusy}
-          onClick={() => setSetup((v) => !v)}
-        >
-          {t("artifacts.review.nativeEnter")}
-        </Button>
-      )}
+      <div className="@container flex min-w-0 items-center gap-2">
+        <input
+          aria-label={t("docs.editor.titlePlaceholder")}
+          value={title}
+          readOnly={!editable}
+          maxLength={DOC_TITLE_MAX}
+          placeholder={t("docs.editor.titlePlaceholder")}
+          onFocus={() => {
+            titleFocused.current = true;
+          }}
+          onBlur={() => {
+            titleFocused.current = false;
+          }}
+          onChange={(event) => {
+            setTitle(event.target.value);
+            if (editable) save.schedule({ title: event.target.value.trim() });
+          }}
+          className="min-w-0 flex-1 bg-transparent text-[24px] leading-8 font-bold outline-none placeholder:text-fg-muted read-only:cursor-default"
+        />
+        {node.can_edit && !review && (
+          <Button
+            variant="ghost-muted"
+            size="28"
+            title={t("artifacts.review.nativeEnter")}
+            aria-expanded={setup}
+            disabled={reviewBusy}
+            onClick={() => setSetup((v) => !v)}
+          >
+            <Icon name="message-circle" size={14} />
+            <span className="sr-only @md:not-sr-only">
+              {t("artifacts.review.nativeEnter")}
+            </span>
+          </Button>
+        )}
+      </div>
       {setup && !review && (
         <NativeReviewSetup
           orgId={orgId}
           spaceId={spaceId}
           busy={reviewBusy}
           onStart={(id) => void enterReview(id)}
+          onDismiss={() => setSetup(false)}
         />
       )}
       {reviewError && <p role="alert">{t("artifacts.review.nativeFailed")}</p>}

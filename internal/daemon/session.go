@@ -65,9 +65,14 @@ type AuthClient struct {
 
 // Register 用注册令牌登记公钥。token 是 v2 安装令牌或旧的纯令牌，原样提交给中心。
 // 电脑名在签发令牌时确定，注册接口不接受改名（中心严格解码请求体）。
-func (c AuthClient) Register(ctx context.Context, token, keyID string, publicKey ed25519.PublicKey) (RegistrationResponse, error) {
+func (c AuthClient) Register(ctx context.Context, token, keyID string, privateKey ed25519.PrivateKey) (RegistrationResponse, error) {
+	if len(privateKey) != ed25519.PrivateKeySize {
+		return RegistrationResponse{}, ErrConfigInvalid
+	}
+	publicKey := privateKey.Public().(ed25519.PublicKey)
 	body := map[string]any{
 		"token": token, "key_id": keyID, "public_key": deviceauth.EncodeBase64URL(publicKey),
+		"signature": deviceauth.EncodeBase64URL(ed25519.Sign(privateKey, deviceauth.RegistrationPayload(token, keyID))),
 	}
 	var response RegistrationResponse
 	if err := c.post(ctx, "/v1/device/register", body, &response); err != nil {
@@ -101,6 +106,9 @@ func (c AuthClient) Session(ctx context.Context, deviceID, keyID string, private
 	challengeBytes, err := deviceauth.DecodeBase64URL(challenge.Challenge, 0)
 	if err != nil || challenge.ChallengeID == "" {
 		return DeviceSession{}, errors.New("daemon: center challenge is malformed")
+	}
+	if !bytes.Equal(challengeBytes, deviceauth.CenterChallenge(c.BaseURL, nonce)) {
+		return DeviceSession{}, errors.New("daemon: device challenge does not match the configured center")
 	}
 	// 签名绑定本机请求的 device_id / key_id，而不是响应里回显的值。
 	payload := deviceauth.CanonicalPayload(challenge.ChallengeID, deviceID, keyID, nonce, challengeBytes)

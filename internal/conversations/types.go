@@ -160,6 +160,7 @@ type CreateInput struct {
 }
 
 const (
+	OriginAutomation     = "AUTOMATION"
 	OriginUser           = "USER"
 	OriginTaskAssignment = "TASK_ASSIGNMENT"
 	// OriginIM 是由飞书消息创建的会话（阶段 6d-2）。

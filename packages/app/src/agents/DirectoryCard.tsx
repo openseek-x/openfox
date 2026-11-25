@@ -57,7 +57,7 @@ export function DirectoryCard({
       ].filter(Boolean);
   return (
     <div
-      className="group relative flex h-[72px] items-center gap-3 rounded-xl border border-line-default bg-surface-card px-4 hover:bg-surface-hover focus-within:bg-surface-hover"
+      className="group relative flex h-[72px] items-center gap-3 rounded-xl border border-line-default bg-surface-card px-4 transition-colors duration-100 hover:bg-surface-hover focus-within:bg-surface-hover has-[[aria-expanded=true]]:bg-surface-hover motion-reduce:transition-none"
       data-testid={`directory-card-${entry.id}`}
     >
       <button
@@ -100,12 +100,7 @@ export function DirectoryCard({
           <span className="truncate">{meta.join(" · ")}</span>
         </div>
       </div>
-      <div
-        className={cn(
-          // 悬停操作叠在卡片右侧，不占布局宽度：未悬停时名称与 meta 可用整行宽度
-          "absolute top-1/2 right-3 flex -translate-y-1/2 items-center gap-1 rounded-md bg-surface-hover pl-2 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100",
-        )}
-      >
+      <div className="of-row-actions relative flex shrink-0 items-center gap-1 pointer-fine:absolute pointer-fine:group-hover:relative pointer-fine:group-focus-within:relative pointer-fine:has-[[aria-expanded=true]]:relative">
         <div className="flex h-7 items-center rounded-md border border-line-default bg-surface-card">
           <button
             type="button"
@@ -115,8 +110,10 @@ export function DirectoryCard({
               if (!noChat) actions.onChat(entry);
             }}
             className={cn(
-              "flex h-full items-center gap-1 rounded-l-md px-2 text-body-sm hover:bg-surface-muted",
-              noChat && "cursor-not-allowed opacity-50",
+              "flex h-full items-center gap-1 rounded-l-md px-2 text-body-sm",
+              noChat
+                ? "cursor-not-allowed opacity-50"
+                : "hover:bg-control-hover",
             )}
           >
             <Icon name="message" size={14} />
@@ -137,7 +134,7 @@ export function DirectoryCard({
                 : t("agents.card.favorite")
             }
             onClick={() => actions.onFavorite(entry)}
-            className="flex h-full items-center rounded-r-md px-1.5 hover:bg-surface-muted"
+            className="flex h-full items-center rounded-r-md px-1.5 hover:bg-control-hover"
           >
             <Icon
               name="star"

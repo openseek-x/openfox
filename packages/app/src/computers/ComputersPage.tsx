@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 
 import type { Device } from "@openfox/api";
@@ -21,13 +21,9 @@ import { desktopLocalStatusKey, isDesktop } from "../desktop";
 import { ConfigPageHeader, EmptyState, ListSkeleton } from "../settings/common";
 import { ComputerDetailPage } from "./ComputerDetailPage";
 import { ConnectComputerDialog } from "./ConnectComputer";
+import { useComputerGroups } from "./localRegistration";
 import { LocalComputerCard } from "./LocalComputerCard";
-import {
-  computerPartition,
-  sortComputers,
-  systemText,
-  visibilityText,
-} from "./model";
+import { systemText, visibilityText } from "./model";
 import {
   ComputerStatusLabel,
   OsBadge,
@@ -36,7 +32,7 @@ import {
 } from "./parts";
 import { ReconcilingBadge } from "./ReconcilingBadge";
 import { ReconcilingRunsPanel } from "./ReconcilingRunsPanel";
-import { useDevices, useMe } from "./queries";
+import { useDevices } from "./queries";
 import { RemovedDevicesSection } from "./ComputerOps";
 
 /** 设置 · 电脑（Figma 页 15）：?computer=<id> 时显示详情整页，否则显示列表。 */
@@ -52,17 +48,13 @@ function ComputerListPage() {
   const { orgId = "" } = useParams();
   const queryClient = useQueryClient();
   const devices = useDevices(orgId);
-  const me = useMe();
   const desktop = isDesktop();
   const [connecting, setConnecting] = useState(false);
 
-  const { shared, personal } = useMemo(() => {
-    const sorted = sortComputers(devices.data ?? [], me.data?.id);
-    return {
-      shared: sorted.filter((item) => computerPartition(item) === "shared"),
-      personal: sorted.filter((item) => computerPartition(item) === "private"),
-    };
-  }, [devices.data, me.data?.id]);
+  const { local, shared, personal } = useComputerGroups(
+    orgId,
+    devices.data ?? [],
+  );
 
   const refresh = () => {
     void devices.refetch();
@@ -99,7 +91,7 @@ function ComputerListPage() {
       {desktop && (
         <section className="flex flex-col gap-2">
           <SectionTitle>{t("computers.sections.local")}</SectionTitle>
-          <LocalComputerCard orgId={orgId} />
+          <LocalComputerCard orgId={orgId} device={local} />
         </section>
       )}
       {devices.isError ? (

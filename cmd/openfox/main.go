@@ -86,14 +86,14 @@ func run(args []string) error {
 
 func runDaemon(args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: openfox daemon <install|start|stop|restart|status|run|service-status|startup|logs|service-action>")
+		return errors.New("usage: openfox daemon <install|start|stop|restart|status|run|service-status|startup|logs|service-action|move-storage>")
 	}
 	manager, err := daemon.DefaultManager()
 	if err != nil {
 		return err
 	}
 	switch args[0] {
-	case "service-status", "startup", "logs", "service-action", "proxy-status", "proxy-save":
+	case "service-status", "startup", "logs", "service-action", "proxy-status", "proxy-save", "move-storage":
 		return runLocalServiceInput(args, manager, os.Stdin, os.Stdout)
 	case "install":
 		flags := flag.NewFlagSet("daemon install", flag.ContinueOnError)
@@ -160,6 +160,20 @@ func runDaemonRun(args []string, manager daemon.Manager) error {
 	}
 	explicit := map[string]bool{}
 	flags.Visit(func(f *flag.Flag) { explicit[f.Name] = true })
+	if path := strings.TrimSpace(*configPath); path != "" && !explicit["socket"] {
+		dir, err := filepath.Abs(filepath.Dir(path))
+		if err != nil {
+			return err
+		}
+		*socket = filepath.Join(dir, "daemon.sock")
+	}
+	runLock, err := manager.LockStorageRun(*socket, *configPath, *journalPath, *workspaceRoot, *tokenFile)
+	if err != nil {
+		return err
+	}
+	if runLock != nil {
+		defer runLock.Close()
+	}
 
 	var tokenProvider func(context.Context) (string, error)
 	var invalidate func(string)
@@ -196,10 +210,6 @@ func runDaemonRun(args []string, manager daemon.Manager) error {
 		*wssURL, *deviceID, *tokenFile, *centerEpoch = config.WSSURL, config.DeviceID, config.TokenFile, config.CenterEpoch
 		if !explicit["workspace-root"] {
 			*workspaceRoot = config.WorkspaceRoot
-		}
-		if !explicit["socket"] {
-			// 与 config.json 同目录：journal 与独立 CODEX_HOME 默认也放在这里。
-			*socket = filepath.Join(filepath.Dir(path), "daemon.sock")
 		}
 		if !explicit["runtime-executable"] {
 			*runtimeExecutable = config.RuntimeExecutable

@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -132,7 +133,7 @@ func runComputerRegister(args []string, deps computerDeps) error {
 	workspaceRoot := flags.String("workspace-root", "", "managed workspace root (default: <config-dir>/workspaces)")
 	configDir := flags.String("config-dir", "", "configuration directory (default: platform config directory)")
 	noService := flags.Bool("no-service", false, "do not install or start the background service")
-	force := flags.Bool("force", false, "replace an existing registration in the configuration directory")
+	force := flags.Bool("force", false, "reconnect the installation using its saved device identity")
 	runtimeExecutable := flags.String("runtime-executable", "", "Codex executable or PATH name (empty: auto-discover)")
 	var supportedVersions, directoryRoots stringListFlag
 	flags.Var(&supportedVersions, "supported-version", "supported Codex version; may be repeated")
@@ -179,12 +180,26 @@ func runComputerRegister(args []string, deps computerDeps) error {
 		return err
 	}
 	configPath := filepath.Join(dir, daemon.DeviceConfigFileName)
-	if _, err := os.Lstat(configPath); err == nil && !*force {
-		return withExitCode(exitAlreadyRegistered, fmt.Errorf("computer register: %s already exists; this computer is already registered (use --force to replace it)", configPath))
-	} else if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return err
+	lock, err := daemon.LockDeviceIdentity(dir)
+	if err != nil {
+		return fmt.Errorf("computer register: lock device identity: %w", err)
 	}
+	defer lock.Close()
+	config, configErr := daemon.LoadDeviceConfig(configPath)
+	if configErr == nil && !*force {
+		return withExitCode(exitAlreadyRegistered, fmt.Errorf("computer register: %s already exists; use --force to reconnect", configPath))
+	}
+	if configErr != nil && !errors.Is(configErr, os.ErrNotExist) {
+		return fmt.Errorf("computer register: read existing registration: %w", configErr)
+	}
+	if daemon.PendingKeyRotation(configPath) {
+		return errors.New("computer register: finish the pending key rotation before reconnecting")
+	}
+	sameCenter := config.CenterURL == decoded.CenterURL
 	root := strings.TrimSpace(*workspaceRoot)
+	if root == "" && sameCenter {
+		root = config.WorkspaceRoot
+	}
 	if root == "" {
 		root = filepath.Join(dir, "workspaces")
 	}
@@ -199,34 +214,34 @@ func runComputerRegister(args []string, deps computerDeps) error {
 		return err
 	}
 
+	if len(directoryRoots) == 0 && sameCenter {
+		roots = config.DirectoryRoots
+	}
+	if len(supportedVersions) == 0 && sameCenter {
+		supportedVersions = config.SupportedVersions
+	}
+	if *runtimeExecutable == "" && sameCenter {
+		*runtimeExecutable = config.RuntimeExecutable
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), registerTimeout)
 	defer cancel()
-	privateKey, keyID, err := daemon.GenerateDeviceKey()
+	keyPath, privateKey, err := registrationKey(dir, config)
 	if err != nil {
-		return fmt.Errorf("computer register: generate device key: %w", err)
+		return fmt.Errorf("computer register: load device identity: %w", err)
 	}
-	keyPath := filepath.Join(dir, daemon.DeviceKeyFileName)
+	keyID := daemon.DeviceKeyID(privateKey.Public().(ed25519.PublicKey))
 	tokenPath := filepath.Join(dir, daemon.DeviceTokenFileName)
-	// 新私钥先写到 .pending：注册失败时不破坏 --force 之前仍在使用的 device-key。
-	pendingKeyPath := keyPath + ".pending"
-	if err := daemon.WriteDeviceKey(pendingKeyPath, privateKey); err != nil {
-		return fmt.Errorf("computer register: write device key: %w", err)
+	if config.TokenFile != "" {
+		tokenPath = config.TokenFile
 	}
-	defer func() { _ = os.Remove(pendingKeyPath) }()
 	client := daemon.AuthClient{BaseURL: daemon.APIBaseURL(decoded.CenterURL), HTTP: deps.httpClient}
-	registration, err := client.Register(ctx, token, keyID, privateKey.Public().(ed25519.PublicKey))
+	registration, err := client.Register(ctx, token, keyID, privateKey)
 	if err != nil {
 		return registrationError(decoded.CenterURL, err)
 	}
 	session, err := client.Session(ctx, registration.DeviceID, keyID, privateKey)
 	if err != nil {
 		return fmt.Errorf("computer register: the computer was registered but signing in failed (%s); run the command again with --force using a new token", safeCenterError(err))
-	}
-	if info, err := os.Lstat(keyPath); err == nil && !info.Mode().IsRegular() {
-		return errors.New("computer register: device-key exists and is not a regular file")
-	}
-	if err := os.Rename(pendingKeyPath, keyPath); err != nil {
-		return fmt.Errorf("computer register: install device key: %w", err)
 	}
 	if err := daemon.WritePrivateFile(tokenPath, []byte(session.Token+"\n")); err != nil {
 		return fmt.Errorf("computer register: write session token: %w", err)
@@ -235,7 +250,7 @@ func runComputerRegister(args []string, deps computerDeps) error {
 	if err != nil {
 		return errors.New("computer register: center URL in the install token is not usable")
 	}
-	config := daemon.DeviceConfig{
+	config = daemon.DeviceConfig{
 		Version: daemon.DeviceConfigVersion, CenterURL: decoded.CenterURL, WSSURL: wssURL,
 		DeviceID: registration.DeviceID, OrganizationID: registration.OrganizationID, KeyID: keyID,
 		PrivateKeyFile: keyPath, TokenFile: tokenPath, WorkspaceRoot: root, CenterEpoch: registration.CenterEpoch,
@@ -266,6 +281,45 @@ func runComputerRegister(args []string, deps computerDeps) error {
 		return nil
 	}
 	return installLaunchAgent(ctx, deps, dir, configPath, foreground)
+}
+
+// registrationKey runs under the identity lock. A key saved before the first
+// exchange lets a new process recover even if the registration response is lost.
+func registrationKey(dir string, config daemon.DeviceConfig) (string, ed25519.PrivateKey, error) {
+	if config.PrivateKeyFile != "" {
+		key, err := daemon.ReadDeviceKey(config.PrivateKeyFile)
+		if err != nil {
+			return "", nil, err
+		}
+		if daemon.DeviceKeyID(key.Public().(ed25519.PublicKey)) != config.KeyID {
+			return "", nil, errors.New("saved device key does not match the registration")
+		}
+		return config.PrivateKeyFile, key, nil
+	}
+
+	// A completed rotation stores the active key under a key-specific filename.
+	rotated, err := fs.Glob(os.DirFS(dir), daemon.DeviceKeyFileName+"-????????????????")
+	if err != nil {
+		return "", nil, err
+	}
+	path := filepath.Join(dir, daemon.DeviceKeyFileName)
+	key, err := daemon.ReadDeviceKey(path)
+	if len(rotated) > 0 {
+		if len(rotated) != 1 || !errors.Is(err, os.ErrNotExist) {
+			return "", nil, errors.New("multiple device keys found; restore config.json before reconnecting")
+		}
+		path = filepath.Join(dir, rotated[0])
+		key, err = daemon.ReadDeviceKey(path)
+		return path, key, err
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return path, key, err
+	}
+	key, _, err = daemon.GenerateDeviceKey()
+	if err == nil {
+		err = daemon.WriteDeviceKey(path, key)
+	}
+	return path, key, err
 }
 
 // installLaunchAgent 写 launchd plist（daemon run --config）并载入；失败时给出前台运行的命令。

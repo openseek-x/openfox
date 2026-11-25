@@ -101,7 +101,7 @@ export const SortableCard = memo(function SortableCard({
             optimistic: statusFields(status),
           })
         }
-        className="absolute top-1.5 right-1.5 bg-surface-card opacity-0 group-focus-within:opacity-100 group-hover:opacity-100"
+        className="absolute top-1.5 right-1.5 bg-surface-card of-row-actions"
       />
     </div>
   );
@@ -125,7 +125,9 @@ export const CardBody = memo(function CardBody({
     <article
       className={cn(
         "flex flex-col gap-[var(--density-card-gap,6px)] rounded-lg border border-line-default bg-surface-card p-[var(--density-card-padding,10px)] shadow-card",
-        overlay && "rotate-1 shadow-popover",
+        overlay
+          ? "rotate-1 shadow-popover"
+          : "transition-colors duration-100 group-hover:bg-surface-hover motion-reduce:transition-none",
       )}
     >
       <div className="flex h-5 items-center gap-2">

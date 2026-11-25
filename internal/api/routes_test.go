@@ -84,6 +84,12 @@ func TestNewRegistersWP02WP03Routes(t *testing.T) {
 			wantStatusCode: http.StatusUnauthorized,
 		},
 		{
+			name:           "retired audit list",
+			method:         http.MethodGet,
+			path:           "/v1/organizations/00000000-0000-0000-0000-0000000000a1/audit-events",
+			wantStatusCode: http.StatusNotFound,
+		},
+		{
 			name:           "runtime config",
 			method:         http.MethodGet,
 			path:           "/v1/organizations/00000000-0000-0000-0000-0000000000a1/runtime-config",

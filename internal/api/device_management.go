@@ -1,6 +1,7 @@
 package api
 
 import (
+	"crypto/ed25519"
 	"encoding/json"
 	"errors"
 	"io"
@@ -113,6 +114,7 @@ type registrationTokenResponse struct {
 }
 
 type deviceRegisterRequest struct {
+	Signature string `json:"signature"`
 	Token     string `json:"token"`
 	KeyID     string `json:"key_id"`
 	PublicKey string `json:"public_key"`
@@ -170,6 +172,15 @@ func (h *DeviceManagementHandler) register(w http.ResponseWriter, r *http.Reques
 	publicKey, err := deviceauth.DecodeBase64URL(input.PublicKey, 32)
 	if err != nil {
 		writeError(w, r, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
+		return
+	}
+	if len(input.Token) > devices.MaxInstallTokenLength || len(input.KeyID) > 128 {
+		writeError(w, r, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
+		return
+	}
+	signature, err := deviceauth.DecodeBase64URL(input.Signature, ed25519.SignatureSize)
+	if err != nil || !ed25519.Verify(publicKey, deviceauth.RegistrationPayload(input.Token, input.KeyID), signature) {
+		writeError(w, r, http.StatusBadRequest, "INVALID_REQUEST", "registration signature is invalid")
 		return
 	}
 	result, err := h.store.RegisterWithToken(r.Context(), devices.RegistrationExchange{
@@ -318,6 +329,7 @@ func (h *DeviceManagementHandler) get(w http.ResponseWriter, r *http.Request) {
 type deviceSettingsRequest struct {
 	Name            *string `json:"name"`
 	MaxSlots        *int    `json:"max_slots"`
+	AllowWorkflows  *bool   `json:"allow_workflows"`
 	SettingsVersion int64   `json:"settings_version"`
 }
 
@@ -332,7 +344,7 @@ func (h *DeviceManagementHandler) updateSettings(w http.ResponseWriter, r *http.
 		return
 	}
 	device, err := h.store.UpdateSettings(r.Context(), selection, viewer, r.PathValue("deviceID"), devices.SettingsInput{
-		Name: input.Name, MaxSlots: input.MaxSlots, ExpectedVersion: input.SettingsVersion,
+		Name: input.Name, MaxSlots: input.MaxSlots, AllowWorkflows: input.AllowWorkflows, ExpectedVersion: input.SettingsVersion,
 	})
 	if err != nil {
 		writeDeviceManagementError(w, r, err)
@@ -593,8 +605,10 @@ func writeDeviceManagementError(w http.ResponseWriter, r *http.Request, err erro
 		writeError(w, r, http.StatusConflict, "GRANT_SCOPE_MISMATCH", "the two devices are granted with different scopes")
 	case errors.Is(err, devices.ErrTooManyAgents):
 		writeError(w, r, http.StatusConflict, "TOO_MANY_AGENTS", "too many Agents to move at once")
+	case errors.Is(err, devices.ErrKeyConflict):
+		writeError(w, r, http.StatusConflict, "KEY_CONFLICT", "device key is already registered")
 	case errors.Is(err, devices.ErrRegistrationConflict):
-		writeError(w, r, http.StatusConflict, "REGISTRATION_CONFLICT", "registration token is stale or already consumed")
+		writeError(w, r, http.StatusConflict, "REGISTRATION_CONFLICT", "registration token or device identity cannot be used")
 	case errors.Is(err, devices.ErrVersionConflict), errors.Is(err, devices.ErrEpochConflict):
 		writeError(w, r, http.StatusConflict, "VERSION_CONFLICT", "device state changed; refresh and retry")
 	case errors.Is(err, devices.ErrOwnerRequired):

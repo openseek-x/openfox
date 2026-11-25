@@ -1,7 +1,9 @@
 package api
 
 import (
+	"bytes"
 	"context"
+	"crypto/ed25519"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -170,5 +172,33 @@ func TestDeviceHeartbeatRequiresDeviceBearerAndReturnsReceiptFacts(t *testing.T)
 	}
 	if response.DeviceID != testDeviceID || response.Version != 2 {
 		t.Fatalf("heartbeat response = %+v", response)
+	}
+}
+
+func TestDeviceRegistrationRequiresProofForThisToken(t *testing.T) {
+	key, private, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := newManagementHandler(&managementStore{})
+	signature := deviceauth.EncodeBase64URL(ed25519.Sign(private, deviceauth.RegistrationPayload("token", "key")))
+	for _, tc := range []struct {
+		token, keyID, proof string
+		want                int
+	}{
+		{"token", "key", signature, http.StatusCreated},
+		{"different", "key", signature, http.StatusBadRequest},
+		{"token", "different", signature, http.StatusBadRequest},
+		{"token", "key", "", http.StatusBadRequest},
+	} {
+		body, err := json.Marshal(deviceRegisterRequest{Token: tc.token, KeyID: tc.keyID, PublicKey: deviceauth.EncodeBase64URL(key), Signature: tc.proof})
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp := httptest.NewRecorder()
+		h.register(resp, httptest.NewRequest(http.MethodPost, "/v1/device/register", bytes.NewReader(body)))
+		if resp.Code != tc.want {
+			t.Errorf("registration with token %q and id %q: got %d, want %d", tc.token, tc.keyID, resp.Code, tc.want)
+		}
 	}
 }

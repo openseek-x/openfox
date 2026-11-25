@@ -32,7 +32,7 @@ import (
 
 const (
 	DefaultPollInterval  = 15 * time.Second
-	DefaultMaxConcurrent = 4
+	DefaultMaxConcurrent = runtimepolicy.DefaultDeviceMaxRuns
 
 	// 停止进程时等待其退出的上限，覆盖 runtime 的 SIGINT→SIGTERM→SIGKILL 升级。
 	stopTimeout = 20 * time.Second

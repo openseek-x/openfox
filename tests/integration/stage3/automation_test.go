@@ -1047,3 +1047,60 @@ func TestScheduleScanDoesNotOverwriteEditedTrigger(t *testing.T) {
 		t.Fatal("stale work ran or overwrote the new plan")
 	}
 }
+
+func TestAutomationDevicePermission(t *testing.T) {
+	env := newS3Env(t)
+	ensureDirectory(env)
+	agent := env.insertAgent(env.space.ID)
+	env.configureAgent(agent)
+	device := env.ensureDevice("ORGANIZATION", "")
+	env.exec("UPDATE openfox.physical_devices SET owner_user_id=$2 WHERE id=$1", device, s3OwnerID)
+	env.exec("UPDATE openfox.device_grants SET allow_workflows=DEFAULT WHERE device_id=$1", device)
+	env.exec("INSERT INTO openfox.device_grants (organization_id,device_id) VALUES ($1,$2)", env.otherOrg, device)
+	devicePath := "devices/" + device
+	created := env.createAutomation(agent, scheduleTrigger("daily", map[string]any{"time": "09:00"}))
+	path := automationsPath(env.space.ID) + "/" + created.Automation.ID
+	run := func() runView {
+		t.Helper()
+		var result runView
+		env.manager().must(http.StatusCreated, http.MethodPost, path+"/run", nil, &result)
+		return result
+	}
+	if r := run(); r.Status != "failed" || r.ConversationID != nil || !strings.Contains(r.Reason, "工作流") {
+		t.Fatalf("default permission: %+v", r)
+	}
+	patch := map[string]any{"settings_version": 1, "allow_workflows": true}
+	env.admin().must(http.StatusNotFound, http.MethodPatch, devicePath, patch, nil)
+	var settings struct {
+		AllowWorkflows bool `json:"allow_workflows"`
+		Version        int  `json:"settings_version"`
+	}
+	env.owner().must(http.StatusOK, http.MethodPatch, devicePath, patch, &settings)
+	if !settings.AllowWorkflows || settings.Version != 2 {
+		t.Fatalf("workflow permission after enabling: %+v", settings)
+	}
+	env.owner().must(http.StatusConflict, http.MethodPatch, devicePath, patch, nil)
+	if count := env.count("SELECT count(*) FROM openfox.device_grants WHERE organization_id=$1 AND device_id=$2 AND allow_workflows", env.otherOrg, device); count != 0 {
+		t.Fatal("permission propagated to the other organization")
+	}
+	active := run()
+	if active.ConversationID == nil {
+		t.Fatalf("authorized workflow: %+v", active)
+	}
+	env.materialize()
+	runID := env.runOf(active.ID)
+	env.owner().must(http.StatusOK, http.MethodPatch, devicePath, map[string]any{"settings_version": 2, "allow_workflows": false}, nil)
+	env.manager().must(http.StatusNoContent, http.MethodDelete, path+"?version=1", nil, nil)
+	env.materialize()
+	var failure string
+	env.scalar(&failure, "SELECT failure_code FROM openfox.runs WHERE id=$1", runID)
+	if env.runState(runID) != "FAILED" || failure != "AUTHORIZATION_REVOKED" {
+		t.Fatalf("queued workflow after permission revoked: failure=%q", failure)
+	}
+	env.owner().must(http.StatusOK, http.MethodPatch, devicePath, map[string]any{"settings_version": 3, "allow_workflows": true}, nil)
+	env.exec("UPDATE openfox.device_grants SET status='REVOKED' WHERE organization_id=$1 AND device_id=$2", env.org, device)
+	env.exec("UPDATE openfox.device_grants SET status='ACTIVE' WHERE organization_id=$1 AND device_id=$2", env.org, device)
+	if env.count("SELECT count(*) FROM openfox.device_grants WHERE organization_id=$1 AND device_id=$2 AND allow_workflows", env.org, device) != 0 {
+		t.Fatal("rejoining restored the old workflow permission")
+	}
+}

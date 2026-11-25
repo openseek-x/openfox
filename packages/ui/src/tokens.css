@@ -26,6 +26,21 @@
   --color-surface-selected: #09090b14;
   --color-surface-sidebar: #ececee;
   --color-surface-sidebar-active: #e1e1e3;
+  --color-surface-sidebar-hover: color-mix(
+    in srgb,
+    var(--color-surface-sidebar),
+    var(--color-surface-sidebar-active) 50%
+  );
+  --color-control-hover: color-mix(
+    in srgb,
+    var(--color-fg-default) 6%,
+    transparent
+  );
+  --color-secondary-hover: color-mix(
+    in srgb,
+    var(--color-surface-muted),
+    var(--color-fg-default) 6%
+  );
   --color-scrim: #09090b;
   /* 对话代码：代码块底色、行内代码底色与代码块描边，和 surface-muted 区分开 */
   --color-surface-code: #f6f6f7;
@@ -122,6 +137,67 @@
     outline: none;
     box-shadow: var(--shadow-focus);
   }
+
+  /* 独立文本输入用底线提示，组合输入把焦点交给外层。 */
+  :where(input:read-write, input[readonly], textarea) {
+    &:focus-visible {
+      box-shadow: var(
+        --of-input-indicator,
+        inset 0 -2px var(--color-line-focus)
+      );
+    }
+    @media (hover: hover) {
+      &:read-write:hover:not(:focus):not([aria-invalid="true"]) {
+        box-shadow: var(
+          --of-input-indicator,
+          inset 0 -1px var(--color-line-strong)
+        );
+      }
+    }
+    @media (forced-colors: active) {
+      &:focus-visible {
+        outline: 2px solid Highlight;
+        outline-offset: -2px;
+      }
+    }
+  }
+}
+
+/* 精确指针按行显示操作，触屏常显；焦点移入弹出菜单后保留入口。 */
+@utility of-row-actions {
+  @media (hover: hover) and (pointer: fine) {
+    opacity: 0;
+    pointer-events: none;
+
+    :where(.group:hover, .group:focus-within) &,
+    &[aria-expanded="true"],
+    &:has([aria-expanded="true"]) {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+}
+
+@utility of-input-frame {
+  --of-input-indicator: none;
+  @apply transition-colors motion-reduce:transition-none;
+
+  @media (hover: hover) {
+    &:hover:is(:read-write, button:enabled, :has(:read-write)):not(
+        :focus-within,
+        [aria-expanded="true"],
+        [aria-invalid="true"],
+        :has([aria-invalid="true"])
+      ) {
+      border-color: var(--color-line-strong);
+      background-color: var(--color-surface-hover);
+    }
+  }
+  @media (forced-colors: active) {
+    &:focus-within {
+      outline: 2px solid Highlight;
+    }
+  }
 }
 
 @layer components {
@@ -205,7 +281,7 @@
   --color-surface-sidebar: #222542;
   --color-surface-active: #404665;
   --color-surface-sidebar-active: #404665;
-  --color-surface-hover: #404665;
+  --color-surface-hover: #303450;
   --color-surface-muted: #404665;
   --color-line-default: #404665;
 }
@@ -217,7 +293,7 @@
   --color-surface-sidebar: #161616;
   --color-surface-active: #303030;
   --color-surface-sidebar-active: #303030;
-  --color-surface-hover: #303030;
+  --color-surface-hover: #242424;
   --color-surface-muted: #303030;
   --color-line-default: #303030;
 }

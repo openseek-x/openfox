@@ -318,14 +318,16 @@ export function DisplayMenu({
             <div className="mb-1 text-caption text-fg-muted">
               {t("tasks.displayMenu.boardOptions")}
             </div>
-            <div className={row}>
-              <span>{t("tasks.displayMenu.showEmptyColumns")}</span>
-              <Switch
-                label={t("tasks.displayMenu.showEmptyColumns")}
-                checked={value.showEmptyColumns}
-                onCheckedChange={(v) => set("showEmptyColumns", v)}
-              />
-            </div>
+            {(value.layout !== "board" || value.boardColumns !== "status") && (
+              <div className={row}>
+                <span>{t("tasks.displayMenu.showEmptyColumns")}</span>
+                <Switch
+                  label={t("tasks.displayMenu.showEmptyColumns")}
+                  checked={value.showEmptyColumns}
+                  onCheckedChange={(v) => set("showEmptyColumns", v)}
+                />
+              </div>
+            )}
             <div className={row}>
               <span
                 className={cn(value.boardRows === "none" && "text-fg-muted")}

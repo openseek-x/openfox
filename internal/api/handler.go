@@ -111,8 +111,9 @@ func NewWithDispatch(auth identity.Service, pool *postgres.Pool, secureCookies b
 		limits.EmailFailuresPerAccount = 20
 	}
 	deviceAuthService := deviceauth.Service{
-		Store: deviceauth.PostgresStore{Pool: pool},
-		Now:   time.Now,
+		CenterAPIURL: centerPublicURL(dispatchOptions.PublicURL) + "/api",
+		Store:        deviceauth.PostgresStore{Pool: pool},
+		Now:          time.Now,
 	}
 	h := &Handler{
 		officePreview:          dispatchOptions.OfficePreview,
@@ -216,7 +217,6 @@ func NewWithDispatch(auth identity.Service, pool *postgres.Pool, secureCookies b
 	h.registerDispatchRoutes(mux)
 	h.registerReconciliationRoutes(mux)
 	h.registerResourcePolicyRoutes(mux)
-	h.registerAuditEventRoutes(mux)
 	h.registerOnboardingRoutes(mux)
 	h.registerSessionRoutes(mux)
 	h.registerProfileRoutes(mux)

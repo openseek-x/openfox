@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
 import type { Device } from "@openfox/api";
@@ -6,13 +6,22 @@ import { useI18n, useT } from "@openfox/i18n";
 import { Avatar, Button, Drawer, Icon, Popover, cn } from "@openfox/ui";
 
 import { isDesktop } from "../desktop";
+import { ComputerDetailBody } from "./ComputerDetailPage";
 import { ConnectComputerDialog } from "./ConnectComputer";
-import { localOs, localState } from "./LocalComputerCard";
 import {
-  computerPartition,
+  useComputerGroups,
+  useLocalRegistrationView,
+  useRegisteredLocalDeviceId,
+} from "./localRegistration";
+import {
+  localOs,
+  localState,
+  localStatusLabel,
+  useConnectingStuck,
+} from "./LocalComputerCard";
+import {
   computerStatus,
   railStatus,
-  sortComputers,
   statusLabel,
   systemText,
   visibilityText,
@@ -43,7 +52,7 @@ export const HOVER_OPEN_MS = 250;
 export const HOVER_CLOSE_MS = 80;
 
 /**
- * 侧栏左下角「电脑」入口（Figma 页 18）：状态点 + 悬停弹层「电脑列表」，点击电脑打开只读详情抽屉。
+ * 侧栏左下角「电脑」入口（Figma 页 18）：状态点 + 悬停弹层「电脑列表」，点击电脑打开详情抽屉。
  */
 export function ComputersRailButton({ orgId }: { orgId: string }) {
   const t = useT();
@@ -190,16 +199,9 @@ function ComputerListPopover({
   onConnect: () => void;
 }) {
   const t = useT();
-  const me = useMe();
   const desktop = isDesktop();
   const fade = useScrollFade();
-  const { shared, personal } = useMemo(() => {
-    const sorted = sortComputers(devices, me.data?.id);
-    return {
-      shared: sorted.filter((item) => computerPartition(item) === "shared"),
-      personal: sorted.filter((item) => computerPartition(item) === "private"),
-    };
-  }, [devices, me.data?.id]);
+  const { local, shared, personal } = useComputerGroups(orgId, devices);
   const empty = !desktop && shared.length === 0 && personal.length === 0;
 
   return (
@@ -240,7 +242,14 @@ function ComputerListPopover({
           <>
             {desktop && (
               <PopoverGroup label={t("computers.sections.thisMachine")}>
-                <LocalPopoverCard orgId={orgId} onNavigate={onNavigate} />
+                {local ? (
+                  <PopoverRow
+                    device={local}
+                    onClick={() => onOpenDevice(local.id)}
+                  />
+                ) : (
+                  <LocalPopoverCard orgId={orgId} onNavigate={onNavigate} />
+                )}
               </PopoverGroup>
             )}
             {shared.length > 0 && (
@@ -317,7 +326,7 @@ function PopoverRow({
   );
 }
 
-/** 本机卡片：本机与远程电脑无法对应到同一条设备记录，点击进入设置页的本机管理。「防止休眠」2c 接入。 */
+/** 尚无可见注册记录时，提供本机服务的管理入口。 */
 function LocalPopoverCard({
   orgId,
   onNavigate,
@@ -328,7 +337,13 @@ function LocalPopoverCard({
   const t = useT();
   const navigate = useNavigate();
   const local = useLocalStatus();
-  const state = localState(local.data, null);
+  const view = useLocalRegistrationView(orgId);
+  const stuck = useConnectingStuck(local.data, local.dataUpdatedAt);
+  const state = localStatusLabel(
+    localState(local.data, null, stuck),
+    view,
+    false,
+  );
   return (
     <button
       type="button"
@@ -341,7 +356,7 @@ function LocalPopoverCard({
       <OsBadge os={localOs()} size={32} />
       <span className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="truncate text-body font-medium text-fg-default">
-          {t("computers.local.name")}
+          {local.data?.machine_name?.trim() || t("computers.local.name")}
           <span className="font-normal text-fg-muted">
             {" "}
             {t("computers.local.suffix")}
@@ -365,7 +380,7 @@ function LocalPopoverCard({
   );
 }
 
-/** 电脑详情抽屉（页 18 C1–C7）：只读；离线时显示「修复并重连」（2c 开放）。电脑不可见时自动关闭。 */
+/** 电脑详情抽屉（页 18 C1–C7）：本机复用完整设置，远程电脑显示摘要；离线时显示「修复并重连」（2c 开放）。电脑不可见时自动关闭。 */
 export function ComputerDrawer({
   orgId,
   deviceId,
@@ -378,6 +393,8 @@ export function ComputerDrawer({
   const { t, locale } = useI18n();
   const detail = useDevice(orgId, deviceId);
   const device = detail.data;
+  const me = useMe();
+  const isLocal = useRegisteredLocalDeviceId(orgId) === deviceId;
   const gone = isNotFound(detail.error);
   useEffect(() => {
     if (gone) onClose();
@@ -393,11 +410,25 @@ export function ComputerDrawer({
   };
 
   return (
-    <Drawer open onClose={close} title={t("computers.drawer.title")}>
+    <Drawer
+      open
+      onClose={close}
+      title={t(
+        isLocal ? "computers.drawer.localTitle" : "computers.drawer.title",
+      )}
+    >
       {!device ? (
         <div className="px-6 py-6 text-body-sm text-fg-muted" aria-busy="true">
           {detail.isError ? t("computers.loadFailed") : t("common.loading")}
         </div>
+      ) : isLocal ? (
+        <ComputerDetailBody
+          key={device.id}
+          orgId={orgId}
+          device={device}
+          meId={me.data?.id}
+          onLeave={onClose}
+        />
       ) : (
         <div className="flex flex-col gap-8 px-6 pt-3 pb-6">
           <header className="flex items-center gap-4">

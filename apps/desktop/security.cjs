@@ -131,9 +131,11 @@ function parseRegistrationStatus(stdout) {
     return {
       registered: false,
       reason:
-        parsed.reason === "invalid_config"
-          ? "invalid_config"
-          : "not_registered",
+        parsed.registered === false && parsed.reason === "not_registered"
+          ? "not_registered"
+          : parsed.reason === "invalid_config"
+            ? "invalid_config"
+            : "unavailable",
     };
   }
   const result = {
@@ -141,6 +143,14 @@ function parseRegistrationStatus(stdout) {
     organization_id: String(parsed.organization_id || ""),
     device_id: String(parsed.device_id || ""),
   };
+  if (Array.isArray(parsed.organization_ids))
+    result.organization_ids = parsed.organization_ids
+      .slice(0, 100)
+      .filter(
+        (id) =>
+          typeof id === "string" &&
+          /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id),
+      );
   const centerURL = httpURLOrNull(parsed.center_url);
   if (centerURL) result.center_url = centerURL;
   return result;
@@ -267,15 +277,42 @@ async function saveSettings(file, settings) {
  */
 function createSleepGuard(blocker) {
   let id = null;
+  let duringRuns = false;
+  let until = 0;
+  let timer = null;
+  function apply() {
+    const want = duringRuns || Date.now() < until;
+    if (want && id === null) id = blocker.start("prevent-app-suspension");
+    if (!want && id !== null) {
+      if (blocker.isStarted(id)) blocker.stop(id);
+      id = null;
+    }
+    return id !== null;
+  }
   return {
     update({ enabled, activeRuns }) {
-      const want = enabled === true && Number(activeRuns) > 0;
-      if (want && id === null) id = blocker.start("prevent-app-suspension");
-      if (!want && id !== null) {
-        if (blocker.isStarted(id)) blocker.stop(id);
-        id = null;
-      }
-      return id !== null;
+      duringRuns = enabled === true && Number(activeRuns) > 0;
+      return apply();
+    },
+    keepAwakeFor(minutes) {
+      if (![0, 60, 120, 240, 480].includes(minutes))
+        throw Error("invalid duration");
+      if (timer !== null) clearTimeout(timer);
+      until = minutes ? Date.now() + minutes * 60000 : 0;
+      timer = minutes
+        ? setTimeout(() => {
+            until = 0;
+            timer = null;
+            apply();
+          }, minutes * 60000)
+        : null;
+      apply();
+    },
+    get protectingRuns() {
+      return duringRuns && id !== null;
+    },
+    get until() {
+      return until > Date.now() ? until : 0;
     },
     get active() {
       return id !== null;

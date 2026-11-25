@@ -135,8 +135,10 @@ export function ChatPanel({
             title={t(`chat.modes.${item}` as MessageKey)}
             onClick={() => change(item)}
             className={cn(
-              "flex size-7 items-center justify-center rounded-md hover:bg-surface-muted",
-              mode === item ? "text-fg-default" : "text-fg-subtle",
+              "flex size-7 items-center justify-center rounded-md",
+              mode === item
+                ? "bg-surface-active text-fg-default"
+                : "text-fg-subtle hover:bg-control-hover hover:text-fg-secondary",
             )}
           >
             <Icon name={MODE_ICONS[item]} size={16} />
@@ -628,11 +630,11 @@ function SessionsMode({ orgId }: { orgId: string }) {
                 <span className="min-w-0 flex-1 truncate text-caption text-fg-muted">
                   {group.agent.title}
                 </span>
-                <span className="shrink-0 text-caption text-fg-muted group-hover:hidden">
+                <span className="shrink-0 text-caption text-fg-muted pointer-fine:group-hover:hidden pointer-fine:group-focus-within:hidden pointer-fine:group-has-[[aria-haspopup=menu][aria-expanded=true]]:hidden">
                   {formatRelativeTime(group.updatedAt, locale)}
                 </span>
               </button>
-              <span className="hidden items-center group-hover:flex">
+              <span className="flex items-center pointer-fine:hidden pointer-fine:group-hover:flex pointer-fine:group-focus-within:flex pointer-fine:group-has-[[aria-haspopup=menu][aria-expanded=true]]:flex">
                 <RowMenu
                   label={t("chat.row.actions")}
                   items={[
@@ -775,7 +777,7 @@ function SessionRow({
         <span className="min-w-0 flex-1 truncate">
           {title ?? t("chat.untitled")}
         </span>
-        <span className="shrink-0 text-caption text-fg-muted group-hover:hidden">
+        <span className="shrink-0 text-caption text-fg-muted pointer-fine:group-hover:hidden pointer-fine:group-focus-within:hidden pointer-fine:group-has-[[aria-haspopup=menu][aria-expanded=true]]:hidden">
           {formatRelativeTime(item.updated_at, locale)}
         </span>
       </Link>

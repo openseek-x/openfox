@@ -14,6 +14,8 @@ import {
   useToast,
 } from "@openfox/ui";
 
+import { useSearchParams } from "react-router-dom";
+import type { Device } from "@openfox/api";
 import { keys, useApi } from "../context";
 
 import {
@@ -22,11 +24,12 @@ import {
   type DesktopLocalStatus,
 } from "../desktop";
 import {
+  type LocalRegistrationView,
   useLocalRegister,
   useLocalRegisterState,
   useLocalRegistrationView,
 } from "./localRegistration";
-import { useLocalStatus } from "./queries";
+import { useTaskSleepPreference, useLocalStatus } from "./queries";
 import { OsBadge, RuntimeIcons, StatusDot } from "./parts";
 import { runtimeName } from "./model";
 
@@ -57,6 +60,27 @@ export function localState(
   }
   if (state === "STARTING") return "starting";
   return "stopped";
+}
+
+/** A running daemon may belong to a different center or organization. */
+export function localStatusLabel(
+  state: LocalState,
+  view: LocalRegistrationView,
+  matched: boolean,
+) {
+  if (state !== "available" || matched) return state;
+  if (
+    view.kind === "other_center" ||
+    (view.kind === "this_org" && view.staleCenterUrl)
+  )
+    return "otherCenter";
+  if (
+    view.kind === "other_org" ||
+    view.kind === "not_registered" ||
+    (view.kind === "this_org" && view.stale)
+  )
+    return "notConnected";
+  return "unverified";
 }
 
 /** 本机操作系统：桥接不返回系统信息，按浏览器平台推断 */
@@ -102,6 +126,8 @@ function LocalRegistrationRow({ orgId }: { orgId: string }) {
   let tone: "muted" | "danger" = "muted";
   if (state.status === "pending") {
     message = t("connect.auto.registering");
+  } else if (view.kind === "other_center") {
+    message = t("connect.auto.otherCenter", { url: view.centerUrl });
   } else if (view.kind === "other_org") {
     const name =
       organizations.data?.find((item) => item.id === view.organizationId)
@@ -158,7 +184,14 @@ function LocalRegistrationRow({ orgId }: { orgId: string }) {
 }
 
 /** 本机卡片（Figma 页 15 · 3.1 / 3.3–3.6）：仅桌面端，通过桌面桥接读写本机守护进程。 */
-export function LocalComputerCard({ orgId }: { orgId?: string }) {
+export function LocalComputerCard({
+  orgId,
+  device,
+}: {
+  orgId?: string;
+  device?: Device;
+}) {
+  const [, setParams] = useSearchParams();
   const t = useT();
   const toast = useToast();
   const queryClient = useQueryClient();
@@ -177,40 +210,29 @@ export function LocalComputerCard({ orgId }: { orgId?: string }) {
   });
   const pending = action.isPending ? action.variables : null;
   const bridge = desktopBridge();
-  const sleep = useMutation({
-    mutationFn: (enabled: boolean) => bridge!.setPreventSleep!(enabled),
-    onSuccess: (prevent_sleep) => {
-      queryClient.setQueryData<DesktopLocalStatus>(
-        desktopLocalStatusKey,
-        (status) => (status ? { ...status, prevent_sleep } : status),
-      );
-    },
-    onError: () => toast(t("connect.sleep.failed"), { tone: "error" }),
-  });
+  const sleep = useTaskSleepPreference();
   const preventSleep = local.data?.prevent_sleep;
   const sleepEnabled = sleep.isPending
     ? sleep.variables
     : (preventSleep?.enabled ?? false);
   const view = useLocalRegistrationView(orgId);
   const connectingStuck = useConnectingStuck(local.data, local.dataUpdatedAt);
-  const rawState = localState(local.data, pending ?? null, connectingStuck);
-  // 注册的服务器地址已过期：本机服务看起来在跑，其实一直连着旧地址，不能显示「可用」
-  const state: LocalState =
-    rawState === "available" && view.kind === "this_org" && view.staleCenterUrl
-      ? "unreachable"
-      : rawState;
+  const state = localState(local.data, pending ?? null, connectingStuck);
+  const label = orgId ? localStatusLabel(state, view, Boolean(device)) : state;
   const runtime = local.data?.runtime;
   const runnable = runtime?.runnable ? 1 : 0;
   const os = localOs();
 
   const description =
-    state === "available"
-      ? t("computers.local.runningDesc", { count: runnable })
-      : state === "unreachable"
-        ? t("computers.local.unreachableDesc")
-        : state === "starting"
-          ? t("computers.local.startingDesc")
-          : t("computers.local.stoppedDesc");
+    label !== state
+      ? t("computers.local.serviceRunning")
+      : state === "available"
+        ? t("computers.local.runningDesc", { count: runnable })
+        : state === "unreachable"
+          ? t("computers.local.unreachableDesc")
+          : state === "starting"
+            ? t("computers.local.startingDesc")
+            : t("computers.local.stoppedDesc");
   const redetect = () => void local.refetch();
 
   return (
@@ -224,7 +246,8 @@ export function LocalComputerCard({ orgId }: { orgId?: string }) {
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
             <span className="text-body font-medium text-fg-default">
-              {t("computers.local.name")}
+              {device?.name ??
+                (local.data?.machine_name?.trim() || t("computers.local.name"))}
             </span>
             <span className="text-body text-fg-muted">
               {t("computers.local.suffix")}
@@ -232,14 +255,14 @@ export function LocalComputerCard({ orgId }: { orgId?: string }) {
             <span className="inline-flex items-center gap-1.5 text-body-sm text-fg-default">
               <StatusDot
                 status={
-                  state === "available"
+                  label === "available"
                     ? "online"
-                    : state === "starting" || state === "unreachable"
+                    : label === "starting" || label === "unreachable"
                       ? "noRuntime"
                       : "offline"
                 }
               />
-              {t(`computers.local.${state}`)}
+              {t(`computers.local.${label}`)}
             </span>
             {state === "available" && runtime && (
               <RuntimeIcons
@@ -271,6 +294,15 @@ export function LocalComputerCard({ orgId }: { orgId?: string }) {
           </span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {device && (
+            <Button
+              variant="outline"
+              size="28"
+              onClick={() => setParams({ computer: device.id })}
+            >
+              {t("computers.drawer.title")}
+            </Button>
+          )}
           {bridge?.setPreventSleep && preventSleep && (
             <div
               className="mr-1 flex items-center gap-2 text-body-sm text-fg-secondary"

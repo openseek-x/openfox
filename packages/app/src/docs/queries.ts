@@ -61,6 +61,19 @@ export function useDocChildren(
   });
 }
 
+export function useRecentPersonalFiles(
+  orgId: string,
+  spaceId: string,
+  enabled: boolean,
+) {
+  const api = useApi();
+  return useQuery({
+    queryKey: [...keys.docs(orgId, spaceId), "recent-personal"],
+    queryFn: () => api.docNodes.recentPersonal(orgId, spaceId),
+    enabled: enabled && Boolean(spaceId),
+  });
+}
+
 export function useDocNode(orgId: string, spaceId: string, nodeId: string) {
   const api = useApi();
   return useQuery({

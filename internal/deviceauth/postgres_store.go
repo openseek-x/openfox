@@ -214,6 +214,9 @@ func (s PostgresStore) RegisterDevice(ctx context.Context, registration Registra
 				INSERT INTO openfox.device_keys (device_id, key_id, public_key)
 				VALUES ($1::uuid, $2, $3)
 			`, deviceID, registration.KeyID, []byte(registration.PublicKey)); err != nil {
+				if isUniqueViolation(err) {
+					return ErrDeviceAlreadyRegistered
+				}
 				return err
 			}
 			_, err := tx.Exec(ctx, `

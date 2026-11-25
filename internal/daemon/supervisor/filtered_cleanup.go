@@ -92,7 +92,7 @@ func (s *Supervisor) FilteredCleanup(ctx context.Context, org string, f storage.
 		if f.MatchedRuns != nil && !f.MatchedRuns[c.Run] {
 			continue
 		}
-		if s.runActive(c.Run) || m.CheckOrRemoveWorktree(ctx, c.Path, c.Repo, false, nil) != nil {
+		if s.runActive(c.Run) || m.CheckOrRemoveWorktree(ctx, j.StoragePaths.Current(c.Path), j.StoragePaths.Current(c.Repo), false, nil) != nil {
 			continue
 		}
 		_ = enc.Encode(c)
@@ -131,7 +131,7 @@ func (s *Supervisor) FilteredCleanup(ctx context.Context, org string, f storage.
 			return nil
 		}
 		size := storage.NewWalker(time.Now()).Size(ctx, c.Path)
-		err := m.CheckOrRemoveWorktree(ctx, c.Path, c.Repo, true, check)
+		err := m.CheckOrRemoveWorktree(ctx, j.StoragePaths.Current(c.Path), j.StoragePaths.Current(c.Repo), true, check)
 		switch {
 		case err == nil:
 			result.Removed.Worktrees++

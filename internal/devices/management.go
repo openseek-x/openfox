@@ -41,7 +41,7 @@ var deviceColumns = `d.id::text, g.id::text, COALESCE(d.owner_user_id::text, '')
 	       d.generation, d.max_slots, d.reserved_slots, d.last_seen_at,
 	       d.protocol_major, d.protocol_minor, d.daemon_version,
 	       d.operating_system, d.architecture, (d.capabilities - 'conversation_workdir_roots' - 'conversation_workdir_git_roots' - 'runtime_mcp_inventory' - 'runtime_config'),
-	       d.center_epoch, d.version, d.settings_version, g.scope,
+	       d.center_epoch, d.version, d.settings_version, g.allow_workflows, g.scope,
 	       COALESCE(g.scope_user_id::text, ''), COALESCE(g.scope_space_id::text, ''), COALESCE(gs.name, ''),
 	       g.permission_version, counts.agent_count, counts.active_agent_count, counts.running_tasks,
 	       counts.reconciling_runs,
@@ -98,7 +98,7 @@ func scanDevice(row rowScanner) (Device, time.Time, error) {
 		&device.Generation, &device.MaxSlots, &device.ReservedSlots, &device.LastSeenAt,
 		&device.ProtocolMajor, &device.ProtocolMinor, &device.DaemonVersion,
 		&device.OperatingSystem, &device.Architecture, &device.Capabilities,
-		&device.CenterEpoch, &device.Version, &device.SettingsVersion, &scope,
+		&device.CenterEpoch, &device.Version, &device.SettingsVersion, &device.AllowWorkflows, &scope,
 		&device.GrantUserID, &device.GrantSpaceID, &device.GrantSpaceName,
 		&device.PermissionVersion, &device.AgentCount, &device.ActiveAgentCount, &device.RunningTasks,
 		&device.ReconcilingRuns,
@@ -373,7 +373,7 @@ func (s PostgresStore) UpdateSettings(ctx context.Context, selection tenancy.Org
 	if err != nil {
 		return Device{}, ErrDeviceNotFound
 	}
-	if input.ExpectedVersion < 1 || (input.Name == nil && input.MaxSlots == nil) {
+	if input.ExpectedVersion < 1 || (input.Name == nil && input.MaxSlots == nil && input.AllowWorkflows == nil) {
 		return Device{}, ErrInvalidRequest
 	}
 	var name, maxSlots any
@@ -393,8 +393,8 @@ func (s PostgresStore) UpdateSettings(ctx context.Context, selection tenancy.Org
 	var result Device
 	err = s.runForSelection(ctx, selection, func(ctx context.Context, tx pgx.Tx) error {
 		var version *int64
-		if err := tx.QueryRow(ctx, `SELECT openfox_private.update_device_settings($1::uuid, $2, $3, $4)`,
-			deviceID, input.ExpectedVersion, name, maxSlots).Scan(&version); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT openfox_private.update_device_settings($1::uuid, $2, $3, $4, $5)`,
+			deviceID, input.ExpectedVersion, name, maxSlots, input.AllowWorkflows).Scan(&version); err != nil {
 			return mapSettingsError(err)
 		}
 		if version == nil {

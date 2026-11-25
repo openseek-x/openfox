@@ -13,11 +13,13 @@ import (
 	"unicode"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"openfox/internal/audit"
 	"openfox/internal/deviceauth"
 	"openfox/internal/identity"
 	"openfox/internal/platform/postgres"
+	"openfox/internal/runtimepolicy"
 	"openfox/internal/secrets"
 	"openfox/internal/tenancy"
 )
@@ -290,6 +292,9 @@ func (s PostgresStore) RotateKey(ctx context.Context, selection tenancy.Organiza
 			INSERT INTO openfox.device_keys (device_id, key_id, public_key, generation)
 			VALUES ($1::uuid, $2, $3, $4)
 		`, deviceID, newKeyID, input.PublicKey, newGeneration); err != nil {
+			if isDevicePublicKeyConflict(err) {
+				return ErrKeyConflict
+			}
 			return err
 		}
 		if _, err := tx.Exec(ctx, `
@@ -429,7 +434,7 @@ func normalizeRegistrationInput(input RegistrationTokenInput) (string, string, i
 	}
 	maxSlots := input.MaxSlots
 	if maxSlots == 0 {
-		maxSlots = 1
+		maxSlots = runtimepolicy.DefaultDeviceMaxRuns
 	}
 	if maxSlots < 1 || maxSlots > 1024 {
 		return "", "", 0, ErrInvalidRequest
@@ -541,12 +546,18 @@ func normalizeUUID(value string) (string, error) {
 	return strings.ToLower(value), nil
 }
 
+func isDevicePublicKeyConflict(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == "device_keys_public_key_unique"
+}
+
 func isRegistrationConflict(err error) bool {
-	if errors.Is(err, ErrRegistrationConflict) {
+	if errors.Is(err, ErrRegistrationConflict) || isDevicePublicKeyConflict(err) {
 		return true
 	}
 	message := strings.ToLower(err.Error())
-	return strings.Contains(message, "registration token is not active") ||
+	return strings.Contains(message, "device registration identity conflict") ||
+		strings.Contains(message, "registration token is not active") ||
 		strings.Contains(message, "device registration issuer is not active") ||
 		strings.Contains(message, "device registration issuer may not grant this scope")
 }

@@ -222,6 +222,52 @@ describe("电脑设置页 · 列表", () => {
     expect(screen.getByText("还没有私有远程电脑")).toBeInTheDocument();
   });
 
+  it("同一注册只在本机分组出现，同名离线电脑仍可单独查看", async () => {
+    const center = "https://center.test";
+    (globalThis as { openfoxDesktop?: unknown }).openfoxDesktop = {
+      getLocalStatus: async () => ({
+        registration: {
+          registered: true,
+          organization_id: "o2",
+          organization_ids: ["o2", "o1"],
+          device_id: "d1",
+          center_url: center,
+        },
+        daemon: { state: "RUNNING" },
+        runtime: { runtime: "codex", runnable: true },
+      }),
+      daemonAction: async () => ({}),
+      pickDirectory: async () => ({ ok: false }),
+    };
+    const active = device({ name: "MacBook-Pro", grant_scope: "PERSONAL" });
+    const old = { ...active, id: "old", online: false };
+    renderSettings("/o/o1/settings/computers", (call) => {
+      if (call.path.endsWith("/devices/center"))
+        return json(200, { center_url: center });
+      if (call.path.endsWith("/devices/d1")) return json(200, detail(active));
+      return listRoute([active, old])(call);
+    });
+    const local = await screen.findByRole("region", { name: "这台电脑" });
+    expect(await within(local).findByText(active.name)).toBeVisible();
+    const privateGroup = screen.getByRole("region", { name: "私有" });
+    expect(within(privateGroup).getAllByText(active.name)).toHaveLength(1);
+    expect(within(privateGroup).getByText("离线")).toBeVisible();
+    expect(
+      within(local).getByRole("button", { name: "电脑详情" }),
+    ).toBeEnabled();
+
+    await userEvent.click(screen.getByRole("button", { name: /^电脑：/ }));
+    const popover = await screen.findByRole("dialog", { name: "电脑列表" });
+    const localGroup = await within(popover).findByRole("region", {
+      name: "本机",
+    });
+    expect(within(popover).getAllByText(active.name)).toHaveLength(2);
+    await userEvent.click(within(localGroup).getByText(active.name));
+    expect(
+      await screen.findByRole("dialog", { name: "本机电脑详情" }),
+    ).toBeVisible();
+  });
+
   it("桌面端显示本机卡片，停止服务前确认，调用桥接 stop", async () => {
     const actions: string[] = [];
     const running = {
@@ -241,9 +287,11 @@ describe("电脑设置页 · 列表", () => {
     };
     renderSettings("/o/o1/settings/computers", listRoute([]));
     const local = await screen.findByRole("region", { name: "这台电脑" });
-    expect(await within(local).findByText("可用")).toBeInTheDocument();
     expect(
-      within(local).getByText("正在此处运行 · 1 个 Runtime 可执行任务。"),
+      await within(local).findByText("尚未确认本机连接"),
+    ).toBeInTheDocument();
+    expect(
+      within(local).getByText("本机后台服务正在运行。"),
     ).toBeInTheDocument();
     await userEvent.click(
       within(local).getByRole("button", { name: "停止服务" }),
@@ -492,6 +540,28 @@ describe("电脑详情整页", () => {
         settings_version: 2,
       }),
     );
+  });
+
+  it("工作流授权只在设备所有者保存成功后生效", async () => {
+    const calls = renderSettings(path, (call) => {
+      if (call.path !== "/v1/organizations/o1/devices/d1") return undefined;
+      if (call.method === "PATCH")
+        return json(
+          200,
+          device({ allow_workflows: true, settings_version: 3 }),
+        );
+      return json(200, { ...detail(), allow_workflows: false });
+    });
+    const toggle = await screen.findByRole("switch", {
+      name: "允许在此机器上运行工作流",
+    });
+    expect(toggle).not.toBeChecked();
+    await userEvent.click(toggle);
+    await waitFor(() => expect(toggle).toBeChecked());
+    expect(calls.find((c) => c.method === "PATCH")?.body).toEqual({
+      allow_workflows: true,
+      settings_version: 2,
+    });
   });
 
   it("移除机器：有阻断 Agent 时列出名字并禁用确认", async () => {

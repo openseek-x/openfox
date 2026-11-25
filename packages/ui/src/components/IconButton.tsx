@@ -22,13 +22,13 @@ const sizeClass: Record<IconButtonSize, string> = {
   "28": "size-7",
 };
 
-const variantClass: Record<IconButtonStyle, string> = {
-  round:
-    "rounded-full bg-surface-card border border-line-default hover:bg-surface-muted",
-  "ghost-soft": "rounded-lg hover:bg-surface-muted",
-  outline: "bg-surface-card border border-line-default hover:bg-surface-hover",
-  secondary: "rounded-lg bg-surface-muted hover:bg-surface-active",
-  ghost: "hover:bg-surface-muted",
+const idleClass: Record<IconButtonStyle, string> = {
+  round: "bg-surface-card enabled:not-aria-disabled:hover:bg-surface-hover",
+  outline: "bg-surface-card enabled:not-aria-disabled:hover:bg-surface-hover",
+  secondary:
+    "bg-surface-muted enabled:not-aria-disabled:hover:bg-secondary-hover",
+  "ghost-soft": "enabled:not-aria-disabled:hover:bg-control-hover",
+  ghost: "enabled:not-aria-disabled:hover:bg-control-hover",
 };
 
 /** 图标按钮，对应 Figma IconButton 的 Style × Size 变体。 */
@@ -48,27 +48,39 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
   ) {
     const radius =
       variant === "round"
-        ? ""
+        ? "rounded-full"
         : size === "36" || variant === "ghost-soft" || variant === "secondary"
           ? "rounded-lg"
           : "rounded-md";
+    const highlighted = [
+      active,
+      rest["aria-expanded"],
+      rest["aria-pressed"],
+    ].some((state) => state === true || state === "true");
+    const bordered = variant === "outline" || variant === "round";
     return (
       <button
         ref={ref}
         type={type}
         aria-label={label}
         title={label}
-        aria-pressed={active || undefined}
+        aria-pressed={
+          (rest["aria-expanded"] === undefined && active) || undefined
+        }
         className={cn(
-          "inline-flex shrink-0 items-center justify-center text-fg-secondary transition-colors",
+          "inline-flex shrink-0 items-center justify-center transition-colors duration-100 motion-reduce:transition-none",
           "disabled:cursor-not-allowed disabled:opacity-50",
           sizeClass[size],
           radius,
-          variantClass[variant],
-          active &&
-            (variant === "round"
-              ? "bg-surface-muted border-line-strong"
-              : "bg-surface-muted"),
+          bordered && "border",
+          bordered &&
+            (highlighted && variant === "round"
+              ? "border-line-strong"
+              : "border-line-default"),
+          highlighted
+            ? "bg-surface-active text-fg-default"
+            : "text-fg-secondary",
+          !highlighted && idleClass[variant],
           className,
         )}
         {...rest}

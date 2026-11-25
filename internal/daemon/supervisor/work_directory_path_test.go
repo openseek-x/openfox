@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"openfox/internal/daemon/workdir"
 	"openfox/internal/workdirpath"
 )
 
@@ -30,7 +31,7 @@ func TestWorkspacePathFactsStayLocalAndExact(t *testing.T) {
 	}
 	database := filepath.Join(root, "state", "runs.db")
 	scope := pathScope()
-	if _, err := ReadWorkDirectoryPath(ctx, database, scope); err == nil {
+	if _, err := ReadWorkDirectoryPath(ctx, database, scope, workdir.StoragePaths{}); err == nil {
 		t.Fatal("missing database accepted")
 	}
 	if _, err := os.Stat(filepath.Dir(database)); !os.IsNotExist(err) {
@@ -52,7 +53,7 @@ func TestWorkspacePathFactsStayLocalAndExact(t *testing.T) {
 	if err := journal.recordWorkDirectory(ctx, scope.DeviceID, run, directory); err != nil {
 		t.Fatal(err)
 	}
-	actual, err := ReadWorkDirectoryPath(ctx, database, scope)
+	actual, err := ReadWorkDirectoryPath(ctx, database, scope, workdir.StoragePaths{})
 	if err != nil || actual != directory {
 		t.Fatal("read failed", err)
 	}
@@ -119,5 +120,65 @@ func TestWorkspacePathGoNodeInterop(t *testing.T) {
 	output, err := command.Output()
 	if err != nil || string(output) != `C:\Users\测试\project` {
 		t.Fatal("Go/Node interop failed", err)
+	}
+}
+
+func TestWorkspaceFactsAndBindingsAfterStorageMove(t *testing.T) {
+	base, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	paths := workdir.StoragePaths{Stable: filepath.Join(base, "state"), Physical: filepath.Join(base, "moved")}
+	stored := filepath.Join(paths.Stable, "workspaces", "task")
+	if err := os.MkdirAll(stored, 0700); err != nil {
+		t.Fatal(err)
+	}
+	database := filepath.Join(paths.Stable, "runs.db")
+	j, err := OpenJournal(t.Context(), database)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scope := pathScope()
+	rc := RunContext{OrganizationID: scope.OrganizationID, SpaceID: scope.SpaceID, ConversationID: scope.ConversationID, AgentID: scope.AgentID, RunID: scope.RunID, Generation: scope.Generation}
+	if err := j.recordWorkDirectory(t.Context(), scope.DeviceID, rc, stored); err != nil {
+		t.Fatal(err)
+	}
+	saved := savedWorkspace{Binding: workdir.Binding{ActualPath: stored}}
+	if err := j.saveConversationWorkspace(t.Context(), scope.DeviceID, rc, &saved); err != nil {
+		t.Fatal(err)
+	}
+	if err := j.RecordWorkspace(t.Context(), stored, "", rc.RunID, rc.Generation); err != nil {
+		t.Fatal(err)
+	}
+	if err := j.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(paths.Stable, paths.Physical); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(paths.Physical, paths.Stable); err != nil {
+		t.Fatal(err)
+	}
+	current := paths.Current(stored)
+	path, err := ReadWorkDirectoryPath(t.Context(), database, scope, paths)
+	if err != nil || path != current {
+		t.Fatalf("offline path: %q %v", path, err)
+	}
+	j, err = OpenJournal(t.Context(), paths.Current(database))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer j.Close()
+	j.StoragePaths = paths
+	binding, err := j.readConversationWorkspace(t.Context(), scope.DeviceID, rc, rc.ConversationID, rc.AgentID, false)
+	if err != nil || binding.Binding.ActualPath != current {
+		t.Fatalf("binding: %+v %v", binding, err)
+	}
+	if err := j.RecordWorkspace(t.Context(), current, "", rc.RunID, rc.Generation); err != nil {
+		t.Fatal(err)
+	}
+	items, err := j.Workspaces(t.Context(), 10)
+	if err != nil || len(items) != 1 || items[0].Path != current {
+		t.Fatalf("workspace rows: %+v %v", items, err)
 	}
 }

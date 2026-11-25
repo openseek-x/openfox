@@ -38,14 +38,9 @@ type runtimeConfigView struct {
 }
 
 type usageView struct {
-	ConfigVersion      int64 `json:"config_version"`
-	Queued             int   `json:"queued"`
-	QueueMax           int   `json:"queue_max"`
-	Active             int   `json:"active"`
-	ActiveMax          int   `json:"active_max"`
-	CapacityMax        int   `json:"capacity_max"`
-	EffectiveActiveMax int   `json:"effective_active_max"`
-	QueueFull          bool  `json:"queue_full"`
+	Queued    int  `json:"queued"`
+	QueueMax  int  `json:"queue_max"`
+	QueueFull bool `json:"queue_full"`
 }
 
 func (c *qcClient) runtimeConfig() runtimeConfigView {
@@ -112,8 +107,7 @@ func TestQuotaRoleRestriction(t *testing.T) {
 	if updated.ConfigVersion != config.ConfigVersion+1 || updated.Policy.QueueMax != 200 {
 		t.Fatalf("updated = %+v", updated)
 	}
-	// 用量接口按角色返回：成员与访客只得到排队数与是否已满（对话里的「队列已满」提示依赖它），
-	// 具体上限、活动数与平台槽位只给组织 OWNER/ADMIN；非成员不可读。
+	// 所有成员可读队列状态，排队上限仅给组织所有者和管理员。
 	for name, client := range map[string]*qcClient{"member": env.member(), "guest": env.guest(), "space admin": env.client(qcAdminID)} {
 		response := client.must(http.StatusOK, http.MethodGet, "runtime-config/usage", nil, nil)
 		var fields map[string]any
@@ -123,9 +117,10 @@ func TestQuotaRoleRestriction(t *testing.T) {
 		}
 	}
 	for name, client := range map[string]*qcClient{"owner": env.owner(), "admin": env.admin()} {
-		if usage := client.usage(); usage.QueueMax != 200 || usage.ActiveMax != 10 || usage.CapacityMax != 4 ||
-			usage.EffectiveActiveMax != 4 || usage.QueueFull {
-			t.Fatalf("%s usage = %+v", name, usage)
+		var fields map[string]any
+		client.must(http.StatusOK, http.MethodGet, "runtime-config/usage", nil, &fields)
+		if len(fields) != 4 || fields["organization_id"] != env.org || fields["queued"] != float64(0) || fields["queue_full"] != false || fields["queue_max"] != float64(200) {
+			t.Fatalf("%s queue status = %v", name, fields)
 		}
 	}
 	if response := env.outsider().do(http.MethodGet, "runtime-config/usage", nil); response.Status == http.StatusOK {
@@ -288,10 +283,6 @@ func TestQuotaShrinkActiveKeepsRunningReservations(t *testing.T) {
 	if got := env.count(`SELECT count(*) FROM openfox.capacity_reservations WHERE organization_id = $1::uuid AND status = 'CLAIMED'`, env.org); got != 2 {
 		t.Fatalf("claimed reservations = %d after shrinking, want 2", got)
 	}
-	usage := env.owner().usage()
-	if usage.Active != 2 || usage.ActiveMax != 1 || usage.CapacityMax != 4 || usage.EffectiveActiveMax != 1 {
-		t.Fatalf("usage = %+v", usage)
-	}
 	var pgError *pgconn.PgError
 	if err := reserve(); !errors.As(err, &pgError) || pgError.Code != "55000" {
 		t.Fatalf("new reservation above the lowered limit: err = %v, want SQLSTATE 55000", err)
@@ -300,10 +291,6 @@ func TestQuotaShrinkActiveKeepsRunningReservations(t *testing.T) {
 	config = env.owner().runtimeConfig()
 	config.Policy.ActiveMax = 50
 	env.owner().must(http.StatusOK, http.MethodPatch, "runtime-config", patchBody(config), nil)
-	usage = env.owner().usage()
-	if usage.ActiveMax != 50 || usage.CapacityMax != 4 || usage.EffectiveActiveMax != 4 {
-		t.Fatalf("usage after raise = %+v", usage)
-	}
 	for index := 0; index < 2; index++ {
 		if err := reserve(); err != nil {
 			t.Fatalf("reservation %d within platform capacity: %v", index, err)

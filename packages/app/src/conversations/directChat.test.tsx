@@ -172,37 +172,48 @@ describe("human direct chat", () => {
     expect(box).toHaveValue("");
   });
 
-  it("opens a human conversation from the new conversation picker", async () => {
-    open(
-      (c) =>
-        c.path === `${ORG}/contacts`
-          ? json(200, {
-              groups: [
-                {
-                  kind: "HUMAN",
-                  items: [
-                    { kind: "user", id: "u1", name: "Me" },
-                    { kind: "user", id: "u2", name: "Carol" },
-                  ],
-                },
-              ],
-              truncated: false,
-            })
-          : undefined,
-      "/o/o1/chat",
-    );
-    await userEvent.click(
-      await screen.findByRole("button", { name: "新建对话" }),
-    );
-    await userEvent.type(
-      await screen.findByRole("textbox", { name: "搜索成员、Agent 或小队" }),
-      "Carol",
-    );
-    await userEvent.click(
-      await screen.findByRole("option", { name: /^Carol/ }),
-    );
-    expect(
-      await screen.findByRole("textbox", { name: "发送消息…" }),
-    ).toBeInTheDocument();
-  });
+  it.each(["新建对话", "选择成员、Agent 或小队"])(
+    "opens a human conversation from %s",
+    async (trigger) => {
+      open(
+        (c) =>
+          c.path === `${ORG}/contacts`
+            ? json(200, {
+                groups: [
+                  {
+                    kind: "HUMAN",
+                    items: [
+                      { kind: "user", id: "u1", name: "Me" },
+                      { kind: "user", id: "u2", name: "Carol" },
+                    ],
+                  },
+                ],
+                truncated: false,
+              })
+            : undefined,
+        "/o/o1/chat",
+      );
+      await userEvent.click(
+        await screen.findByRole("button", { name: trigger }),
+      );
+      await userEvent.type(
+        await screen.findByRole("combobox", { name: "搜索成员、Agent 或小队" }),
+        "Carol",
+      );
+      const person = await screen.findByRole("option", { name: /^Carol/ });
+      expect(screen.getByRole("combobox")).toHaveAttribute(
+        "aria-activedescendant",
+        person.id,
+      );
+      fireEvent.keyDown(screen.getByRole("combobox"), {
+        key: "Enter",
+        isComposing: true,
+      });
+      expect(person).toBeInTheDocument();
+      await userEvent.keyboard("{ArrowDown}{Enter}");
+      expect(
+        await screen.findByRole("textbox", { name: "发送消息…" }),
+      ).toBeInTheDocument();
+    },
+  );
 });

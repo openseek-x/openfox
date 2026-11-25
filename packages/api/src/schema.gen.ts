@@ -8474,7 +8474,7 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * 修改电脑名称与并发上限（仅电脑所有者；settings_version 乐观锁）
+         * 修改电脑名称、并发上限及本组织工作流权限（仅电脑所有者；settings_version 乐观锁）
          * @description 非所有者、电脑不在当前组织的有效授权内，一律 404 NOT_FOUND。settings_version 不一致返回 409 RECONCILIATION_CONFLICT。
          *     并发上限低于当前已占用数时允许保存，只影响后续派发。心跳不改变 settings_version。
          */
@@ -9739,7 +9739,8 @@ export interface paths {
         /**
          * 设备用注册令牌兑换身份（无需认证；令牌一次性）
          * @description token 同时接受 v2 安装令牌（ofx_v2_…，中心解出其中的注册令牌明文再算哈希）与旧的纯注册令牌。
-         *     令牌已用 / 已过期 / 已吊销 / 签发人已无签发资格：409 REGISTRATION_CONFLICT；并发兑换同一令牌只有 1 次成功。
+         *     签名须绑定提交的 token 和 key_id。首次登记创建电脑，持有效密钥的同一安装用新令牌重连时复用原设备 ID 和有效授权。
+         *     每枚令牌只能成功兑换一次。无效令牌、所有者不符、设备或密钥已吊销、组织不允许接入时返回 409 REGISTRATION_CONFLICT。
          */
         post: operations["registerDeviceWithToken"];
         delete?: never;
@@ -11298,7 +11299,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** 列出某个容器内某个父节点下的子节点（按 position、title；每次最多 500） */
+        /** 列出目录子节点，或列出个人文档中最近修改的文件 */
         get: operations["listDocNodes"];
         put?: never;
         /** 新建文件夹 / 文档 / 表格（文档集要求空间可写；我的文档只要空间可读）。每个容器最多 5000 个节点、树深最多 10 层 */
@@ -13472,28 +13473,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/organizations/{organizationID}/audit-events": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                organizationID: components["parameters"]["OrganizationID"];
-            };
-            cookie?: never;
-        };
-        /**
-         * 组织审计日志（仅组织 OWNER/ADMIN）
-         * @description 阶段 12e。按 (created_at, id) 倒序，游标分页（不支持 OFFSET）。时间范围左闭右开：from <= created_at < to；同时给出 from 与 to 时要求 from < to 且跨度不超过 366 天。只返回审计表里的非敏感字段，元数据按白名单过滤。Run 生命周期不在审计日志里（见 Run 事件）。参数不合法返回 400 INVALID_REQUEST。
-         */
-        get: operations["listAuditEvents"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/v1/organizations/{organizationID}/runtime-config": {
         parameters: {
             query?: never;
@@ -13527,8 +13506,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * 组织配额的当前用量（组织成员可读排队数与是否已满；上限仅 OWNER/ADMIN）
-         * @description 阶段 12e。组织级聚合计数的快照，仅用于展示与「组织队列已满」提示，不参与准入判定。非管理员只得到排队数与队列是否已满，不含各项上限、活动数与平台槽位。
+         * 组织队列状态（排队上限仅 OWNER/ADMIN 可见）
+         * @description 向对话返回当前排队数以及是否已满。
          */
         get: operations["getRuntimeUsage"];
         put?: never;
@@ -19773,6 +19752,8 @@ export interface components {
             version: number;
             /** @description 名称与并发上限的乐观锁版本（PATCH 用） */
             settings_version: number;
+            /** @description 此组织的工作流是否可以使用该电脑，默认关闭。 */
+            allow_workflows?: boolean;
             grant_scope: components["schemas"]["DeviceGrantScope"];
             /** Format: uuid */
             grant_user_id: string | null;
@@ -19830,6 +19811,7 @@ export interface components {
         DeviceUpdateRequest: {
             name?: string;
             max_slots?: number;
+            allow_workflows?: boolean;
             settings_version: number;
         };
         DeviceRemovalBlockers: {
@@ -20334,10 +20316,10 @@ export interface components {
             /** @enum {string} */
             handoff: "NONE" | "WAITING_REPLY" | "WAITING_REVIEW";
             /**
-             * @description TASK_ASSIGNMENT = 任务指派给 Agent 时由服务端自动创建
+             * @description AUTOMATION 表示组织工作流会话。TASK_ASSIGNMENT = 任务指派给 Agent 时由服务端自动创建
              * @enum {string}
              */
-            origin: "USER" | "TASK_ASSIGNMENT";
+            origin: "USER" | "TASK_ASSIGNMENT" | "IM" | "AUTOMATION";
             /** @description 完成 / 重新打开 / 交接的乐观锁；发消息、绑定任务会递增，置顶 / 已读 / 重命名 / 归档不变 */
             version: number;
             /** Format: date-time */
@@ -21045,7 +21027,7 @@ export interface components {
         DeviceRegistrationTokenRequest: {
             name: string;
             install_id?: string;
-            /** @description 0 或缺省 = 1 */
+            /** @description 0 或缺省 = 5 */
             max_slots?: number;
             /** @description 省略时 OWNER / ADMIN = ORGANIZATION，其他成员 = PERSONAL */
             scope?: components["schemas"]["DeviceRegistrationScope"];
@@ -21069,6 +21051,8 @@ export interface components {
             key_id: string;
             /** @description ed25519 公钥（32 字节）的 base64url（无填充） */
             public_key: string;
+            /** @description 安装私钥对本次 token 与 key_id 的注册签名（64 字节 base64url），编码见 device-auth.md */
+            signature: string;
         };
         DeviceRegisterResult: {
             /** Format: uuid */
@@ -21401,7 +21385,7 @@ export interface components {
              * @description 本次 Run 所在会话的来源
              * @enum {string}
              */
-            origin: "USER" | "TASK_ASSIGNMENT";
+            origin: "USER" | "TASK_ASSIGNMENT" | "IM" | "AUTOMATION";
             /** @description 最近的评论（按时间正序），正文截断到 2000 字符 */
             comments: {
                 /**
@@ -22552,32 +22536,11 @@ export interface components {
             /** @description 可据此证据对所属开放案执行 RESULT_ACCEPTED */
             can_accept_result: boolean;
         };
-        /** @description 一条审计记录（阶段 12e）。不含 request_id、授权版本等内部字段 */
-        AuditEvent: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            actor_id: string;
-            /** @description 操作人姓名；没有姓名时为邮箱，都没有时为 ID 前缀 */
-            actor_name: string;
-            actor_email: string;
-            action: string;
-            decision: string;
-            reason: string;
-            resource_kind: string;
-            resource_id: string;
-            /** @description 白名单内的非敏感元数据（字符串值） */
-            metadata: {
-                [key: string]: string;
-            };
-            /** Format: date-time */
-            created_at: string;
-        };
         /** @description 组织运行策略；修改时整份提交 */
         RuntimePolicy: {
             /** @description 排队 Run 上限 */
             queue_max: number;
-            /** @description 活动运行上限（实际生效值还受平台槽位限制，见 RuntimeUsage） */
+            /** @description 活动运行上限（实际生效值还受平台槽位限制） */
             active_max: number;
             queue_timeout_hours: number;
             /** Format: int64 */
@@ -22608,21 +22571,13 @@ export interface components {
             /** Format: date-time */
             applied_at?: string;
         };
-        /** @description 组织成员只得到 organization_id、queued、queue_full；其余字段只返回给组织 OWNER/ADMIN */
+        /** @description 当前排队数与是否已满。仅组织 OWNER/ADMIN 收到 queue_max。 */
         RuntimeUsage: {
             /** Format: uuid */
             organization_id: string;
-            config_version?: number;
             /** @description 排队中的 Run 数 */
             queued: number;
             queue_max?: number;
-            /** @description 占用活动槽位的运行数 */
-            active?: number;
-            active_max?: number;
-            /** @description 平台槽位上限 */
-            capacity_max?: number;
-            /** @description 实际生效的活动运行上限 = min(active_max, capacity_max) */
-            effective_active_max?: number;
             /** @description 队列已满；新消息会保持等待，直到队列有空位 */
             queue_full: boolean;
         };
@@ -41688,7 +41643,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description 挑战；设备用私钥对 deviceauth.CanonicalPayload(challenge_id, device_id, key_id, nonce, challenge) 签名（nonce / challenge 为 base64url 解码后的字节） */
+            /** @description 设备先用中心公开 API 地址与 nonce 复算 challenge，再用私钥对 deviceauth.CanonicalPayload(challenge_id, device_id, key_id, nonce, challenge) 签名（nonce / challenge 为 base64url 解码后的字节） */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -44464,6 +44419,8 @@ export interface operations {
     listDocNodes: {
         parameters: {
             query: {
+                /** @description recent 限个人根目录请求，跨子目录返回最近修改的 12 个非文件夹节点，按 updated_at 降序、id 升序排列。省略时列出指定目录的直接子节点，最多 500 条。 */
+                view?: "recent";
                 container: "personal" | "set";
                 set_id?: string;
                 /** @description 缺省 = 容器根 */
@@ -48222,48 +48179,6 @@ export interface operations {
             503: components["responses"]["Error"];
         };
     };
-    listAuditEvents: {
-        parameters: {
-            query?: {
-                limit?: number;
-                /** @description 上一页返回的 next_cursor（不透明） */
-                cursor?: string;
-                actor_id?: string;
-                /** @description 动作，精确匹配；以 * 结尾表示前缀匹配（例如 device.*） */
-                action?: string;
-                resource_kind?: string;
-                /** @description 起始时间（含） */
-                from?: string;
-                /** @description 结束时间（不含） */
-                to?: string;
-            };
-            header?: never;
-            path: {
-                organizationID: components["parameters"]["OrganizationID"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 一页审计记录 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        events: components["schemas"]["AuditEvent"][];
-                        /** @description 没有更多时为 null */
-                        next_cursor: string | null;
-                    };
-                };
-            };
-            400: components["responses"]["Error"];
-            401: components["responses"]["Error"];
-            403: components["responses"]["Error"];
-            503: components["responses"]["Error"];
-        };
-    };
     getRuntimeConfig: {
         parameters: {
             query?: never;
@@ -48335,7 +48250,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 配额用量 */
+            /** @description 组织队列状态 */
             200: {
                 headers: {
                     [name: string]: unknown;

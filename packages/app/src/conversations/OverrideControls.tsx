@@ -214,7 +214,7 @@ function ModelOptions({
   );
   return (
     <>
-      <div className="flex items-center gap-2 border-b border-line-default px-2.5 py-2">
+      <div className="of-input-frame flex items-center gap-2 border-b border-line-default px-2.5 py-2 focus-within:border-line-focus">
         <Icon name="search" className="shrink-0 text-fg-muted" />
         <input
           ref={input}

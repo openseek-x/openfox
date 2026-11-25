@@ -107,6 +107,7 @@ type Device struct {
 	CenterEpoch       int64           `json:"center_epoch"`
 	Version           int64           `json:"version"`
 	SettingsVersion   int64           `json:"settings_version"`
+	AllowWorkflows    bool            `json:"allow_workflows"`
 	GrantScope        Scope           `json:"grant_scope"`
 	GrantUserID       string          `json:"grant_user_id"`
 	GrantSpaceID      string          `json:"grant_space_id"`
@@ -171,6 +172,7 @@ type deviceJSON struct {
 	CenterEpoch         int64                `json:"center_epoch"`
 	Version             int64                `json:"version"`
 	SettingsVersion     int64                `json:"settings_version"`
+	AllowWorkflows      bool                 `json:"allow_workflows"`
 	GrantScope          Scope                `json:"grant_scope"`
 	GrantUserID         *string              `json:"grant_user_id"`
 	GrantSpaceID        *string              `json:"grant_space_id"`
@@ -210,7 +212,7 @@ func (device Device) MarshalJSON() ([]byte, error) {
 		LastSeenAt: device.LastSeenAt, ProtocolMajor: device.ProtocolMajor, ProtocolMinor: device.ProtocolMinor,
 		DaemonVersion: device.DaemonVersion, OperatingSystem: device.OperatingSystem,
 		Architecture: device.Architecture, Capabilities: capabilities, CenterEpoch: device.CenterEpoch,
-		Version: device.Version, SettingsVersion: device.SettingsVersion, GrantScope: device.GrantScope,
+		Version: device.Version, SettingsVersion: device.SettingsVersion, AllowWorkflows: device.AllowWorkflows, GrantScope: device.GrantScope,
 		GrantUserID: nullable(device.GrantUserID), GrantSpaceID: nullable(device.GrantSpaceID),
 		GrantSpaceName: nullable(device.GrantSpaceName), PermissionVersion: device.PermissionVersion,
 		Runtimes: runtimes, AgentCount: device.AgentCount, ActiveAgentCount: device.ActiveAgentCount,
@@ -324,6 +326,7 @@ type Page struct {
 type SettingsInput struct {
 	Name            *string
 	MaxSlots        *int
+	AllowWorkflows  *bool
 	ExpectedVersion int64
 }
 

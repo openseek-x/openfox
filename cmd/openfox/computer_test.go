@@ -44,7 +44,7 @@ func newFakeCenter(t *testing.T) *fakeCenter {
 	if err != nil {
 		t.Skipf("TCP listeners unavailable: %v", err)
 	}
-	center := &fakeCenter{nonce: []byte("nonce-0123456789"), challenge: []byte("challenge-0123456789")}
+	center := &fakeCenter{nonce: []byte("nonce-0123456789")}
 	mux := http.NewServeMux()
 	writeJSON := func(w http.ResponseWriter, status int, value any) {
 		w.Header().Set("Content-Type", "application/json")
@@ -56,6 +56,7 @@ func newFakeCenter(t *testing.T) *fakeCenter {
 			Token     string `json:"token"`
 			KeyID     string `json:"key_id"`
 			PublicKey string `json:"public_key"`
+			Signature string `json:"signature"`
 		}
 		decoder := json.NewDecoder(r.Body)
 		decoder.DisallowUnknownFields()
@@ -76,7 +77,8 @@ func newFakeCenter(t *testing.T) *fakeCenter {
 			return
 		}
 		key, err := deviceauth.DecodeBase64URL(body.PublicKey, ed25519.PublicKeySize)
-		if err != nil || daemon.DeviceKeyID(key) != body.KeyID {
+		signature, _ := deviceauth.DecodeBase64URL(body.Signature, ed25519.SignatureSize)
+		if err != nil || daemon.DeviceKeyID(key) != body.KeyID || !ed25519.Verify(key, deviceauth.RegistrationPayload(body.Token, body.KeyID), signature) {
 			writeJSON(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "INVALID_REQUEST"}})
 			return
 		}
@@ -117,6 +119,7 @@ func newFakeCenter(t *testing.T) *fakeCenter {
 	server.Start()
 	t.Cleanup(server.Close)
 	center.server = server
+	center.challenge = deviceauth.CenterChallenge(daemon.APIBaseURL(server.URL), center.nonce)
 	return center
 }
 
@@ -215,13 +218,13 @@ func TestComputerRegisterWritesPrivateConfigWithoutService(t *testing.T) {
 	if !errors.As(err, &coded) || coded.code != exitAlreadyRegistered || center.registers != before {
 		t.Fatalf("second register = %v", err)
 	}
-	// --force：替换注册，生成新密钥。
+	// Reconnecting uses the same persisted installation key.
 	if err := runComputerWith([]string{"register", "--install-token", center.installToken(t), "--config-dir", dir, "--no-service", "--force"}, testDeps(t, &stdout, "darwin", launchctl)); err != nil {
 		t.Fatal(err)
 	}
 	replaced, _ := daemon.LoadDeviceConfig(filepath.Join(dir, "config.json"))
-	if replaced.KeyID == config.KeyID {
-		t.Fatal("--force did not generate a new key")
+	if replaced.KeyID != config.KeyID || replaced.DeviceID != config.DeviceID {
+		t.Fatal("--force changed the installation identity")
 	}
 }
 
@@ -377,5 +380,61 @@ func TestComputerStatusReportsRegistrationWithoutSecrets(t *testing.T) {
 	}
 	if got := status(); got.Registered || got.Reason != "invalid_config" {
 		t.Fatalf("unsafe config = %#v", got)
+	}
+}
+
+func TestComputerRegisterRejectsChallengeForDifferentCenter(t *testing.T) {
+	center := newFakeCenter(t)
+	center.challenge = deviceauth.CenterChallenge("https://other.example/api", center.nonce)
+	dir := t.TempDir()
+	err := runComputerWith([]string{"register", "--install-token", center.installToken(t), "--config-dir", dir, "--no-service"}, testDeps(t, &bytes.Buffer{}, "darwin", &fakeLaunchctl{}))
+	if err == nil || !strings.Contains(err.Error(), "challenge") {
+		t.Fatalf("unexpected result: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, daemon.DeviceTokenFileName)); !os.IsNotExist(err) {
+		t.Fatal("unexpected session file")
+	}
+}
+
+func TestRegistrationKeyRecoversRotatedFileAndRejectsAmbiguity(t *testing.T) {
+	dir := t.TempDir()
+	key, id, err := daemon.GenerateDeviceKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	rotated := filepath.Join(dir, daemon.DeviceKeyFileName+"-"+id[:16])
+	if err := daemon.WriteDeviceKey(rotated, key); err != nil {
+		t.Fatal(err)
+	}
+	path, found, err := registrationKey(dir, daemon.DeviceConfig{})
+	if err != nil || path != rotated || !found.Equal(key) {
+		t.Fatalf("recover rotated key: %v", err)
+	}
+	other, _, err := daemon.GenerateDeviceKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := daemon.WriteDeviceKey(filepath.Join(dir, daemon.DeviceKeyFileName), other); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := registrationKey(dir, daemon.DeviceConfig{}); err == nil {
+		t.Fatal("ambiguous keys accepted")
+	}
+	if _, _, err := registrationKey(dir, daemon.DeviceConfig{PrivateKeyFile: rotated, KeyID: "wrong"}); err == nil {
+		t.Fatal("mismatched key accepted")
+	}
+}
+
+func TestComputerRegisterBusyBeforeExchange(t *testing.T) {
+	dir := t.TempDir()
+	lock, err := daemon.LockDeviceIdentity(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lock.Close()
+	center := newFakeCenter(t)
+	err = runComputerWith([]string{"register", "--install-token", center.installToken(t), "--config-dir", dir, "--no-service"}, testDeps(t, &bytes.Buffer{}, "darwin", &fakeLaunchctl{}))
+	if err == nil || center.registers != 0 {
+		t.Fatalf("concurrent exchange under held identity lock: %v, %d", err, center.registers)
 	}
 }

@@ -593,7 +593,8 @@ export const zhCN = {
     favoriteFailed: "无法更新收藏",
     board: {
       label: "任务看板",
-      collapsed: "折叠的列",
+      jumpToColumn: "定位列",
+      findColumn: "搜索列名",
       instructions:
         "按空格拿起任务卡片，用方向键移动，再按空格放下，按 Esc 取消；按回车打开任务。",
       picked: "已拿起任务 {task}",
@@ -727,6 +728,7 @@ export const zhCN = {
       backToInbox: "返回收件箱",
       goToSpace: "前往空间任务页",
       aiPanel: "AI 面板",
+      taskView: "任务",
       aiPanelClose: "关闭 AI 面板",
       aiPanelResize: "调整任务 AI 面板宽度",
       aiPanelOpenInChat: "在对话中打开",
@@ -1554,13 +1556,31 @@ export const zhCN = {
       login: "登录系统时自动启动",
       manual: "手动启动",
       startupHint: "只改变下次登录的自动加载；当前服务与任务继续运行。",
-      keepAliveHint:
-        "启动后由系统保持后台运行，崩溃后自动恢复；退出桌面应用不会停止服务。",
+      keepAliveHint: "启动后，系统会在服务意外退出时重启服务。",
+      keepOnQuit: "退出桌面端后保持后台服务运行",
+      keepOnQuitHint: "设置退出确认框的默认选项，可在每次退出时更改。",
+      startedAt: "服务启动时间",
+      storageLocation: "OpenFox 本机数据目录",
+      moveStorage: "修改存储位置",
+      moved: "本机数据已迁移，可以重新启动服务。",
+      moveStopFirst: "要修改位置，请先在上方的后台服务设置中停止本机服务。",
+      moveBusy: "请先停止本机服务，等待当前操作完成后再迁移。",
+      moveVolume: "请选择与本机数据目录相同的 macOS 数据卷。",
+      moveFailed:
+        "迁移失败，请确认目标文件夹可写且下面没有其他 OpenFox 目录，然后重试。",
+      openStorage: "查看存储位置",
+      openFailed: "无法打开本机存储目录",
+      timedAwake: "限时防止休眠",
+      timedAwakeHint: "桌面端打开时保持本机唤醒，显示器可正常熄灭。",
+      duration: "防止休眠时长",
+      hours: "{count} 小时",
+      until: "至 {time}",
       running: "正在后台运行",
       notRunning: "未确认运行状态",
       desktopOnly: "请在这台电脑的桌面应用中操作。",
       macOnly: "当前仅支持 macOS 本机服务。",
       upgrade: "请更新桌面应用和 OpenFox CLI 后使用。",
+      primaryOrgOnly: "请切换到这台电脑最初注册的组织，管理本机服务。",
       notLocal: "无法确认是当前中心注册的本机，请在目标电脑上操作。",
       ownerOnly: "仅本机的设备所有者可以查看和控制本机服务。",
       notInstalled: "尚未安装本机后台服务，请先连接这台电脑。",
@@ -1616,6 +1636,10 @@ export const zhCN = {
     local: {
       name: "这台电脑",
       suffix: "(本机)",
+      otherCenter: "已连接其他服务器",
+      notConnected: "未连接当前组织",
+      unverified: "尚未确认本机连接",
+      serviceRunning: "本机后台服务正在运行。",
       available: "可用",
       stopped: "已停止",
       starting: "启动中",
@@ -1730,6 +1754,9 @@ export const zhCN = {
       notAvailable: "—",
       runSettings: "任务运行设置",
       maxSlots: "最大并发运行任务数",
+      allowWorkflows: "允许在此机器上运行工作流",
+      allowWorkflowsHint:
+        "开启后，此组织的工作流可通过指派到这台电脑的 Agent 使用本机网络、文件和 CLI。仅电脑所有者可修改。",
       maxSlotsHint: "1–256，只影响之后派发的任务",
       maxSlotsInvalid: "请输入 1–256 之间的整数",
       storage: "存储",
@@ -1748,6 +1775,7 @@ export const zhCN = {
       title: "电脑列表",
     },
     drawer: {
+      localTitle: "本机电脑详情",
       title: "电脑详情",
     },
     guide: {
@@ -1797,7 +1825,6 @@ export const zhCN = {
   attachments: attachmentsZh,
   quickReplies: quickRepliesZh,
   share: shareZh,
-  // 阶段 12e · 审计日志、资源配额、共享电脑信任说明、待核对处理
   governance: governanceZh,
   // 阶段 12e · 电脑运维：密钥轮换、允许的组织、并发上限、配置状态、受保护目录
   ops: opsZh,

@@ -67,7 +67,11 @@ func runWorkDirectoryPath(args []string, deps computerDeps) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	path, err := supervisor.ReadWorkDirectoryPath(ctx, filepath.Join(*configDir, "runs.db"), scope)
+	locations, err := localStoragePaths(*configDir)
+	if err != nil {
+		return fail()
+	}
+	path, err := supervisor.ReadWorkDirectoryPath(ctx, filepath.Join(*configDir, "runs.db"), scope, locations)
 	if err != nil {
 		return fail()
 	}

@@ -17,7 +17,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { useQueryClient, type InfiniteData } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 
 import type { Task, TaskPageResult, TaskStatus } from "@openfox/api";
 import { useT } from "@openfox/i18n";
@@ -31,8 +31,9 @@ import { LoadMore } from "../parts";
 import { StatusIcon } from "../primitives/StatusIcon";
 import { useTaskPages, useUpdateTask } from "../queries";
 import { statusFields } from "../TaskMenu";
-import type { TaskViewProps } from "../views";
+import type { BoardProps, TaskViewProps } from "../views";
 import { CardBody, SortableCard, cardLabel as label } from "./Card";
+import { BoardColumnJump } from "./BoardColumnJump";
 import { GroupedBoard } from "./GroupedBoard";
 
 const COLUMN_PREFIX = "column:";
@@ -41,7 +42,7 @@ const COLUMN_PREFIX = "column:";
  * 看板入口。阶段 9e：按状态分列且行不分组时用原来的状态看板（每列单独分页）；
  * 其他分组用分组看板（一次分页、在前端按列 / 行分组）。
  */
-export function Board(props: TaskViewProps) {
+export function Board(props: BoardProps) {
   return isStatusBoard(props.display) ? (
     <StatusBoard {...props} />
   ) : (
@@ -49,8 +50,9 @@ export function Board(props: TaskViewProps) {
   );
 }
 
-/** 看板：列 = 状态；空列收进右侧「折叠的列」，开启「显示空白列」时展开。 */
-function StatusBoard(props: TaskViewProps) {
+/** 每个工作流状态占一列，仅为有任务的列加载卡片。 */
+function StatusBoard(props: BoardProps) {
+  const boardId = useId();
   const { orgId, source, params, columns, counts, display } = props;
   const t = useT();
   const queryClient = useQueryClient();
@@ -71,12 +73,7 @@ function StatusBoard(props: TaskViewProps) {
     }),
   );
 
-  const visible = applyGroupOrder(columns, display.groupOrder?.status).filter(
-    (c) => display.showEmptyColumns || (counts.get(c.id) ?? 0) > 0,
-  );
-  const hidden = applyGroupOrder(columns, display.groupOrder?.status).filter(
-    (c) => !visible.includes(c),
-  );
+  const orderedColumns = applyGroupOrder(columns, display.groupOrder?.status);
 
   const columnTasks = (statusId: string): Task[] => {
     const data = queryClient.getQueryData<
@@ -179,32 +176,30 @@ function StatusBoard(props: TaskViewProps) {
         screenReaderInstructions: { draggable: t("tasks.board.instructions") },
       }}
     >
+      <BoardColumnJump
+        toolbar={props.toolbar}
+        boardId={boardId}
+        options={orderedColumns.map((column) => ({
+          value: column.id,
+          label: column.name,
+          icon: <StatusIcon category={column.category} color={column.color} />,
+          count: counts.get(column.id) ?? 0,
+        }))}
+      />
       <div
         role="region"
         aria-label={t("tasks.board.label")}
         className="flex min-h-0 flex-1 gap-3 overflow-x-auto px-4 pb-4"
       >
-        {visible.map((column) => (
+        {orderedColumns.map((column) => (
           <Column
             key={column.id}
             {...props}
             column={column}
+            headingId={`${boardId}-${column.id}`}
             count={counts.get(column.id) ?? 0}
           />
         ))}
-        {hidden.length > 0 && (
-          <section
-            aria-label={t("tasks.board.collapsed")}
-            className="flex w-[200px] shrink-0 flex-col gap-1"
-          >
-            <h3 className="px-2 py-2 text-caption text-fg-muted">
-              {t("tasks.board.collapsed")}
-            </h3>
-            {hidden.map((column) => (
-              <CollapsedColumn key={column.id} column={column} />
-            ))}
-          </section>
-        )}
       </div>
       <DragOverlay>
         {dragging && <CardBody task={dragging} display={display} overlay />}
@@ -215,15 +210,16 @@ function StatusBoard(props: TaskViewProps) {
 
 function Column({
   column,
+  headingId,
   count,
   ...props
-}: TaskViewProps & { column: TaskStatus; count: number }) {
+}: TaskViewProps & { column: TaskStatus; headingId: string; count: number }) {
   const t = useT();
   const { orgId, source, params, onCreate } = props;
   const pages = useTaskPages(orgId, source, params, column.id, count > 0);
   const tasks = useMemo(
-    () => pages.data?.pages.flatMap((p) => p.tasks) ?? [],
-    [pages.data],
+    () => (count > 0 ? (pages.data?.pages.flatMap((p) => p.tasks) ?? []) : []),
+    [count, pages.data],
   );
   const { setNodeRef, isOver } = useDroppable({
     id: `${COLUMN_PREFIX}${column.id}`,
@@ -235,7 +231,11 @@ function Column({
     >
       <header className="flex h-10 items-center gap-2 px-3">
         <StatusIcon category={column.category} color={column.color} />
-        <h3 className="min-w-0 truncate text-body font-medium">
+        <h3
+          id={headingId}
+          tabIndex={-1}
+          className="min-w-0 truncate rounded-sm text-body font-medium"
+        >
           {column.name}
         </h3>
         <span className="text-body-sm text-fg-muted" data-testid="column-count">
@@ -269,30 +269,11 @@ function Column({
           ))}
         </SortableContext>
         <LoadMore
-          hasMore={Boolean(pages.hasNextPage)}
+          hasMore={count > 0 && Boolean(pages.hasNextPage)}
           loading={pages.isFetchingNextPage}
           onLoad={() => void pages.fetchNextPage()}
         />
       </div>
     </section>
-  );
-}
-
-function CollapsedColumn({ column }: { column: TaskStatus }) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: `${COLUMN_PREFIX}${column.id}`,
-  });
-  return (
-    <div
-      ref={setNodeRef}
-      className={cn(
-        "flex h-9 items-center gap-2 rounded-lg border border-line-default bg-surface-card px-2.5 text-body",
-        isOver && "border-line-focus bg-surface-active",
-      )}
-    >
-      <StatusIcon category={column.category} color={column.color} />
-      <span className="min-w-0 flex-1 truncate">{column.name}</span>
-      <span className="text-body-sm text-fg-muted">0</span>
-    </div>
   );
 }

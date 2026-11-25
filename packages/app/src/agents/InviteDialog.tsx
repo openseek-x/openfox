@@ -177,7 +177,7 @@ export function InviteDialog({
                   : undefined
               }
             >
-              <div className="flex min-h-24 flex-wrap content-start gap-1.5 rounded-lg border border-line-default p-2.5 focus-within:border-line-focus">
+              <div className="of-input-frame flex min-h-24 flex-wrap content-start gap-1.5 rounded-lg border border-line-default p-2.5 focus-within:border-line-focus">
                 {emails.map((email) => {
                   const bad = !isValidEmail(email);
                   return (
