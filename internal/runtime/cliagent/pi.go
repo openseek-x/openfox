@@ -25,11 +25,12 @@ func piProtocol() protocol {
 	return protocol{
 		name: NamePi, display: "pi",
 		executables: []string{"pi"}, envPath: "OPENFOX_PI_PATH",
-		wellKnown:   []string{".local/bin", ".npm-global/bin", ".bun/bin", ".volta/bin"},
-		envPrefixes: []string{"PI_"},
-		envSuffixes: []string{"_API_KEY", "_BASE_URL", "_ACCESS_KEY_ID", "_SECRET_ACCESS_KEY", "_AUTH_TOKEN"},
-		versionArgs: []string{"--version"},
-		listModels:  piModels,
+		wellKnown:     []string{".local/bin", ".npm-global/bin", ".bun/bin", ".volta/bin"},
+		envPrefixes:   []string{"PI_"},
+		envSuffixes:   []string{"_API_KEY", "_BASE_URL", "_ACCESS_KEY_ID", "_SECRET_ACCESS_KEY", "_AUTH_TOKEN"},
+		versionArgs:   []string{"--version"},
+		helpSignature: [2]string{"--mode", "--session-dir"},
+		listModels:    piModels,
 		defaultModels: []Model{
 			{ID: "default", DisplayName: "Default", IsDefault: true},
 		},

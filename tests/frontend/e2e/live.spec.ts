@@ -35,7 +35,9 @@ test("验证码登录、建任务、看板拖动、评论 @、收件箱与租户
 
   // 新建任务：快捷键 C，指派给 carol，优先级高
   await page.goto(`/o/${org}/spaces/${space}/tasks`);
-  await expect(page.getByRole("heading", { name: "任务" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "任务", exact: true, level: 1 }),
+  ).toBeVisible();
   await page.keyboard.press("c");
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("textbox", { name: "标题" }).pressSequentially(title);
@@ -56,10 +58,14 @@ test("验证码登录、建任务、看板拖动、评论 @、收件箱与租户
     exact: true,
   });
   if (await typeTab.isVisible()) await typeTab.click();
-  // 看板拖动：从 Ready for work 拖到折叠的 Building 列
-  const card = page.getByRole("button", { name: new RegExp(title) }).first();
+  // 从原状态的卡片拖到目标列正文，列标题位于拖放区域之外。
+  const card = page
+    .getByRole("region", { name: /^Ready for work / })
+    .getByRole("button", { name: new RegExp(title) });
   await expect(card).toBeVisible();
-  const target = page.getByText("Building", { exact: true }).first();
+  const target = page
+    .getByRole("region", { name: /^Building / })
+    .locator("header + div");
   await target.scrollIntoViewIfNeeded();
   const from = (await card.boundingBox())!;
   const moved = page.waitForResponse(
@@ -287,4 +293,53 @@ test("分拣台从表单提交接受、拒绝、重复，待处理数更新且�
     if (action === "accept") target = task;
     if (action === "duplicate") expect(result.duplicate_of.id).toBe(target.id);
   }
+});
+
+test("浏览器拒绝保存创建方式时仍能打开和切换新建任务", async ({
+  page,
+}, testInfo) => {
+  test.skip(!process.env.OPENFOX_LIVE_OTP_CODE, "需要隔离数据库与登录验证码");
+  await login(page, process.env.OPENFOX_LIVE_EMAIL ?? "alice@example.test");
+  await page.addInitScript((key) => {
+    const read = Storage.prototype.getItem;
+    const write = Storage.prototype.setItem;
+    Storage.prototype.getItem = function (name) {
+      if (name === key) throw new DOMException("存储不可用", "SecurityError");
+      return read.call(this, name);
+    };
+    Storage.prototype.setItem = function (name, value) {
+      if (name === key) throw new DOMException("存储不可用", "SecurityError");
+      return write.call(this, name, value);
+    };
+  }, `openfox:task-create-mode:${org}`);
+  await page.goto(`/o/${org}/spaces/${space}/tasks`);
+  await expect(
+    page.getByRole("heading", { name: "任务", exact: true, level: 1 }),
+  ).toBeVisible();
+  await page.keyboard.press("c");
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "切换到智能体" })
+    .click();
+  await expect(
+    page.getByRole("dialog", { name: "通过智能体创建" }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("task-create-storage.png"),
+  });
+  await page.getByRole("button", { name: "切换到手动" }).click();
+  const dialog = page.getByRole("dialog");
+  const title = `受限存储下创建的任务 ${Date.now()}`;
+  await dialog.getByRole("textbox", { name: "标题" }).fill(title);
+  const [created] = await Promise.all([
+    page.waitForResponse(
+      (r) => r.request().method() === "POST" && r.url().endsWith("/tasks"),
+    ),
+    dialog.getByRole("button", { name: /^创\s*建$/ }).click(),
+  ]);
+  expect(created.status()).toBe(201);
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: new RegExp(title) }).first(),
+  ).toBeVisible();
 });

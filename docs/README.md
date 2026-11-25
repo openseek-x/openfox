@@ -4,6 +4,9 @@
 
 | 文档                                          | 内容                             |
 | --------------------------------------------- | -------------------------------- |
+| [代码现状与检查入口](code-overview.md) | 中心、daemon、Web、桌面端及核查结果 |
+| [开发记录](development-records/) | 变更、迁移和验证证据 |
+| [集成说明](integrations/) | CodeCommit、QQ、Slack、Teams、Zoho BugTracker 配置 |
 | [部署说明](../deploy/README.md)               | Web、桌面端、显式迁移与备份恢复  |
 | [数据库迁移](../db/migrations/README.md)      | 迁移顺序、兼容要求和回退注意事项 |
 | [API 契约](../contracts/openapi.yaml)         | 服务端接口定义                   |

@@ -25,10 +25,11 @@ func claudeProtocol() protocol {
 	return protocol{
 		name: NameClaudeCode, display: "Claude Code",
 		executables: []string{"claude"}, envPath: "OPENFOX_CLAUDE_PATH",
-		wellKnown:   []string{".claude/local", ".local/bin", ".npm-global/bin", ".bun/bin", ".volta/bin"},
-		envPrefixes: []string{"ANTHROPIC_", "CLAUDE_CODE_", "CLAUDE_CONFIG_DIR", "AWS_", "CLOUD_ML_", "GOOGLE_", "VERTEX_"},
-		versionArgs: []string{"--version"},
-		login:       claudeLogin,
+		wellKnown:     []string{".claude/local", ".local/bin", ".npm-global/bin", ".bun/bin", ".volta/bin"},
+		envPrefixes:   []string{"ANTHROPIC_", "CLAUDE_CODE_", "CLAUDE_CONFIG_DIR", "AWS_", "CLOUD_ML_", "GOOGLE_", "VERTEX_"},
+		versionArgs:   []string{"--version"},
+		helpSignature: [2]string{"--permission-mode", "--output-format"},
+		login:         claudeLogin,
 		defaultModels: []Model{
 			{ID: "default", DisplayName: "Default", IsDefault: true},
 			{ID: "sonnet", DisplayName: "Sonnet"},

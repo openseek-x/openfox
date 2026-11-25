@@ -78,7 +78,7 @@ export function HtmlPreview({
     };
     window.addEventListener("message", receive);
     return () => window.removeEventListener("message", receive);
-  }, [preview, onSelect, annotate]);
+  }, [preview, onSelect, annotate, text]);
   useEffect(() => {
     if (!scope || !preview) return;
     const receive = (event: MessageEvent) => {
@@ -137,7 +137,7 @@ export function HtmlPreview({
       );
     else onUnmapped?.();
   };
-  useEffect(locate, [preview, located]);
+  useEffect(locate, [preview, located, annotate, onUnmapped]);
   if (!preview)
     return (
       <p role="status" className="p-3 text-body-sm">

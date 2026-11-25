@@ -63,7 +63,8 @@ func (a *Adapter) ExportSession(ctx context.Context, sessionID string) (runtime.
 }
 
 func (a *Adapter) exportOpenCodeSession(ctx context.Context, sessionID string) (runtime.SessionFile, error) {
-	path, _, err := a.locate(ctxOrBackground(ctx))
+	candidate, _, err := a.locate(ctxOrBackground(ctx))
+	path := candidate.Path
 	if err != nil {
 		return runtime.SessionFile{}, runtime.ErrUnavailable
 	}

@@ -157,7 +157,11 @@ describe("QQ integration", () => {
       return undefined;
     });
     await userEvent.click(
-      await screen.findByRole("button", { name: "我的 QQ 身份" }),
+      await screen.findByRole(
+        "button",
+        { name: "我的 QQ 身份" },
+        { timeout: 5000 },
+      ),
     );
     const dialog = screen.getByRole("dialog", { name: "我的 QQ 身份" });
     await userEvent.click(

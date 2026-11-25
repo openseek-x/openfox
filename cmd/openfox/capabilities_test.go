@@ -12,6 +12,7 @@ import (
 	"openfox/internal/devices"
 	"openfox/internal/runtime"
 	"openfox/internal/runtime/codex"
+	"openfox/internal/runtimepolicy"
 )
 
 type fakeProber struct {
@@ -146,5 +147,49 @@ func TestCapabilityReporterPublishesApprovalModes(t *testing.T) {
 	legacy := devices.ParseRuntimes([]byte(`{"runtimes":{"codex":{"runnable":true}}}`))
 	if len(legacy) != 1 || strings.Join(legacy[0].ApprovalModes, ",") != "FOLLOW_RUNTIME" {
 		t.Fatalf("legacy = %+v", legacy)
+	}
+}
+
+type observingCatalog struct {
+	*fakeProber
+	observe func()
+}
+
+func (p observingCatalog) ListModels(ctx context.Context) ([]codex.Model, error) {
+	p.observe()
+	return p.fakeProber.ListModels(ctx)
+}
+func TestDiscoveryPublishedBeforeCatalogAndCursorCannotRun(t *testing.T) {
+	source := daemon.NewStaticHeartbeatSource(devices.Heartbeat{})
+	cursor := &fakeProber{report: runtime.Capabilities{Runtime: "cursor", Version: "2026.10.22", Executable: "/opt/test/cursor-agent", DiscoverySource: "path", DiscoveryOnly: true}}
+	codexProbe := observingCatalog{&fakeProber{report: runtime.Capabilities{Runnable: true}}, func() {
+		hb, err := source.Current(t.Context())
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, r := range devices.ParseRuntimes(hb.Capabilities) {
+			if r.Provider == "cursor" && r.DiscoveryOnly && !r.Runnable && r.InstallPath == "/opt/test/cursor-agent" && r.DiscoverySource == "path" {
+				return
+			}
+		}
+		t.Fatal("查询首个模型目录之前应发布 Cursor 安装信息")
+	}}
+	r := capabilityReporter{prober: codexProbe, extras: []*namedProber{{name: "cursor", prober: cursor}}, source: source}
+	r.refresh(t.Context())
+	if cursor.listCalls != 0 {
+		t.Fatal("不应向只有发现能力的 CLI 请求模型目录")
+	}
+}
+
+func TestDiscoveryFingerprintAfterDeviceSettingsReload(t *testing.T) {
+	prefs := runtimepolicy.DefaultDevicePreferences()
+	before := discoveryFingerprint("", prefs)
+	prefs.RuntimePaths = map[string]string{}
+	if discoveryFingerprint("", prefs) != before {
+		t.Fatal("清空路径后，重启应能使用相同的缓存")
+	}
+	prefs.RuntimePaths["pi"] = "/opt/second/bin/pi"
+	if discoveryFingerprint("", prefs) == before {
+		t.Fatal("切换安装路径应使缓存失效")
 	}
 }

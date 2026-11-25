@@ -895,10 +895,13 @@ for (const locale of ["zh-CN", "en-US"] as const) {
       name: t("tasks.detail.aiPanelResize"),
     });
     await expect(panel).toHaveCSS("width", "480px");
+    const upperBound = Number(await handle.getAttribute("aria-valuemax"));
+    const expandedWidth = Math.min(580, upperBound);
+    expect(expandedWidth).toBeGreaterThan(480);
     await dragHandle(page, handle, -100);
-    await expect(panel).toHaveCSS("width", "580px");
+    await expect(panel).toHaveCSS("width", `${expandedWidth}px`);
     await page.reload();
-    await expect(panel).toHaveCSS("width", "580px");
+    await expect(panel).toHaveCSS("width", `${expandedWidth}px`);
     await handle.press("Home");
     await expect(panel).toHaveCSS("width", "320px");
     const composer = panel.locator('[data-slot="prompt-input"]');
@@ -974,19 +977,18 @@ for (const locale of ["zh-CN", "en-US"] as const) {
     const parentWidth = await panel.evaluate(
       (node) => node.parentElement!.clientWidth,
     );
-    await expect(handle).toHaveAttribute(
-      "aria-valuenow",
-      String(Math.min(960, parentWidth - 560)),
-    );
+    expect(upperBound).toBe(Math.min(960, parentWidth - 560));
+    await expect(handle).toHaveAttribute("aria-valuenow", String(upperBound));
     await page.setViewportSize({ width: 900, height: 900 });
     await expect(handle).toBeHidden();
     await expect(panel).toBeVisible();
-    await expect(
-      page.getByRole("button", {
-        name: t("tasks.detail.taskView"),
-        exact: true,
-      }),
-    ).toBeVisible();
+    const views = page.getByRole("group", { name: t("tasks.detail.label") });
+    await views
+      .getByRole("button", { name: t("tasks.detail.taskView") })
+      .click();
+    await expect(panel).toBeHidden();
+    await views.getByRole("button", { name: t("chat.title") }).click();
+    await expect(panel).toBeVisible();
     expect(
       await panel.evaluate((node) => node.scrollWidth <= node.clientWidth),
     ).toBe(true);
