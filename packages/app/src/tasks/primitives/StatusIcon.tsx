@@ -26,7 +26,12 @@ export function StatusIcon({
   className,
 }: StatusIconProps) {
   const t = useT();
-  const c = color || STATUS_LIFECYCLE_COLORS[category];
+  const statusColor = color || STATUS_LIFECYCLE_COLORS[category];
+  const c =
+    category === "TODO" &&
+    statusColor.toLowerCase() === STATUS_LIFECYCLE_COLORS.TODO
+      ? "var(--color-fg-muted)"
+      : statusColor;
   const label = t(`tasks.statusCategory.${category}`);
   return (
     <svg
