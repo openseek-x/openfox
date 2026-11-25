@@ -18,11 +18,11 @@ export function controlShellClass(
   invalid: boolean,
 ): string {
   return cn(
-    "of-control flex min-w-0 items-center gap-2 border bg-surface-card text-body text-fg-default transition-colors",
+    "of-control of-input-frame flex min-w-0 items-center gap-2 border bg-surface-card text-body text-fg-default focus-visible:shadow-none",
     controlFrameClass[variant],
-    invalid ? "border-danger" : "border-line-default",
-    "focus-within:border-line-focus",
-    variant === "labeled" && "focus-within:shadow-focus",
+    invalid
+      ? "border-danger"
+      : "border-line-default focus-within:border-line-focus",
     "has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50",
   );
 }

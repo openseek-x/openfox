@@ -593,7 +593,8 @@ export const zhCN = {
     favoriteFailed: "无法更新收藏",
     board: {
       label: "任务看板",
-      collapsed: "折叠的列",
+      jumpToColumn: "定位列",
+      findColumn: "搜索列名",
       instructions:
         "按空格拿起任务卡片，用方向键移动，再按空格放下，按 Esc 取消；按回车打开任务。",
       picked: "已拿起任务 {task}",
@@ -727,6 +728,7 @@ export const zhCN = {
       backToInbox: "返回收件箱",
       goToSpace: "前往空间任务页",
       aiPanel: "AI 面板",
+      taskView: "任务",
       aiPanelClose: "关闭 AI 面板",
       aiPanelResize: "调整任务 AI 面板宽度",
       aiPanelOpenInChat: "在对话中打开",

@@ -297,7 +297,8 @@ export const artifactsEn: Messages["artifacts"] = {
     nativeHint:
       "Save first, then select your private Codex chat. Add comments to its draft and send a message to request changes. If the document changes in the meantime, select the content again.",
     nativeConversation: "Select a private Codex chat",
-    nativeNone: "No eligible chats. Create a personal Codex chat first.",
+    nativeNone:
+      "Create a private Codex chat in this space to start annotating.",
     nativeStart: "Save and open annotations",
     nativeFailed:
       "Cannot open or refresh review. Check that saving succeeded, the document is unchanged, and the chat has no other members.",

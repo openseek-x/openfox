@@ -64,7 +64,7 @@ export function Tabs({ tabs, value, onChange, label, className }: TabsProps) {
               "-mb-px flex h-9 items-center gap-1.5 border-b-2 text-body disabled:cursor-not-allowed disabled:opacity-50",
               active
                 ? "border-primary font-medium text-fg-default"
-                : "border-transparent text-fg-muted hover:text-fg-default",
+                : "border-transparent text-fg-muted enabled:hover:text-fg-default",
             )}
           >
             {tab.label}

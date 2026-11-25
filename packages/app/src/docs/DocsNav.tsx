@@ -165,12 +165,12 @@ export function DocsNav({
     <aside
       aria-label={t("docs.title")}
       style={{ width }}
-      className="relative flex h-full shrink-0 flex-col border-r border-line-default bg-surface-sidebar"
+      className="relative flex h-full shrink-0 flex-col border-r border-line-subtle bg-surface-sidebar"
     >
       <button
         type="button"
         onClick={actions.search}
-        className="mx-2 mt-2 flex h-11 shrink-0 items-center gap-2 rounded-lg px-2 text-left text-body text-fg-secondary hover:bg-surface-hover"
+        className="mx-2 mt-2 flex h-11 shrink-0 items-center gap-2 rounded-lg px-2 text-left text-body text-fg-secondary hover:bg-surface-sidebar-hover"
       >
         <Icon name="search" className="text-fg-muted" />
         <span>{t("docs.nav.search")}</span>
@@ -198,6 +198,8 @@ export function DocsNav({
                       size="28"
                       variant="ghost"
                       active={props.open}
+                      aria-haspopup="menu"
+                      aria-expanded={props.open}
                       onClick={props.toggle}
                     />
                   )}
@@ -226,7 +228,7 @@ export function DocsNav({
                       "doc",
                     )
                   }
-                  className="flex h-8 items-center gap-2 rounded-lg px-2 text-left text-body-sm text-fg-secondary hover:bg-surface-hover"
+                  className="flex h-8 items-center gap-2 rounded-lg px-2 text-left text-body-sm text-fg-secondary hover:bg-surface-sidebar-hover"
                 >
                   <Icon name="plus" size={14} />
                   {t("docs.nav.createFirstDoc")}
@@ -330,13 +332,11 @@ function GroupHeader({
       ref={droppable.setNodeRef}
       className={cn(
         "group flex h-8 shrink-0 items-center rounded-lg pr-1 pl-2 text-caption text-fg-muted",
-        hot && "bg-surface-active",
+        hot && "bg-surface-sidebar-active",
       )}
     >
       <span className="flex-1 truncate font-medium">{label}</span>
-      <span className="opacity-0 group-hover:opacity-100 focus-within:opacity-100">
-        {action}
-      </span>
+      <span className="of-row-actions">{action}</span>
     </div>
   );
 }
@@ -375,7 +375,7 @@ function SetRow({
         style={{ paddingLeft: indentFor(0) }}
         className={cn(
           "group relative flex h-8 items-center gap-1 rounded-lg pr-1 text-body",
-          hot ? "bg-surface-active" : "hover:bg-surface-hover",
+          hot ? "bg-surface-sidebar-active" : "hover:bg-surface-sidebar-hover",
         )}
       >
         <button
@@ -398,7 +398,7 @@ function SetRow({
           <span className="truncate">{docSet.name}</span>
         </button>
         {docSet.can_edit && (
-          <span className="flex items-center opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+          <span className="flex items-center of-row-actions">
             {/* 文档集根的快速添加：与「我的文档」分组的「+」相同的菜单，目标为文档集根 */}
             <QuickAddMenu
               location={{ container, parentId: null }}
@@ -412,6 +412,8 @@ function SetRow({
                   size="28"
                   variant="ghost"
                   active={props.open}
+                  aria-haspopup="menu"
+                  aria-expanded={props.open}
                   onClick={props.toggle}
                 />
               )}
@@ -542,9 +544,11 @@ function DocRow({
         style={{ paddingLeft: indentFor(depth) }}
         className={cn(
           "group relative flex h-8 items-center gap-1 rounded-lg pr-1 text-body",
-          selected ? "bg-surface-active font-medium" : "hover:bg-surface-hover",
+          selected && "font-medium",
+          selected || hot === "inside"
+            ? "bg-surface-sidebar-active"
+            : "hover:bg-surface-sidebar-hover",
           drag.isDragging && "opacity-50",
-          hot === "inside" && "bg-surface-active",
         )}
       >
         {hot === "before" && (
@@ -570,13 +574,14 @@ function DocRow({
         )}
         <button
           type="button"
+          aria-current={selected ? "page" : undefined}
           onClick={() => navigate(docsPath(orgId, spaceId, node.id))}
           className="flex min-w-0 flex-1 items-center gap-2 py-1 text-left"
         >
           <NodeIcon node={node} />
           <span className="truncate">{node.title || t("docs.untitled")}</span>
         </button>
-        <span className="flex items-center opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+        <span className="flex items-center of-row-actions">
           {isFolder && node.can_edit && (
             <QuickAddMenu
               location={{ container: node.container, parentId: node.id }}
@@ -590,6 +595,8 @@ function DocRow({
                   size="28"
                   variant="ghost"
                   active={props.open}
+                  aria-haspopup="menu"
+                  aria-expanded={props.open}
                   onClick={props.toggle}
                 />
               )}

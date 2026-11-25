@@ -1,4 +1,4 @@
-import { useId, useMemo, type CSSProperties } from "react";
+import { useId, useMemo, useState, type CSSProperties } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { isApiError, type Task } from "@openfox/api";
@@ -42,13 +42,19 @@ export function TaskPage() {
   const taskParam = useTaskParam();
   const panel = useTaskPanel();
   const panelId = useId();
+  const [taskViewKey, setTaskViewKey] = useState<string | null>(null);
   const resize = usePanelWidth({
     storageKey: localKeys.taskAiPanelWidth,
     initial: 480,
     min: 320,
     max: 960,
-    remaining: 400,
+    remaining: 560,
   });
+  const compact =
+    Boolean(panel.conversationId) &&
+    resize.availableWidth > 0 &&
+    resize.availableWidth < 920;
+  const showTask = !compact || taskViewKey === location.key;
   const detail = useTaskByDisplayId(orgId, id);
   const task = detail.data;
   // 没有进入前的页面（深链接、刷新）时，关闭回到任务所在空间的任务页
@@ -67,80 +73,114 @@ export function TaskPage() {
   return (
     <div
       ref={resize.containerRef}
-      className="@container/task relative flex h-full min-h-0"
+      className="relative flex h-full min-h-0 flex-col"
     >
-      <div className="flex min-w-0 flex-1 flex-col">
-        <TaskDetailView
-          orgId={orgId}
-          displayId={id}
-          onOpenTask={taskParam.open}
-          onDeleted={exit.close}
-          onExpand={(shown) => exit.restore(shown)}
-          expandLabel={t("tasks.detail.restoreDrawer")}
-          expandIcon="minimize-2"
-          rejectReplacement={`/o/${orgId}/inbox`}
-          redirectCanonical={redirectCanonical}
-          notFoundActions={
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => navigate(`/o/${orgId}/inbox`)}
-              >
-                {t("tasks.detail.backToInbox")}
-              </Button>
-              <Button variant="outline" onClick={exit.close}>
-                {t("tasks.detail.goToSpace")}
-              </Button>
-            </div>
-          }
-          frame={({ title, actions, children }) => (
-            <section
-              aria-label={t("tasks.detail.label")}
-              className="flex min-h-0 flex-1 flex-col"
-            >
-              <div className="flex h-11 shrink-0 items-center gap-2 border-b border-line-default px-3">
-                <IconButton
-                  label={t("common.close")}
-                  icon={<Icon name="x" />}
-                  size="28"
-                  onClick={exit.close}
-                />
-                <h1 className="min-w-0 flex-1 truncate text-body font-medium">
-                  {title}
-                </h1>
-                {actions}
-              </div>
-              <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
-            </section>
-          )}
-        />
-      </div>
-      {panel.conversationId && (
-        <aside
-          id={panelId}
-          aria-label={t("tasks.detail.aiPanel")}
-          style={
-            { "--task-ai-panel-width": `${resize.width}px` } as CSSProperties
-          }
-          className="absolute inset-0 z-10 flex min-h-0 min-w-0 flex-col bg-surface-card @[720px]/task:relative @[720px]/task:w-[var(--task-ai-panel-width)] @[720px]/task:shrink-0 @[720px]/task:border-l @[720px]/task:border-line-default"
+      {compact && (
+        <div
+          role="group"
+          aria-label={t("tasks.detail.label")}
+          className="flex shrink-0 gap-1 border-b border-line-soft p-1.5"
         >
-          <PanelResizeHandle
-            {...resize}
-            label={t("tasks.detail.aiPanelResize")}
-            controls={panelId}
-            side="right"
-            onCollapse={panel.close}
-            className="absolute inset-y-0 -left-1 hidden w-2 @[720px]/task:block"
-          />
-          <TaskAiPanel
-            orgId={orgId}
-            task={task}
-            conversationId={panel.conversationId}
-            onClose={panel.close}
-            taskKnown={Boolean(task) || Boolean(detail.error)}
-          />
-        </aside>
+          <Button
+            size="28"
+            variant={showTask ? "secondary" : "ghost"}
+            aria-pressed={showTask}
+            onClick={() => setTaskViewKey(location.key)}
+          >
+            {t("tasks.detail.taskView")}
+          </Button>
+          <Button
+            size="28"
+            variant={showTask ? "ghost" : "secondary"}
+            aria-pressed={!showTask}
+            onClick={() => setTaskViewKey(null)}
+          >
+            {t("chat.title")}
+          </Button>
+        </div>
       )}
+      <div className="flex min-h-0 flex-1">
+        <div className={showTask ? "flex min-w-0 flex-1 flex-col" : "hidden"}>
+          <TaskDetailView
+            orgId={orgId}
+            displayId={id}
+            onOpenTask={taskParam.open}
+            onDeleted={exit.close}
+            onExpand={(shown) => exit.restore(shown)}
+            expandLabel={t("tasks.detail.restoreDrawer")}
+            expandIcon="minimize-2"
+            rejectReplacement={`/o/${orgId}/inbox`}
+            redirectCanonical={redirectCanonical}
+            notFoundActions={
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate(`/o/${orgId}/inbox`)}
+                >
+                  {t("tasks.detail.backToInbox")}
+                </Button>
+                <Button variant="outline" onClick={exit.close}>
+                  {t("tasks.detail.goToSpace")}
+                </Button>
+              </div>
+            }
+            frame={({ title, actions, children }) => (
+              <section
+                aria-label={t("tasks.detail.label")}
+                className="flex min-h-0 flex-1 flex-col"
+              >
+                <div className="flex h-11 shrink-0 items-center gap-2 border-b border-line-default px-3">
+                  <IconButton
+                    label={t("common.close")}
+                    icon={<Icon name="x" />}
+                    size="28"
+                    onClick={exit.close}
+                  />
+                  <h1 className="min-w-0 flex-1 truncate text-body font-medium">
+                    {title}
+                  </h1>
+                  {actions}
+                </div>
+                <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+              </section>
+            )}
+          />
+        </div>
+        {panel.conversationId && (
+          <aside
+            id={panelId}
+            aria-label={t("tasks.detail.aiPanel")}
+            style={
+              { "--task-ai-panel-width": `${resize.width}px` } as CSSProperties
+            }
+            className={
+              compact
+                ? showTask
+                  ? "hidden"
+                  : "flex min-w-0 flex-1 flex-col"
+                : "relative flex min-h-0 w-[var(--task-ai-panel-width)] shrink-0 flex-col border-l border-line-default"
+            }
+          >
+            {!compact && (
+              <PanelResizeHandle
+                {...resize}
+                label={t("tasks.detail.aiPanelResize")}
+                controls={panelId}
+                side="right"
+                onCollapse={panel.close}
+                className="absolute inset-y-0 -left-1 w-2"
+              />
+            )}
+            <TaskAiPanel
+              orgId={orgId}
+              task={task}
+              conversationId={panel.conversationId}
+              onClose={panel.close}
+              taskKnown={Boolean(task) || Boolean(detail.error)}
+            />
+          </aside>
+        )}
+      </div>
     </div>
   );
 }

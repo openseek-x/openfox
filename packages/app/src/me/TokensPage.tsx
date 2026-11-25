@@ -358,7 +358,7 @@ function CreateTokenDialog({
           {t("me.tokens.dialog.name")}
         </label>
         {/* 名称与过期时间同在一个 40 高的输入壳里 */}
-        <div className="flex h-10 items-center rounded-lg border border-line-default bg-surface-card focus-within:border-line-focus has-[:disabled]:opacity-50">
+        <div className="of-input-frame flex h-10 items-center rounded-lg border border-line-default bg-surface-card focus-within:border-line-focus has-[:disabled]:opacity-50">
           <input
             id={nameId}
             value={name}

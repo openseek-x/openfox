@@ -23,3 +23,5 @@ export interface TaskViewProps {
   /** 迭代 / 专项等引用 id → 显示名称，由页面从已有查询构造 */
   refNames?: ReadonlyMap<string, string>;
 }
+
+export type BoardProps = TaskViewProps & { toolbar: HTMLElement | null };

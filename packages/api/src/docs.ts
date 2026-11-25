@@ -71,6 +71,12 @@ export function createDocsApi(http: HttpClient) {
         ),
     },
     docNodes: {
+      recentPersonal: async (orgId: string, spaceId: string) =>
+        (
+          await http.request<{ nodes: DocNode[] }>(docsPath(orgId, spaceId), {
+            query: { container: "personal", view: "recent" },
+          })
+        ).nodes,
       revisions: (
         orgId: string,
         spaceId: string,

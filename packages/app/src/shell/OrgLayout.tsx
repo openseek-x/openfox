@@ -18,6 +18,7 @@ import { useT } from "@openfox/i18n";
 import {
   Avatar,
   Badge,
+  Drawer,
   Icon,
   IconButton,
   Menu,
@@ -108,6 +109,9 @@ export function OrgLayout() {
     remaining: 439,
   });
   const location = useLocation();
+  const narrow = sidebar.availableWidth > 0 && sidebar.availableWidth < 700;
+  const [navOpen, setNavOpen] = useState(false);
+  useEffect(() => setNavOpen(false), [location.key, narrow]);
   const inSettings = location.pathname.startsWith(`/o/${orgId}/settings`);
   const inMembers = location.pathname.startsWith(`/o/${orgId}/members`);
   // 首页内打开对话仍保留首页侧栏，与主导航高亮使用同一规则。
@@ -171,6 +175,26 @@ export function OrgLayout() {
   const toggle = () => changeCollapsed(!collapsed);
   const sidebarHidden = collapsed || sidebar.width === 0;
 
+  const closeNavigation = narrow ? () => setNavOpen(false) : toggle;
+  const navigation = inSettings ? (
+    <SettingsNavigation orgId={orgId} onCollapse={closeNavigation} />
+  ) : inMembers ? (
+    <MembersNavigation orgId={orgId} onCollapse={closeNavigation} />
+  ) : inChat ? (
+    <ChatPanel orgId={orgId} onCollapse={closeNavigation} />
+  ) : (
+    // 按组织重新挂载，侧栏的本机折叠状态随组织切换
+    <Navigation
+      key={orgId}
+      orgId={orgId}
+      onCollapse={closeNavigation}
+      showNewTask={narrow || !sidebarHidden}
+    />
+  );
+  const rail = (
+    <Rail orgId={orgId} collapsed={!narrow && collapsed} onToggle={toggle} />
+  );
+
   return (
     <WorkspacePersistence key={orgId} orgId={orgId}>
       <NavRejectContext.Provider value={rejectRef}>
@@ -182,62 +206,64 @@ export function OrgLayout() {
             <TitleBar
               org={org}
               organizations={organizations.data ?? []}
-              showNewTask={sidebarHidden}
+              showNewTask={narrow || sidebarHidden}
+              openNavigation={narrow ? () => setNavOpen(true) : undefined}
             />
             <div
               ref={sidebar.containerRef}
               className="flex min-h-0 flex-1 gap-2 px-2 pb-2"
             >
-              <div className="relative flex shrink-0">
-                <aside
-                  aria-label={t("shell.a11y.sidebar")}
-                  className="flex shrink-0 overflow-hidden rounded-xl bg-surface-card"
-                >
-                  <Rail orgId={orgId} collapsed={collapsed} onToggle={toggle} />
-                  <div
-                    id="org-sidebar-panel"
-                    style={{ width: collapsed ? 0 : sidebar.width }}
-                    aria-hidden={sidebarHidden}
-                    inert={sidebarHidden}
-                    className={cn(
-                      "flex min-w-0 shrink-0 overflow-hidden",
-                      !sidebar.resizing &&
-                        "transition-[width] duration-150 ease-out motion-reduce:transition-none",
-                    )}
-                  >
-                    <div
-                      style={{ width: Math.max(sidebar.min, sidebar.width) }}
-                      className="flex min-w-0 shrink-0"
-                    >
-                      {inSettings ? (
-                        <SettingsNavigation orgId={orgId} onCollapse={toggle} />
-                      ) : inMembers ? (
-                        <MembersNavigation orgId={orgId} onCollapse={toggle} />
-                      ) : inChat ? (
-                        <ChatPanel orgId={orgId} onCollapse={toggle} />
-                      ) : (
-                        // 按组织重新挂载，侧栏的本机折叠状态随组织切换
-                        <Navigation
-                          key={orgId}
-                          orgId={orgId}
-                          onCollapse={toggle}
-                          showNewTask={!sidebarHidden}
-                        />
-                      )}
-                    </div>
-                  </div>
-                </aside>
-                <PanelResizeHandle
-                  {...sidebar}
-                  label={t("shell.a11y.resizeSidebar")}
-                  controls="org-sidebar-panel"
+              {narrow ? (
+                <Drawer
+                  open={navOpen}
+                  onClose={() => setNavOpen(false)}
+                  title={t("shell.a11y.sidebar")}
                   side="left"
-                  collapsed={collapsed}
-                  onCollapse={() => changeCollapsed(true)}
-                  onExpand={() => changeCollapsed(false)}
-                  className="absolute inset-y-0 -right-2 w-2"
-                />
-              </div>
+                  width="min(320px, calc(100vw - 32px))"
+                >
+                  <div className="flex h-full">
+                    {rail}
+                    {navigation}
+                  </div>
+                </Drawer>
+              ) : (
+                <div className="relative flex shrink-0">
+                  <aside
+                    aria-label={t("shell.a11y.sidebar")}
+                    className="flex shrink-0 overflow-hidden rounded-xl bg-surface-card"
+                  >
+                    {rail}
+                    <div
+                      id="org-sidebar-panel"
+                      style={{ width: collapsed ? 0 : sidebar.width }}
+                      aria-hidden={sidebarHidden}
+                      inert={sidebarHidden}
+                      className={cn(
+                        "flex min-w-0 shrink-0 overflow-hidden",
+                        !sidebar.resizing &&
+                          "transition-[width] duration-150 ease-out motion-reduce:transition-none",
+                      )}
+                    >
+                      <div
+                        style={{ width: Math.max(sidebar.min, sidebar.width) }}
+                        className="flex min-w-0 shrink-0"
+                      >
+                        {navigation}
+                      </div>
+                    </div>
+                  </aside>
+                  <PanelResizeHandle
+                    {...sidebar}
+                    label={t("shell.a11y.resizeSidebar")}
+                    controls="org-sidebar-panel"
+                    side="left"
+                    collapsed={collapsed}
+                    onCollapse={() => changeCollapsed(true)}
+                    onExpand={() => changeCollapsed(false)}
+                    className="absolute inset-y-0 -right-2 w-2"
+                  />
+                </div>
+              )}
               <main
                 data-org-main
                 className="min-w-0 flex-1 overflow-auto rounded-xl bg-surface-card"
@@ -269,10 +295,12 @@ function TitleBar({
   org,
   organizations,
   showNewTask,
+  openNavigation,
 }: {
   org: Organization;
   organizations: Organization[];
   showNewTask: boolean;
+  openNavigation?: () => void;
 }) {
   const t = useT();
   const api = useApi();
@@ -317,6 +345,16 @@ function TitleBar({
         macDesktop && "pl-[92px]",
       )}
     >
+      {openNavigation && (
+        <IconButton
+          label={t("shell.expand")}
+          icon={<Icon name="panel-left" />}
+          size="28"
+          variant="ghost"
+          aria-haspopup="dialog"
+          onClick={openNavigation}
+        />
+      )}
       <Menu
         label={t("shell.switchOrg")}
         trigger={({ ref, toggle, open }) => (
@@ -328,7 +366,9 @@ function TitleBar({
             className="flex h-7 items-center gap-2 rounded-lg py-1 pr-2 pl-1 text-body font-medium hover:bg-surface-muted"
           >
             <OrgIcon org={org} size={20} />
-            <span className="max-w-[160px] truncate">{org.name}</span>
+            <span className="max-w-[22vw] truncate sm:max-w-[160px]">
+              {org.name}
+            </span>
             <Icon name="chevron-down" size={14} className="text-fg-muted" />
           </button>
         )}
@@ -353,7 +393,7 @@ function TitleBar({
         </MenuItem>
       </Menu>
       {showNewTask && <NewTaskButton orgId={org.id} inTitleBar />}
-      <div className="flex flex-1 items-center justify-center gap-2">
+      <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
         {desktop && <DesktopNav />}
         <SearchLauncher orgId={org.id} />
       </div>
@@ -493,7 +533,7 @@ function Rail({
   return (
     <nav
       aria-label={t("shell.a11y.rail")}
-      className="flex w-[55px] shrink-0 flex-col items-center gap-1 border-r border-line-default py-3"
+      className="flex w-[55px] shrink-0 flex-col items-center gap-1 border-r border-line-subtle py-3"
     >
       <Icon name="brand-logo" size={28} label="OpenFox" />
       <IconButton
@@ -517,7 +557,7 @@ function Rail({
           aria-current={active === item.module ? "page" : undefined}
           title={t(item.label)}
           className={cn(
-            "flex size-9 items-center justify-center rounded-lg text-fg-secondary hover:bg-surface-muted",
+            "flex size-9 items-center justify-center rounded-lg text-fg-secondary transition-colors duration-100 not-aria-[current=page]:hover:bg-surface-hover motion-reduce:transition-none",
             active === item.module && "bg-surface-active text-fg-default",
           )}
         >
@@ -551,7 +591,7 @@ function NavRow({
       end={end}
       className={({ isActive }) =>
         cn(
-          "flex h-[var(--density-nav-row,30px)] items-center gap-2 rounded-lg pr-1.5 pl-2 text-body hover:bg-surface-hover",
+          "flex h-[var(--density-nav-row,30px)] items-center gap-2 rounded-lg pr-1.5 pl-2 text-body transition-colors duration-100 not-aria-[current=page]:hover:bg-surface-hover motion-reduce:transition-none",
           isActive ? "bg-surface-active font-medium" : "text-fg-default",
         )
       }
@@ -709,14 +749,14 @@ function Navigation({
           ))
       )}
 
-      <div ref={spaceRef} className="group/spaces flex items-center pr-1">
+      <div ref={spaceRef} className="group flex items-center pr-1">
         <SectionLabel
           label={t("shell.mySpaces")}
           open={spacesOpen}
           onToggle={() => setSpacesOpen((v) => !v)}
         />
         {/* 阶段 3a · 「+」平时隐藏，悬停分组行时出现（Figma 页 10 · 0.5） */}
-        <span className="mt-3 ml-auto opacity-0 group-hover/spaces:opacity-100 focus-within:opacity-100">
+        <span className="of-row-actions mt-3 ml-auto">
           <JoinOrCreateSpace orgId={orgId} variant="icon" />
         </span>
       </div>
@@ -748,12 +788,12 @@ function Navigation({
                   "shrink-0 text-fg-muted transition-transform",
                   collapsedSpaces.includes(space.id)
                     ? "-rotate-90"
-                    : "opacity-0 group-hover/space:opacity-100 group-focus-visible/space:opacity-100",
+                    : "pointer-fine:opacity-0 pointer-fine:group-hover/space:opacity-100 pointer-fine:group-focus-visible/space:opacity-100",
                 )}
               />
             </button>
             {!collapsedSpaces.includes(space.id) && (
-              <div className="ml-[15px] flex flex-col gap-0.5 border-l border-line-default pl-2">
+              <div className="ml-[15px] flex flex-col gap-0.5 border-l border-line-subtle pl-2">
                 <NavRow
                   to={`${base}/spaces/${space.id}/tasks`}
                   icon="square-check"
@@ -798,20 +838,22 @@ function Navigation({
           </div>
         ))}
 
-      <SectionLabel label={t("shell.organization")} />
-      <NavRow
-        to={`${base}/settings/integrations`}
-        icon="puzzle"
-        label={t("shell.integrations")}
-      />
-      <NavRow
-        to={`${base}/settings`}
-        icon="settings"
-        label={t("shell.moreSettings")}
-        end
-      />
+      <div className="flex shrink-0 flex-col gap-1 pb-3">
+        <SectionLabel label={t("shell.organization")} />
+        <NavRow
+          to={`${base}/settings/integrations`}
+          icon="puzzle"
+          label={t("shell.integrations")}
+        />
+        <NavRow
+          to={`${base}/settings`}
+          icon="settings"
+          label={t("shell.moreSettings")}
+          end
+        />
+      </div>
 
-      <div className="mt-auto flex flex-col gap-1 border-t border-line-default pt-2">
+      <div className="mt-auto flex flex-col gap-1 border-t border-line-subtle pt-2">
         {/* 阶段 4c · 进阶指引入口可在开始使用页隐藏（只影响本机）；阶段 8f 起就地展开 */}
         <AdvancedGuide
           orgId={orgId}

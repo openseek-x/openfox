@@ -110,17 +110,6 @@ export function ComputerNotice({
     !agent.builtin_kind &&
     me.isSuccess &&
     canEditAgent(agent, me.data?.id, role);
-  const changeComputer = () => {
-    settings.open(agent.id, agent.space_id);
-    // 抽屉渲染后滚到「电脑 & Runtime」分区（只滚动定位，不改抽屉自身的展开状态）
-    requestAnimationFrame(() =>
-      requestAnimationFrame(() =>
-        document
-          .getElementById("agent-section-runtime")
-          ?.scrollIntoView?.({ block: "start" }),
-      ),
-    );
-  };
   return (
     <Callout
       tone="warning"
@@ -137,8 +126,18 @@ export function ComputerNotice({
             </Link>
           )}
           {canChange && (
-            <Button size="28" variant="outline" onClick={changeComputer}>
-              {t("chat.computerNotice.changeComputer")}
+            <Button
+              size="28"
+              variant="outline"
+              onClick={() =>
+                settings.open(agent.id, agent.space_id, "runtime-settings")
+              }
+            >
+              {t(
+                state.kind === "noComputer"
+                  ? "chat.computerNotice.bindComputer"
+                  : "chat.computerNotice.changeComputer",
+              )}
             </Button>
           )}
         </span>

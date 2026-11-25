@@ -78,7 +78,7 @@ function SubRow({
       end={end}
       className={({ isActive }) =>
         cn(
-          "flex h-[var(--density-subnav-row,30px)] items-center rounded-lg px-2 text-body hover:bg-surface-hover",
+          "flex h-[var(--density-subnav-row,30px)] items-center rounded-lg px-2 text-body transition-colors duration-100 not-aria-[current=page]:hover:bg-surface-hover motion-reduce:transition-none",
           isActive ? "bg-surface-active font-medium" : "text-fg-default",
         )
       }
@@ -123,7 +123,7 @@ export function SpaceTaskNav({
   );
 
   return (
-    <div className="ml-[15px] flex flex-col gap-0.5 border-l border-line-default pl-2">
+    <div className="ml-[15px] flex flex-col gap-0.5 border-l border-line-subtle pl-2">
       {shown.map((item) => (
         <div key={item.id} className="flex flex-col gap-0.5">
           <SubRow
@@ -148,8 +148,8 @@ export function SpaceTaskNav({
             aria-expanded={props.open}
             onClick={props.toggle}
             className={cn(
-              "flex h-[30px] items-center rounded-lg px-2 text-left text-body text-fg-default hover:bg-surface-hover",
-              props.open && "bg-surface-active",
+              "flex h-[30px] items-center rounded-lg px-2 text-left text-body text-fg-default",
+              props.open ? "bg-surface-active" : "hover:bg-surface-hover",
             )}
           >
             {t("shell.space.taskNavMore")}
@@ -162,7 +162,7 @@ export function SpaceTaskNav({
             <div
               key={item.id}
               role="none"
-              className="flex items-center gap-1 rounded-lg pr-1 hover:bg-surface-active"
+              className="flex items-center gap-1 rounded-lg pr-1 hover:bg-surface-hover"
             >
               <Link
                 to={`${base}/${item.path}`}

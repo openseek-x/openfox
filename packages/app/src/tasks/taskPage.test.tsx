@@ -85,7 +85,7 @@ afterEach(() => {
 
 describe("任务全页", () => {
   it("AI 面板宽度独立持久化、受任务区最小宽度约束，关闭仍保留任务", async () => {
-    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1000);
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(1160);
     localStorage.setItem("openfox:task-ai-panel-width", "520");
     const server = renderAt([panel], conversations());
     const handle = await screen.findByRole("separator", {

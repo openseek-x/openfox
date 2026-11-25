@@ -169,7 +169,7 @@ function OptionItem({
       ref={setNodeRef}
       style={{ transform: DndCSS.Translate.toString(transform), transition }}
       className={cn(
-        "flex h-9 items-center gap-1.5 rounded-lg border border-line-default bg-surface-card pr-1 pl-1",
+        "of-input-frame flex h-9 items-center gap-1.5 rounded-lg border border-line-default bg-surface-card pr-1 pl-1 focus-within:border-line-focus",
         isDragging && "relative z-10 shadow-popover",
       )}
     >

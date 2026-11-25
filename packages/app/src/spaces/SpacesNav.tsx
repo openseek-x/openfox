@@ -171,9 +171,9 @@ export function JoinOrCreateSpace({
   const label =
     joinable.length > 0 ? t("spaces.nav.joinOrCreate") : t("spaces.nav.create");
   const rowClass =
-    "flex h-[30px] w-full items-center gap-2 rounded-lg px-2 text-body text-fg-default hover:bg-surface-hover";
+    "flex h-[30px] w-full items-center gap-2 rounded-lg px-2 text-body text-fg-default not-aria-expanded:hover:bg-surface-hover aria-expanded:bg-surface-active";
   const iconClass =
-    "flex size-5 items-center justify-center rounded-md text-fg-muted hover:bg-surface-muted hover:text-fg-default";
+    "flex size-5 items-center justify-center rounded-md text-fg-muted not-aria-expanded:hover:bg-control-hover hover:text-fg-default aria-expanded:bg-surface-active";
   if (joinable.length === 0 && !canCreate) return null;
   if (joinable.length === 0)
     return variant === "row" ? (
@@ -355,8 +355,10 @@ function SpaceNavRow({
           if (justDragged.current) event.preventDefault();
         }}
         className={cn(
-          "flex h-[30px] cursor-grab items-center gap-2 rounded-lg px-2 text-body hover:bg-surface-hover active:cursor-grabbing",
-          active ? "bg-surface-active font-medium" : "text-fg-default",
+          "flex h-[30px] cursor-grab items-center gap-2 rounded-lg px-2 text-body active:cursor-grabbing",
+          active
+            ? "bg-surface-active font-medium"
+            : "text-fg-default hover:bg-surface-hover",
         )}
         // dnd-kit 默认把拖拽源标成 role=button；这里保留链接语义，只沿用其余无障碍属性
         {...{ ...attributes, role: undefined }}

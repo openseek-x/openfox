@@ -42,6 +42,7 @@ export interface DrawerProps {
   actions?: ReactNode;
   /** 宽度，默认 min(860, 100vw-378)（电脑详情抽屉） */
   width?: string;
+  side?: "left" | "right";
   /**
    * 是否模态，默认 true：有遮罩、锁定焦点与滚动、点遮罩关闭。
    * false 时页面其余部分仍可操作，点击外部关闭当前抽屉。
@@ -53,8 +54,8 @@ export interface DrawerProps {
 }
 
 /**
- * 右侧抽屉：遮罩 #0000003F，从右滑入 300ms；头部固定、内容区滚动。
- * 外框距顶 44、右 9、底 9（与 Figma Drawer 一致，避开标题栏）。
+ * 抽屉默认从右侧滑入，导航可从左侧打开。头部固定、内容区滚动。
+ * 外框距顶 44、两侧对应边及底部 9，避开标题栏。
  */
 export function Drawer({
   open,
@@ -62,6 +63,7 @@ export function Drawer({
   title,
   actions,
   width = "min(860px, calc(100vw - 378px))",
+  side = "right",
   modal = true,
   itemKey,
   children,
@@ -112,10 +114,15 @@ export function Drawer({
         style={{ width }}
         onKeyDown={modal ? undefined : (event) => closeOnEscape(event, onClose)}
         className={cn(
-          "absolute top-11 right-[9px] bottom-[9px] flex flex-col overflow-hidden rounded-xl border border-line-default bg-surface-card shadow-dialog outline-none",
+          "absolute top-11 bottom-[9px] flex flex-col overflow-hidden rounded-xl border border-line-default bg-surface-card shadow-dialog outline-none",
           !modal && "pointer-events-auto",
           "transition-transform duration-300 ease-drawer",
-          entered ? "translate-x-0" : "translate-x-[calc(100%+9px)]",
+          side === "left" ? "left-[9px]" : "right-[9px]",
+          !entered &&
+            (side === "left"
+              ? "-translate-x-[calc(100%+9px)]"
+              : "translate-x-[calc(100%+9px)]"),
+          "motion-reduce:transition-none",
         )}
       >
         <div className="flex h-11 shrink-0 items-center gap-2 border-b border-line-default px-3">

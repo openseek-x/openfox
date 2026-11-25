@@ -61,11 +61,15 @@ export function SearchLauncher({ orgId }: { orgId: string }) {
         type="button"
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
-        className="flex h-7 w-[300px] items-center gap-1.5 rounded-lg bg-surface-card px-2.5 text-body-sm text-fg-muted hover:bg-surface-hover"
+        className="flex h-7 w-full max-w-[300px] min-w-0 items-center gap-1.5 rounded-lg bg-surface-card px-2.5 text-body-sm text-fg-muted hover:bg-surface-hover"
       >
         <Icon name="search" size={14} />
-        <span className="flex-1 text-left">{t("shell.search")}</span>
-        <span className="text-caption text-fg-subtle">{keycaps}</span>
+        <span className="min-w-0 flex-1 truncate text-left">
+          {t("shell.search")}
+        </span>
+        <span className="hidden text-caption text-fg-subtle sm:inline">
+          {keycaps}
+        </span>
       </button>
       {open && <CommandPalette orgId={orgId} onClose={() => setOpen(false)} />}
     </>

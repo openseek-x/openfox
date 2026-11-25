@@ -75,6 +75,8 @@ export function TaskMenu({
             icon={<Icon name="ellipsis" />}
             size="28"
             active={open}
+            aria-haspopup="menu"
+            aria-expanded={open}
             className={className}
             onPointerDown={(event) => event.stopPropagation()}
             onKeyDown={(event) => event.stopPropagation()}
@@ -112,8 +114,10 @@ export function TaskMenu({
                 }}
                 className={cn(
                   "flex min-h-[34px] w-full items-center gap-2.5 rounded-lg py-1.5 pr-2 pl-2.5 text-left text-body outline-none",
-                  "hover:bg-surface-active focus-visible:bg-surface-active focus-visible:shadow-none",
-                  readOnly && "cursor-not-allowed opacity-50",
+                  "focus-visible:bg-surface-active focus-visible:shadow-none",
+                  readOnly
+                    ? "cursor-not-allowed opacity-50"
+                    : "hover:bg-surface-hover",
                 )}
               >
                 <Icon name="arrow-right" className="text-fg-muted" />

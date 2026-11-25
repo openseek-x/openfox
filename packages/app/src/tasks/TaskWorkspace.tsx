@@ -169,6 +169,9 @@ export function TaskWorkspace({
   );
   // 阶段 7e · 统计视图：工具栏上的独立开关，不属于布局，也不写本机存储
   const [statsOpen, setStatsOpen] = useState(false);
+  const [boardToolbar, setBoardToolbar] = useState<HTMLSpanElement | null>(
+    null,
+  );
   const findRef = useRef<HTMLInputElement | null>(null);
   const setDisplay = (next: DisplaySettings) => {
     if (displayControl) displayControl.onChange(next);
@@ -237,6 +240,11 @@ export function TaskWorkspace({
     refNames,
   };
 
+  const showStatusColumns =
+    !statsOpen &&
+    display.layout === "board" &&
+    display.boardColumns === "status" &&
+    columns.length > 0;
   let body: ReactNode;
   if (counts.isLoading)
     body = (
@@ -255,7 +263,7 @@ export function TaskWorkspace({
         }
       />
     );
-  else if ((counts.data?.total ?? 0) === 0)
+  else if ((counts.data?.total ?? 0) === 0 && !showStatusColumns)
     body = filtering ? (
       <TaskState
         icon={<Icon name="list-filter" size={24} className="text-fg-muted" />}
@@ -281,7 +289,7 @@ export function TaskWorkspace({
   else if (display.layout === "gantt") body = <Gantt {...viewProps} />;
   else if (display.layout === "list") body = <TaskList {...viewProps} />;
   else if (display.layout === "table") body = <TaskTable {...viewProps} />;
-  else body = <Board {...viewProps} />;
+  else body = <Board {...viewProps} toolbar={boardToolbar} />;
 
   return (
     <EstimationContext.Provider value={estimation}>
@@ -289,11 +297,12 @@ export function TaskWorkspace({
         <div
           role="toolbar"
           aria-label={t("tasks.toolbar")}
-          className="flex min-h-12 items-center gap-2 px-4"
+          className="@container flex min-h-12 items-center gap-2 px-4"
         >
           <div className="flex min-w-0 flex-1 items-center gap-2">
             {leading}
           </div>
+          <span ref={setBoardToolbar} className="contents" />
           {finding || find ? (
             <TextInput
               ref={findRef}

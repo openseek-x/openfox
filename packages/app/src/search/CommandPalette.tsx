@@ -743,7 +743,7 @@ export function CommandPalette({
         <h2 className="sr-only">{t("commandPalette.title")}</h2>
         <p className="sr-only">{t("commandPalette.subtitle")}</p>
         <div className="flex shrink-0 items-center gap-2 px-4 pt-4">
-          <div className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-full border border-line-default px-3 focus-within:border-line-focus">
+          <div className="of-input-frame flex h-9 min-w-0 flex-1 items-center gap-2 rounded-full border border-line-default px-3 focus-within:border-line-focus">
             <Icon name="search" className="text-fg-muted" />
             {category !== "all" && (
               <button

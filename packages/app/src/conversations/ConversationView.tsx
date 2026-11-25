@@ -154,15 +154,6 @@ function ConversationViewContent({
     () => timelineItems(messages, target ? null : runId),
     [messages, runId, target],
   );
-  // 最后一条 Agent 回复：操作栏常显（之后即使有新的运行中项也保持）
-  const lastReplyId = useMemo(() => {
-    for (let i = items.length - 1; i >= 0; i--) {
-      const item = items[i]!;
-      if (item.kind === "message" && item.message.author_kind === "AGENT")
-        return item.message.id;
-    }
-    return null;
-  }, [items]);
   const owner = !conversation || conversation.owner_user_id === me.data?.id;
   const closed = conversation && conversation.lifecycle !== "OPEN";
   const overrides = useConversationOverrides({
@@ -599,11 +590,13 @@ function ConversationViewContent({
     (messagesQuery.isSuccess && messages.length === 0 && !runId);
 
   const assistantLanding = isAssistant && showEmpty;
+  const newChat = !conversationId && !isAssistant;
+  const centeredComposer = newChat || assistantLanding;
   return (
     <>
       <div
         className={
-          assistantLanding
+          centeredComposer
             ? "flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto"
             : "flex min-h-0 min-w-0 flex-1 flex-col"
         }
@@ -612,15 +605,21 @@ function ConversationViewContent({
           ref={scroller}
           onScroll={onScroll}
           className={
-            assistantLanding
+            centeredComposer
               ? "relative mt-auto shrink-0"
               : "relative min-h-0 flex-1 overflow-y-auto"
           }
         >
           <div
             className={cn(
-              "mx-auto flex min-h-full max-w-[848px] flex-col gap-6 px-4 @lg:px-6",
-              assistantLanding ? (conversationId ? "py-0" : "py-12") : "py-6",
+              "mx-auto flex min-h-full flex-col gap-6 px-4 @lg:px-6",
+              newChat ? "max-w-[800px] pt-6 pb-4" : "max-w-[848px]",
+              !newChat &&
+                (assistantLanding
+                  ? conversationId
+                    ? "py-0"
+                    : "py-12"
+                  : "py-6"),
             )}
           >
             {conversationId && messagesQuery.isLoading ? (
@@ -653,7 +652,7 @@ function ConversationViewContent({
                 </Button>
               </div>
             ) : showEmpty ? (
-              <div className="m-auto">{empty}</div>
+              <div className={newChat ? "w-full" : "m-auto"}>{empty}</div>
             ) : (
               <>
                 {messagesQuery.hasNextPage && (
@@ -729,7 +728,6 @@ function ConversationViewContent({
                       runBefore={item.runBefore}
                       model={agent.model}
                       author={authorOf(item.message.author_agent_id)}
-                      pinActions={item.message.id === lastReplyId}
                       authorName={
                         crew
                           ? crew.members.find(
@@ -762,7 +760,7 @@ function ConversationViewContent({
         </div>
         <div
           className={
-            assistantLanding
+            centeredComposer
               ? "relative mb-auto shrink-0 px-4 pb-4 @lg:px-6"
               : "relative shrink-0 px-4 pt-3 pb-4 @lg:px-6"
           }
@@ -928,7 +926,6 @@ function MessageBlock({
   retrying,
   directRetry,
   author,
-  pinActions,
 }: {
   onReply?: () => void;
   onFork?: () => void;
@@ -938,8 +935,6 @@ function MessageBlock({
   runBefore: string | null;
   /** 头部显示的作者（头像与名字） */
   author: ComposerAgent;
-  /** 会话里最后一条 Agent 回复：操作栏常显 */
-  pinActions: boolean;
   model?: string | null;
   /** 小队对话里 Agent 消息的作者名 */
   authorName?: string;
@@ -1002,7 +997,6 @@ function MessageBlock({
             model={model}
             authorName={authorName}
             delegatedTo={delegatedTo}
-            pinActions={pinActions}
           >
             {/* 阶段 10d：本次回复对应 Run 的产物按钮（回复与 Run 经 runBefore 关联） */}
             {runBefore && (

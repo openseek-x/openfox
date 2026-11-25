@@ -1,9 +1,17 @@
-import { useMemo, useRef, useState, type RefObject } from "react";
+import { useRef, useState, type RefObject } from "react";
 import { useNavigate } from "react-router-dom";
 
-import type { AgentDirectoryEntry } from "@openfox/api";
 import { useT } from "@openfox/i18n";
-import { Badge, Button, Icon, Popover, Spinner, cn } from "@openfox/ui";
+import {
+  Badge,
+  Button,
+  Icon,
+  Popover,
+  SearchMenu,
+  Spinner,
+  cn,
+  type SearchMenuGroup,
+} from "@openfox/ui";
 
 import { AgentAvatar, PersonAvatar } from "../agents/AgentAvatar";
 import { CreateAgentDialog } from "../agents/CreateAgentDialog";
@@ -25,11 +33,13 @@ export function NewChatPopover({
   open,
   onOpenChange,
   anchorRef,
+  matchWidth,
 }: {
   orgId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   anchorRef: RefObject<HTMLElement | null>;
+  matchWidth?: boolean;
 }) {
   const t = useT();
   const navigate = useNavigate();
@@ -41,176 +51,130 @@ export function NewChatPopover({
       .flatMap((g) => g.items)
       .filter((c) => c.kind === "user" && c.id !== me.data?.id) ?? [];
   const settings = useAgentSettingsParam();
-  const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
-  const matchingPeople = people.filter((c) =>
-    c.name.toLowerCase().includes(query.trim().toLowerCase()),
-  );
-
-  const entries = useMemo(
-    () => (directory.data?.entries ?? []).filter((entry) => !entry.archived_at),
-    [directory.data],
-  );
-  const groups = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const matched = entries.filter(
-      (entry) =>
-        !q ||
-        entry.name.toLowerCase().includes(q) ||
-        entry.title.toLowerCase().includes(q),
-    );
-    const bySpace = new Map<
-      string,
-      { name: string; items: AgentDirectoryEntry[] }
-    >();
-    for (const entry of matched) {
-      const group = bySpace.get(entry.space_id) ?? {
-        name: entry.space_name,
-        items: [],
-      };
-      group.items.push(entry);
-      bySpace.set(entry.space_id, group);
-    }
-    return [...bySpace.entries()].map(([id, group]) => ({ id, ...group }));
-  }, [entries, query]);
-
-  const pick = (entry: AgentDirectoryEntry) => {
-    onOpenChange(false);
-    navigate(newChatPath(orgId, entry));
-  };
-
+  const spaces = new Map<string, SearchMenuGroup>();
+  for (const entry of directory.data?.entries ?? []) {
+    if (entry.archived_at) continue;
+    const group = spaces.get(entry.space_id) ?? {
+      id: entry.space_id,
+      label: entry.space_name,
+      options: [],
+    };
+    const crew = entry.type === "crew";
+    group.options.push({
+      value: newChatPath(orgId, entry),
+      label: entry.name,
+      keywords: entry.title,
+      description:
+        [
+          entry.title,
+          !crew &&
+            !entry.runtime &&
+            !entry.online &&
+            !entry.computer_name &&
+            t("chat.newChatPopover.noComputer"),
+        ]
+          .filter(Boolean)
+          .join(" · ") || undefined,
+      icon: crew ? (
+        <SmallCrewIcon />
+      ) : (
+        <AgentAvatar
+          name={entry.name}
+          avatar={entry.avatar}
+          size={20}
+          offline={!entry.online}
+        />
+      ),
+      trailing: crew ? (
+        <Badge small tone="muted">
+          {t("chat.newChatPopover.crew")}
+        </Badge>
+      ) : entry.visibility === "PRIVATE" ? (
+        <Icon name="lock" size={12} />
+      ) : undefined,
+      disabled: !crew && entry.allow_direct_chat === false,
+      disabledReason: t("chat.newChatPopover.directDisabled"),
+    });
+    spaces.set(entry.space_id, group);
+  }
+  const groups: SearchMenuGroup[] = [
+    {
+      id: "people",
+      options: [
+        {
+          value: `/o/${orgId}/assistant`,
+          label: t("chat.newChatPopover.assistant"),
+          icon: <Icon name="bot-face" size={16} />,
+        },
+        ...people.map((person) => ({
+          value: `/o/${orgId}/chat?user=${encodeURIComponent(person.id)}`,
+          label: person.name,
+          icon: <PersonAvatar name={person.name} size={20} />,
+        })),
+      ],
+    },
+    ...Array.from(spaces.values(), (group) =>
+      spaces.size === 1 ? { ...group, label: undefined } : group,
+    ),
+  ];
+  const loading = directory.isLoading || contacts.isLoading;
+  const empty = spaces.size === 0 && people.length === 0;
   return (
     <>
-      <Popover
-        open={open}
-        onOpenChange={onOpenChange}
-        anchorRef={anchorRef}
-        placement="bottom-start"
-        aria-label={t("chat.newChat")}
-        className="w-64 p-0"
-      >
-        {directory.isLoading ? (
-          <div className="flex justify-center py-6">
-            <Spinner />
-          </div>
-        ) : entries.length === 0 && people.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 px-4 py-5 text-center">
-            <Icon name="bot-face" size={20} />
-            <p className="text-body font-semibold">
-              {t("chat.newChatPopover.noAgents")}
-            </p>
-            <p className="text-body-sm text-fg-muted">
-              {t("chat.newChatPopover.noAgentsDesc")}
-            </p>
-            <Button
-              variant="outline"
-              size="28"
-              onClick={() => {
-                onOpenChange(false);
-                setCreating(true);
-              }}
-            >
-              {t("chat.newChatPopover.createAgent")}
-            </Button>
-          </div>
-        ) : (
-          <div className="flex flex-col">
-            <input
-              data-autofocus
-              autoFocus
-              aria-label={t("chat.newChatPopover.search")}
-              placeholder={t("chat.newChatPopover.search")}
-              value={query}
-              maxLength={100}
-              onChange={(event) => setQuery(event.target.value)}
-              className="h-10 border-b border-line-default bg-transparent px-3 text-body outline-none placeholder:text-fg-subtle"
-            />
-            <div
-              role="listbox"
-              aria-label={t("chat.newChat")}
-              className="max-h-[360px] overflow-y-auto p-1"
-            >
-              {!query.trim() && (
-                <PickRow
-                  icon={
-                    <span className="flex size-5 items-center justify-center rounded-full bg-surface-muted">
-                      <Icon name="bot-face" size={12} />
-                    </span>
-                  }
-                  name={t("chat.newChatPopover.assistant")}
-                  onPick={() => {
-                    onOpenChange(false);
-                    navigate(`/o/${orgId}/assistant`);
-                  }}
-                />
-              )}
-              {matchingPeople.map((person) => (
-                <PickRow
-                  key={person.id}
-                  name={person.name}
-                  icon={<PersonAvatar name={person.name} size={20} />}
-                  onPick={() => {
-                    onOpenChange(false);
-                    navigate(
-                      `/o/${orgId}/chat?user=${encodeURIComponent(person.id)}`,
-                    );
-                  }}
-                />
-              ))}
-              {groups.length === 0 && matchingPeople.length === 0 && (
-                <p className="px-2.5 py-3 text-center text-body-sm text-fg-muted">
-                  {t("chat.newChatPopover.noMatch")}
-                </p>
-              )}
-              {groups.map((group, index) => (
-                <div key={group.id}>
-                  {(index > 0 || groups.length > 1) && (
-                    <div className="px-2.5 pt-2 pb-1 text-caption text-fg-muted">
-                      {group.name}
-                    </div>
-                  )}
-                  {group.items.map((entry) => {
-                    const disabled =
-                      entry.type === "agent" &&
-                      entry.allow_direct_chat === false;
-                    return (
-                      <PickRow
-                        key={`${entry.type}:${entry.id}`}
-                        icon={
-                          entry.type === "crew" ? (
-                            <SmallCrewIcon />
-                          ) : (
-                            <AgentAvatar
-                              name={entry.name}
-                              avatar={entry.avatar}
-                              size={20}
-                              offline={!entry.online}
-                            />
-                          )
-                        }
-                        name={entry.name}
-                        hint={entry.title}
-                        trailing={
-                          entry.type === "crew" ? (
-                            <Badge small tone="muted">
-                              {t("chat.newChatPopover.crew")}
-                            </Badge>
-                          ) : entry.visibility === "PRIVATE" ? (
-                            <Icon name="lock" size={12} />
-                          ) : undefined
-                        }
-                        disabled={disabled}
-                        disabledReason={t("chat.newChatPopover.directDisabled")}
-                        onPick={() => pick(entry)}
-                      />
-                    );
-                  })}
-                </div>
-              ))}
+      {loading || empty ? (
+        <Popover
+          open={open}
+          onOpenChange={onOpenChange}
+          anchorRef={anchorRef}
+          placement="bottom-start"
+          matchWidth={matchWidth}
+          fitHeight
+          aria-label={t("chat.newChat")}
+          className="w-64 p-0"
+        >
+          {loading ? (
+            <div className="flex justify-center py-6">
+              <Spinner />
             </div>
-          </div>
-        )}
-      </Popover>
+          ) : (
+            <div className="flex flex-col items-center gap-2 px-4 py-5 text-center">
+              <Icon name="bot-face" size={20} />
+              <p className="text-body font-semibold">
+                {t("chat.newChatPopover.noAgents")}
+              </p>
+              <p className="text-body-sm text-fg-muted">
+                {t("chat.newChatPopover.noAgentsDesc")}
+              </p>
+              <Button
+                variant="outline"
+                size="28"
+                onClick={() => {
+                  onOpenChange(false);
+                  setCreating(true);
+                }}
+              >
+                {t("chat.newChatPopover.createAgent")}
+              </Button>
+            </div>
+          )}
+        </Popover>
+      ) : (
+        <SearchMenu
+          open={open}
+          onOpenChange={onOpenChange}
+          anchorRef={anchorRef}
+          placement="bottom-start"
+          matchWidth={matchWidth}
+          fitHeight
+          label={t("chat.newChat")}
+          placeholder={t("chat.newChatPopover.search")}
+          emptyText={t("chat.newChatPopover.noMatch")}
+          groups={groups}
+          selected={[]}
+          onSelect={(to) => navigate(to)}
+        />
+      )}
       {creating && (
         <CreateAgentDialog
           orgId={orgId}
@@ -234,83 +198,51 @@ export function SmallCrewIcon() {
   );
 }
 
-function PickRow({
-  icon,
-  name,
-  hint,
-  trailing,
-  disabled,
-  disabledReason,
-  onPick,
-}: {
-  icon: React.ReactNode;
-  name: string;
-  hint?: string;
-  trailing?: React.ReactNode;
-  disabled?: boolean;
-  disabledReason?: string;
-  onPick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="option"
-      aria-selected={false}
-      aria-disabled={disabled || undefined}
-      title={disabled ? disabledReason : undefined}
-      onClick={() => {
-        if (!disabled) onPick();
-      }}
-      className={cn(
-        "flex h-9 w-full items-center gap-2 rounded-lg px-2.5 text-left text-body hover:bg-surface-active",
-        disabled && "cursor-not-allowed opacity-50 hover:bg-transparent",
-      )}
-    >
-      {icon}
-      <span className="truncate">{name}</span>
-      {hint && (
-        <span className="min-w-0 flex-1 truncate text-caption text-fg-muted">
-          {hint}
-        </span>
-      )}
-      {!hint && <span className="flex-1" />}
-      {trailing && <span className="flex text-fg-muted">{trailing}</span>}
-    </button>
-  );
-}
-
 /** 「新建对话」按钮 + 浮层 */
 export function NewChatButton({
   orgId,
   className,
+  landing = false,
 }: {
   orgId: string;
   className?: string;
+  landing?: boolean;
 }) {
   const t = useT();
   const ref = useRef<HTMLButtonElement | null>(null);
   const [open, setOpen] = useState(false);
+  const label = t(landing ? "chat.page.pick" : "chat.newChat");
   return (
     <>
       <button
         ref={ref}
         type="button"
-        aria-label={t("chat.newChat")}
-        title={t("chat.newChat")}
+        aria-label={label}
+        aria-haspopup="dialog"
+        title={label}
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
         className={cn(
-          "flex size-7 items-center justify-center rounded-lg text-fg-secondary hover:bg-surface-muted",
+          landing
+            ? "flex min-h-12 w-full items-center gap-3 rounded-xl border border-line-strong bg-surface-card px-4 text-left text-body text-fg-secondary shadow-sm hover:bg-surface-hover"
+            : "flex size-7 items-center justify-center rounded-lg text-fg-secondary hover:bg-surface-muted",
           className,
         )}
       >
-        <Icon name="circle-plus" size={18} />
+        <Icon name={landing ? "users" : "circle-plus"} size={18} />
+        {landing && (
+          <>
+            <span className="flex-1">{label}</span>
+            <Icon name="chevron-down" size={16} />
+          </>
+        )}
       </button>
       <NewChatPopover
         orgId={orgId}
         open={open}
         onOpenChange={setOpen}
         anchorRef={ref}
+        matchWidth={landing}
       />
     </>
   );

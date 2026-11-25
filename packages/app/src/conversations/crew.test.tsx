@@ -137,10 +137,9 @@ describe("小队对话", () => {
       .getByText("好的，我来处理")
       .closest('[data-slot="agent-turn"]')!;
     expect(within(reply as HTMLElement).getByText("队员")).toBeInTheDocument();
-    // 会话最后一条回复的操作栏常显
     expect(
-      reply.querySelector('[data-slot="message-actions"]'),
-    ).toHaveAttribute("data-pinned", "true");
+      within(reply as HTMLElement).getByRole("button", { name: "消息操作" }),
+    ).toBeInTheDocument();
     expect(screen.getAllByText("产品小队").length).toBeGreaterThan(0);
   });
 

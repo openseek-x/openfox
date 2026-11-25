@@ -820,7 +820,7 @@ function DetailBody({
               <ConversationTabs orgId={orgId} task={task} />
             </div>
           )}
-          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+          <div className="flex min-w-0 flex-col items-start gap-2">
             <ReadOnlyTip>
               <Menu
                 label={t("tasks.detail.changeType")}
@@ -877,7 +877,7 @@ function DetailBody({
                 )}
               </Menu>
             </ReadOnlyTip>
-            <div className="min-w-0 flex-1 basis-48">
+            <div className="w-full min-w-0">
               <ReadOnlyTip block>
                 <InlineText
                   key={`title:${task.id}:${task.version}`}
@@ -1079,15 +1079,24 @@ function InlineText({
       />
     );
   return (
-    <input
+    <textarea
       {...common}
-      onChange={(event) => setDraft(event.target.value)}
+      rows={1}
+      className={cn(common.className, "block min-h-8 field-sizing-content")}
+      onChange={(event) =>
+        setDraft(event.target.value.replace(/[\r\n]+/g, " "))
+      }
       onKeyDown={(event) => {
-        if (event.key === "Enter") event.currentTarget.blur();
+        if (event.nativeEvent.isComposing) return;
+        if (event.key === "Enter") {
+          event.preventDefault();
+          event.currentTarget.blur();
+        }
         if (event.key === "Escape") {
           event.stopPropagation();
           setDraft(value);
-          requestAnimationFrame(() => event.currentTarget?.blur());
+          const field = event.currentTarget;
+          requestAnimationFrame(() => field.blur());
         }
       }}
     />

@@ -293,7 +293,7 @@ describe("对话页", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("Agent 回复：头部显示头像与名字，只有最后一条回复的操作栏常显", async () => {
+  it("Agent 回复：头部显示头像与名字，每条回复都有可聚焦的消息操作", async () => {
     renderSettings(
       "/o/o1/chat/c1",
       chatBase((call) => {
@@ -324,10 +324,18 @@ describe("对话页", () => {
     expect(within(first).getByText("Agent")).toBeInTheDocument();
     const firstActions = first.querySelector('[data-slot="message-actions"]')!;
     const lastActions = last.querySelector('[data-slot="message-actions"]')!;
-    expect(firstActions).not.toHaveAttribute("data-pinned");
-    expect(firstActions.className).toContain("[@media(hover:hover)]:opacity-0");
-    expect(lastActions).toHaveAttribute("data-pinned", "true");
-    expect(lastActions.className).not.toContain("opacity-0");
+    for (const actions of [firstActions, lastActions]) {
+      expect(
+        within(actions as HTMLElement).getByRole("button", {
+          name: "消息操作",
+        }),
+      ).toBeInTheDocument();
+      expect(
+        within(actions as HTMLElement).queryByRole("button", {
+          name: "分享这条消息",
+        }),
+      ).toBeNull();
+    }
   });
 
   it("发送：Enter 发送并自动 @ Agent；失败后重试复用同一个 client_message_id，成功后换新的", async () => {

@@ -144,7 +144,7 @@ export function ConversationStatusMenu({
           aria-expanded={open}
           disabled={mark.isPending}
           onClick={toggle}
-          className="relative z-10 inline-flex min-h-6 min-w-6 shrink-0 items-center justify-center rounded-md hover:bg-surface-active"
+          className="relative z-10 inline-flex min-h-6 min-w-6 shrink-0 items-center justify-center rounded-md enabled:not-aria-expanded:hover:bg-control-hover aria-expanded:bg-surface-active"
         >
           {status === "IDLE" || status === "ABORTED" ? (
             <Icon name="ellipsis" size={16} className="text-fg-muted" />
@@ -209,7 +209,7 @@ function SessionSwitcher({
         aria-label={t("chat.header.switchSession")}
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
-        className="flex h-7 min-w-0 items-center gap-1 rounded-md px-1.5 text-body font-medium hover:bg-surface-muted"
+        className="flex h-7 min-w-0 items-center gap-1 rounded-md px-1.5 text-body font-medium not-aria-expanded:hover:bg-control-hover aria-expanded:bg-surface-active"
       >
         <span className="truncate">{label}</span>
         <Icon
@@ -503,7 +503,7 @@ export function ConversationHeader({
         <button
           type="button"
           onClick={() => taskParam.open(conversation.task!.display_id)}
-          className="ml-1 flex h-6 items-center gap-1 rounded-md px-1.5 text-caption text-fg-secondary hover:bg-surface-muted"
+          className="ml-1 flex h-6 items-center gap-1 rounded-md px-1.5 text-caption text-fg-secondary hover:bg-control-hover"
         >
           <Icon name="hifox-clipboard-task" size={12} className="text-accent" />
           {conversation.task.display_id.toUpperCase()}
@@ -583,10 +583,13 @@ export function ConversationHeader({
       <button
         type="button"
         onClick={() => settings.open(agent.id, spaceId)}
-        className="flex h-7 items-center gap-1 rounded-md px-1.5 text-body-sm text-fg-secondary hover:bg-surface-muted"
+        title={t("chat.header.settings")}
+        className="flex h-7 shrink-0 items-center gap-1 rounded-md px-1.5 text-body-sm text-fg-secondary hover:bg-control-hover"
       >
         <Icon name="hifox-settings-sliders" size={14} />
-        {t("chat.header.settings")}
+        <span className="sr-only @lg:not-sr-only">
+          {t("chat.header.settings")}
+        </span>
       </button>
       {conversation && (
         <>

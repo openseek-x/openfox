@@ -427,13 +427,18 @@ describe("市场列表", () => {
     expect(within(card).getByText("技")).toBeInTheDocument();
   });
 
-  it("切换到 Agent 模板：请求模板接口并显示模板卡片", async () => {
+  it("技能就绪后预载模板首页，切换时复用同一次请求", async () => {
     const user = userEvent.setup();
     const calls = setup("/o/o1/market");
     await screen.findByRole("button", { name: "查看技能 技能 a1" });
+    await waitFor(() =>
+      expect(marketCalls(calls, "templates")).toHaveLength(1),
+    );
     await user.click(screen.getByRole("radio", { name: "Agent 模板" }));
-    expect(await screen.findByText("模板 t1")).toBeInTheDocument();
-    expect(screen.getByText("2 个技能")).toBeInTheDocument();
+    const card = await screen.findByRole("button", {
+      name: "查看 Agent 模板 模板 t1",
+    });
+    expect(within(card).getByText("2 个技能")).toBeInTheDocument();
     expect(marketCalls(calls, "templates")).toHaveLength(1);
     // 精选包只在技能页显示；模板页没有排序按钮
     expect(
@@ -881,6 +886,7 @@ describe("市场安装目标", () => {
       await within(picker).findByRole("button", { name: "查看技能 技能 a1" }),
     );
     const detail = await screen.findByRole("dialog", { name: "技能 a1" });
+    expect(marketCalls(calls, "templates")).toHaveLength(0);
     await user.click(
       await within(detail).findByRole("button", { name: "添加到空间" }),
     );

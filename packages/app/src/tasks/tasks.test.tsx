@@ -34,17 +34,55 @@ beforeEach(() => {
 afterEach(() => localStorage.clear());
 
 describe("空间任务看板", () => {
-  it("按工作流状态渲染列与计数，空列收进「折叠的列」", async () => {
+  it("按工作流顺序显示所有状态列，空列计数为 0", async () => {
     renderAt(spaceTasks);
     const todo = await screen.findByRole("region", { name: "待处理 2" });
     expect(await within(todo).findByText("OPEN-1")).toBeInTheDocument();
     expect(await within(todo).findByText("任务标题 2")).toBeInTheDocument();
     const doing = screen.getByRole("region", { name: "进行中 1" });
     expect(await within(doing).findByText("任务标题 3")).toBeInTheDocument();
-    const collapsed = screen.getByRole("region", { name: "折叠的列" });
-    expect(collapsed).toHaveTextContent("已完成");
+    const board = screen.getByRole("region", { name: "任务看板" });
+    expect(
+      within(board)
+        .getAllByRole("heading")
+        .map((el) => el.textContent),
+    ).toEqual(["待处理", "进行中", "已完成"]);
+    const done = within(board).getByRole("region", { name: "已完成 0" });
+    expect(within(done).getByTestId("column-count")).toHaveTextContent("0");
     // 每列单独分页请求，带 status_id 与 limit=50
     expect(screen.getByRole("heading", { name: "任务" })).toBeInTheDocument();
+  });
+
+  it("从工具栏按名称定位到空状态列，将键盘焦点交给列标题", async () => {
+    const user = userEvent.setup();
+    renderAt(spaceTasks);
+    const trigger = await screen.findByRole("button", { name: "定位列" });
+    await user.click(trigger);
+    const search = await screen.findByRole("combobox", { name: "搜索列名" });
+    await user.type(search, "已完成");
+    expect(screen.getAllByRole("option")).toHaveLength(1);
+    await user.keyboard("{Enter}");
+    expect(screen.getByRole("heading", { name: "已完成" })).toHaveFocus();
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("整个看板为空时也保留每个状态列，跳过空列的卡片请求", async () => {
+    const server = renderAt(spaceTasks, (call) =>
+      call.path.endsWith("/tasks/counts")
+        ? json(200, { total: 0, by_status: [] })
+        : undefined,
+    );
+    const board = await screen.findByRole("region", { name: "任务看板" });
+    for (const name of ["待处理", "进行中", "已完成"]) {
+      expect(
+        within(board).getByRole("region", { name: name + " 0" }),
+      ).toBeInTheDocument();
+    }
+    expect(
+      server.calls.filter(
+        (c) => c.path.endsWith("/tasks") && c.query.has("status_id"),
+      ),
+    ).toHaveLength(0);
   });
 
   it("卡片菜单移动到其他状态：PATCH 带 status_id 与 version，失败时回滚并提示", async () => {

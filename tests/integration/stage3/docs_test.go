@@ -374,8 +374,29 @@ func TestDocPersonalIsPrivateToOwner(t *testing.T) {
 	if hits := env.searchDocs(env.member(), space, "私人"); len(hits) != 0 {
 		t.Fatalf("member search leaked personal docs: %+v", hits)
 	}
+	const recent = "container=personal&view=recent"
+	if got := env.listDocs(manager, space, recent); len(got) != 1 || got[0].ID != secret.ID {
+		t.Fatalf("recent should include the nested file, excluding folders: %+v", got)
+	}
+	if got := env.listDocs(env.other(), space, recent); len(got) != 0 {
+		t.Fatalf("recent leaked personal documents: %+v", got)
+	}
+	manager.expectError(http.StatusBadRequest, "INVALID_REQUEST", http.MethodGet, docSpacePath(space)+"/docs?"+recent+"&parent_id="+folder.ID, nil)
 	if hits := env.searchDocs(manager, space, "私人"); len(hits) != 1 {
 		t.Fatalf("owner search = %+v", hits)
+	}
+
+	// 首页最多 12 项；修改一篇较旧的子目录文档后，它应重新排到首位。
+	for i := 0; i < 12; i++ {
+		env.docNodeIn(manager, space, docPersonal(), "", docs.KindDoc, fmt.Sprintf("文件 %02d", i))
+	}
+	if got := env.listDocs(manager, space, recent); len(got) != 12 || got[0].Title != "文件 11" || got[11].Title != "文件 00" {
+		t.Fatalf("unexpected recent file limit or ordering: %+v", got)
+	}
+	manager.must(http.StatusOK, http.MethodPatch, docSpacePath(space)+"/docs/"+secret.ID,
+		map[string]any{"version": secret.Version, "title": "更新后的笔记"}, nil)
+	if got := env.listDocs(manager, space, recent); len(got) != 12 || got[0].ID != secret.ID {
+		t.Fatalf("editing an older nested file should move it to the top: %+v", got)
 	}
 
 	// 只要空间可读即可在「我的文档」里创建（只读成员也可以）。

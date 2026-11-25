@@ -556,7 +556,7 @@ export function DirectChatView({
           </p>
         )}
         <div
-          className="rounded-2xl border border-line-default bg-surface-card p-3"
+          className="of-input-frame rounded-2xl border border-line-default bg-surface-card p-3 focus-within:border-line-focus"
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => {
             e.preventDefault();

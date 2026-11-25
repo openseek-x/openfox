@@ -17,6 +17,7 @@ import {
 import { useT } from "@openfox/i18n";
 import { Button, Icon, Skeleton } from "@openfox/ui";
 
+import { NewChatButton } from "./NewChatPopover";
 import { AgentAvatar } from "../agents/AgentAvatar";
 import { useAgentSettingsParam } from "../agents/params";
 import { useAgent, useCrew, useDirectory } from "../agents/queries";
@@ -94,12 +95,15 @@ export function ChatPage() {
   if (agentId)
     return <NewConversation key={agentId} orgId={orgId} agentId={agentId} />;
   return (
-    <PageState
-      icon={
-        <Icon name="hifox-chat-bubble" size={28} className="text-fg-muted" />
-      }
-      title={t("chat.page.pick")}
-    />
+    <div className="flex h-full min-h-0 items-center justify-center overflow-y-auto px-5 py-8">
+      <section className="flex w-full max-w-[420px] flex-col items-center text-center">
+        <Icon name="brand-logo" size={48} />
+        <h1 className="mt-5 mb-6 text-display font-semibold tracking-tight">
+          {t("chat.newChat")}
+        </h1>
+        <NewChatButton orgId={orgId} landing />
+      </section>
+    </div>
   );
 }
 
@@ -333,11 +337,11 @@ function NewCrewConversation({
         }}
         spaceId={entry.space_id}
         empty={
-          <div className="flex flex-col items-center gap-3 text-center">
+          <div className="flex min-w-0 flex-col items-center gap-3 text-center">
             <Icon name="users" size={32} className="text-fg-muted" />
-            <p className="text-body text-fg-secondary">
+            <h1 className="min-w-0 break-words text-heading font-semibold tracking-tight">
               {t("chat.page.crewStartWith", { name: crew.name })}
-            </p>
+            </h1>
           </div>
         }
       />
@@ -438,11 +442,11 @@ function NewConversation({
           settings.open(entry.id, entry.space_id, "run-settings")
         }
         empty={
-          <div className="flex flex-col items-center gap-3 text-center">
+          <div className="flex min-w-0 flex-col items-center gap-3 text-center">
             <AgentAvatar name={entry.name} avatar={entry.avatar} size={40} />
-            <p className="text-body text-fg-secondary">
+            <h1 className="min-w-0 break-words text-heading font-semibold tracking-tight">
               {t("chat.page.startWith", { name: entry.name })}
-            </p>
+            </h1>
           </div>
         }
       />

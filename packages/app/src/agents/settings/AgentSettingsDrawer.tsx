@@ -335,7 +335,7 @@ export function AgentSettingsDrawer({
                 orgId={orgId}
                 agent={agent}
                 expanded={expanded}
-                initialRunSection={param.initialRunSection}
+                initialSection={param.initialSection}
                 setDirty={setDirty}
                 guard={guard}
                 onShowRuns={() => setTab("runs")}
@@ -381,7 +381,7 @@ function SettingsTab({
   orgId,
   agent,
   expanded,
-  initialRunSection,
+  initialSection,
   setDirty,
   guard,
   onShowRuns,
@@ -389,7 +389,7 @@ function SettingsTab({
   orgId: string;
   agent: SpaceAgent;
   expanded: boolean;
-  initialRunSection: boolean;
+  initialSection: "run" | "runtime" | undefined;
   setDirty: (section: string, dirty: boolean) => void;
   guard: (action: () => void) => void;
   onShowRuns: () => void;
@@ -399,18 +399,18 @@ function SettingsTab({
   const devices = useDevices(orgId);
   const attachedSkills = useAgentSkills(orgId, agent.space_id, agent.id);
   const [open, setOpen] = useState<Set<SectionId>>(
-    () => new Set(initialRunSection ? ["run"] : []),
+    () => new Set(initialSection ? [initialSection] : []),
   );
   useEffect(() => {
-    if (!initialRunSection) return;
-    setOpen((prev) => new Set(prev).add("run"));
+    if (!initialSection) return;
+    setOpen((prev) => new Set(prev).add(initialSection));
     const frame = requestAnimationFrame(() =>
       document
-        .getElementById("agent-section-run")
+        .getElementById(`agent-section-${initialSection}`)
         ?.scrollIntoView?.({ block: "start" }),
     );
     return () => cancelAnimationFrame(frame);
-  }, [initialRunSection]);
+  }, [initialSection]);
   const toggle = (id: SectionId) => {
     const apply = () =>
       setOpen((prev) => {
@@ -442,7 +442,12 @@ function SettingsTab({
         deviceSlots={device ? effectiveMaxSlots(device) : null}
       />
     ),
-    runtime: <RuntimeSection {...props} />,
+    runtime: (
+      <RuntimeSection
+        {...props}
+        chooseComputer={initialSection === "runtime"}
+      />
+    ),
     workingHours: <WorkingHoursSection {...props} />,
     git: <GitSection {...props} />,
     skills: <SkillsSection {...props} />,

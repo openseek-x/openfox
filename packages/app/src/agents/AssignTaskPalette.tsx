@@ -149,7 +149,7 @@ export function AssignTaskPalette({
         aria-label={t("agents.assign.label", { name: target.name })}
         className="flex w-[512px] max-w-full flex-col rounded-2xl border border-line-default bg-surface-card p-2 shadow-dialog"
       >
-        <div className="flex items-center gap-2 border-b border-line-default px-3 pt-1 pb-2.5">
+        <div className="of-input-frame flex items-center gap-2 border-b border-line-default px-3 pt-1 pb-2.5 focus-within:border-line-focus">
           <Icon name="search" className="text-fg-muted" />
           <input
             data-autofocus

@@ -15,7 +15,7 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { useMemo, useState, type ReactNode } from "react";
+import { useId, useMemo, useState, type ReactNode } from "react";
 
 import type { Task } from "@openfox/api";
 import { useT, type MessageKey } from "@openfox/i18n";
@@ -42,7 +42,8 @@ import { PriorityIcon } from "../primitives/PriorityIcon";
 import { StatusIcon } from "../primitives/StatusIcon";
 import { useTaskPages, useUpdateTask } from "../queries";
 import { statusFields } from "../TaskMenu";
-import type { TaskViewProps } from "../views";
+import type { BoardProps, TaskViewProps } from "../views";
+import { BoardColumnJump } from "./BoardColumnJump";
 import { CardBody, SortableCard } from "./Card";
 
 // 阶段 9e · 分组看板：一次分页加载任务（与表格同一个查询），在前端按列 / 行分组。
@@ -96,7 +97,8 @@ export function GroupGlyph({ group }: { group: TaskGroup }): ReactNode {
   return null;
 }
 
-export function GroupedBoard(props: TaskViewProps) {
+export function GroupedBoard(props: BoardProps) {
+  const boardId = useId();
   const { orgId, source, params, columns, counts, display, onCreate } = props;
   const t = useT();
   const groupName = useGroupName();
@@ -162,6 +164,7 @@ export function GroupedBoard(props: TaskViewProps) {
       : groupCount(columnField, group.key);
   const visibleColumns = columnGroups.filter(
     (g) =>
+      columnField === "status" ||
       display.showEmptyColumns ||
       [...cells.keys()].some((k) => k.endsWith(`|${g.key}`)),
   );
@@ -280,7 +283,11 @@ export function GroupedBoard(props: TaskViewProps) {
   const columnHeader = (group: TaskGroup) => (
     <header className="flex h-10 items-center gap-2 px-3">
       <GroupGlyph group={group} />
-      <h3 className="min-w-0 truncate text-body font-medium">
+      <h3
+        id={`${boardId}-${group.key}`}
+        tabIndex={-1}
+        className="min-w-0 truncate rounded-sm text-body font-medium"
+      >
         {groupName(group)}
       </h3>
       <span className="text-body-sm text-fg-muted" data-testid="column-count">
@@ -331,6 +338,15 @@ export function GroupedBoard(props: TaskViewProps) {
         screenReaderInstructions: { draggable: t("tasks.board.instructions") },
       }}
     >
+      <BoardColumnJump
+        toolbar={props.toolbar}
+        boardId={boardId}
+        options={visibleColumns.map((group) => ({
+          value: group.key,
+          label: groupName(group),
+          icon: <GroupGlyph group={group} />,
+        }))}
+      />
       <div className="flex min-h-0 flex-1 flex-col">
         {(hint || disabledHint) && (
           <p
