@@ -367,17 +367,9 @@ export function StepText({ text }: { text: string }) {
   return render ? <>{render(text)}</> : <PlainText text={text} />;
 }
 
-/**
- * 过程说明用弱化文字色（与思考详情一致），和最终回复区分开；代码块等自带颜色的内容不受影响。
- * fg-secondary 与正文色过于接近，实测无法区分，所以用 fg-muted（白底对比度约 4.8:1，满足 AA）。
- */
 export function AgentTextRow({ step }: { step: StepView }) {
   if (!step.text?.trim()) return null;
-  return (
-    <div data-step-text="" className="min-w-0 text-fg-muted">
-      <StepText text={step.text} />
-    </div>
-  );
+  return <StepText text={step.text} />;
 }
 
 // ------------------------------------------------------------------- Row/Exec
@@ -692,10 +684,14 @@ export function TurnActivityList({
   const blocks: TurnItem[][] = [];
   let tools: TurnItem[] | null = null;
   for (const item of items) {
+    // 回合结束且未展开时，过程说明与成功的准备、思考一起收进「已完成 x 秒」，只留最终回复；
+    // 展开后按原顺序显示。被隐藏的说明不再打断相邻工具的分组，收起时合成一行「已执行 n 项操作」。
     if (
       compact &&
       item.type === "step" &&
-      (item.step.kind === "prep_env" || item.step.kind === "thinking") &&
+      (item.step.kind === "prep_env" ||
+        item.step.kind === "thinking" ||
+        item.step.kind === "agent_text") &&
       !needsAttention(item.step.status)
     )
       continue;

@@ -1681,7 +1681,7 @@ describe("通用工具与过程层级", () => {
     },
   );
 
-  it("仅分组相邻工具，完成后保留说明，成功准备藏于过程详情，失败可见", async () => {
+  it("仅分组相邻工具；完成后说明与成功准备藏于过程详情，失败可见", async () => {
     const user = userEvent.setup();
     const events = [
       stepEvent({ id: "prep", kind: "prep_env", state: "done" }),
@@ -1718,26 +1718,34 @@ describe("通用工具与过程层级", () => {
         <RunTimelineView turn={turn} run={run({ state: "SUCCEEDED" })} />
       </Providers>,
     );
+    // 收起时：说明被隐藏，不再打断分组，4 项工具合成一组；含失败项，所以自动展开
     expect(screen.queryByText("环境就绪")).not.toBeInTheDocument();
     expect(
+      screen.queryByText("找到项目说明，继续检查。"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "4 项操作 · 存在异常" }),
+    ).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("permission denied")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "已完成" }));
+    // 展开过程：说明回到原位置，把工具重新分成相邻的两组
+    expect(screen.getByText("环境就绪")).toBeInTheDocument();
+    expect(
       screen.getByRole("button", { name: "已执行 2 项操作" }),
-    ).toHaveAttribute("aria-expanded", "false");
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "2 项操作 · 存在异常" }),
     ).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByText("permission denied")).toBeInTheDocument();
     expect(container.textContent!.indexOf("已执行 2 项操作")).toBeLessThan(
       container.textContent!.indexOf("找到项目说明"),
     );
     expect(container.textContent!.indexOf("找到项目说明")).toBeLessThan(
       container.textContent!.indexOf("tasks.update"),
     );
-    await user.click(screen.getByRole("button", { name: "已完成" }));
-    expect(screen.getByText("环境就绪")).toBeInTheDocument();
-    expect(screen.getByText("files.list")).toBeInTheDocument();
   });
 
-  it("过程说明用弱化文字色，与最终回复区分；空说明不渲染", () => {
+  it("过程说明在回合结束后默认收起，只留最终回复；展开过程后按原顺序出现", async () => {
+    const user = userEvent.setup();
     const events = [
       stepEvent({
         id: "note",
@@ -1746,6 +1754,7 @@ describe("通用工具与过程层级", () => {
         text: "先查看请求拦截器。",
       }),
       stepEvent({ id: "blank", kind: "agent_text", state: "done", text: "  " }),
+      stepEvent({ id: "r", kind: "read", state: "done", path: "http.ts" }),
       legacy("output", "最终结论"),
       stepEvent({
         id: "end",
@@ -1764,11 +1773,37 @@ describe("通用工具与过程层级", () => {
         />
       </Providers>,
     );
-    const note = screen.getByText("先查看请求拦截器。");
-    expect(note.closest("[data-step-text]")).toHaveClass("text-fg-muted");
-    // 最终回复不在过程说明的弱化容器里
-    expect(screen.getByText("最终结论").closest("[data-step-text]")).toBeNull();
-    expect(container.querySelectorAll("[data-step-text]")).toHaveLength(1);
+    expect(screen.queryByText("先查看请求拦截器。")).not.toBeInTheDocument();
+    expect(screen.getByText("最终结论")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /已完成/ }));
+    expect(screen.getByText("先查看请求拦截器。")).toBeInTheDocument();
+    expect(container.textContent!.indexOf("先查看请求拦截器。")).toBeLessThan(
+      container.textContent!.indexOf("最终结论"),
+    );
+    // 空白说明展开后也不渲染
+    expect(container.querySelectorAll("p").length).toBe(2);
+  });
+
+  it("运行中的过程说明实时显示", () => {
+    const turn = foldRunEvents([
+      stepEvent({
+        id: "note",
+        kind: "agent_text",
+        state: "done",
+        text: "正在查看请求拦截器。",
+      }),
+      stepEvent({ id: "r", kind: "read", state: "running", path: "http.ts" }),
+    ]);
+    render(
+      <Providers>
+        <RunTimelineView
+          turn={turn}
+          run={run({ state: "RUNNING" })}
+          renderText={(text) => <p>{text}</p>}
+        />
+      </Providers>,
+    );
+    expect(screen.getByText("正在查看请求拦截器。")).toBeInTheDocument();
   });
 
   it("用户手动展开的工具在运行结束后保持展开", async () => {

@@ -30,12 +30,19 @@
   - 表格外框改为 `w-fit max-w-full overflow-x-auto`，表格去掉 `w-full` 与行悬停底色，表头底色保留。
   - 列表项间距从 4 px 改为 2 px，嵌套列表上边距同步收紧。
   - 分隔线改用弱分隔色 `line-soft`。
-- `steps/rows.tsx`：`AgentTextRow` 外加 `text-fg-muted` 容器，并标记 `data-step-text`。起初试用 `fg-secondary`，截图里与正文几乎无法区分，所以改用与思考详情一致的 `fg-muted`。代码块、行内代码和链接自带颜色，不受影响。
+- `steps/rows.tsx`：过程说明的处理在提测时由任务创建人改选为 Q2=C，即默认折叠。`TurnActivityList` 在回合结束且未展开时，把 `agent_text` 和成功的准备、思考一起收进“已完成 x 秒”。展开后，说明按原顺序显示；运行中照常实时显示。被隐藏的说明不再打断相邻工具的分组，所以收起时会合成一行“已执行 n 项操作”。前两轮实现的弱化文字色（Q2=A，`text-fg-muted` 容器）已撤回，`AgentTextRow` 恢复原样。
 - `steps/rows.tsx`（第二轮）
   - `ExecRow`：命令行与输出合成一个终端块，工作目录作为命令前缀放在同一行，输出和无输出说明用分隔线接在下面。删除不再使用的 `CodeBlock`。`ExecOutput` 增加可覆盖的 `className`，工具调用沿用原来的灰底。
   - 深色主题与两套深色配色里 `line-default`、`line-soft` 都与 `surface-muted` 同色，所以终端块内的分隔线改用 `line-strong`。
   - `ToolCallRow`：去掉外框卡片和展开区的上边框，展开内容与其他步骤一样缩进 32 px，参数和结果块内边距与命令输出统一为 `px-3 py-2`。
-- 测试：`ChatMarkdown.test.tsx` 新增引用、短表与宽表、分隔线的用例；`steps.test.tsx` 新增过程说明弱化、最终回复不受影响、空说明不渲染的用例；第二轮新增“命令与输出同属一个终端块”“工具调用无外框”两个用例。
+- 测试：
+  - `ChatMarkdown.test.tsx` 新增引用、短表与宽表、分隔线的用例。
+  - `steps.test.tsx` 新增以下用例：
+    - 过程说明在结束后默认收起、展开后按原顺序出现、空说明不渲染。
+    - 运行中的过程说明实时显示。
+    - 命令与输出同属一个终端块。
+    - 工具调用无外框。
+  - 原用例“仅分组相邻工具，完成后保留说明……”按 Q2=C 改为：收起时说明隐藏、4 项工具合成一组；展开后说明回到原位，工具重新分成两组。
 
 ## 验证
 
@@ -48,6 +55,7 @@
 - `pnpm typecheck`、`pnpm build`、改动文件的 Prettier 检查和 `git diff --check` 均通过。
 - 端到端：`artifact-annotation-mode` 4 项通过，产物 Markdown 批注前后截图一致。`prompt-kit` 15 项中 13 项通过，另外 2 项“task AI panel resizing”期望面板宽 580 px、实际 541 px，在基线上同样失败。该用例检查 `TaskPage` 的 AI 面板宽度，与本次改动无关。
 - 第二轮（工具过程全部展开，9 类步骤）：同一轮整体高度 2183 → 2101 px，两条成功命令与一条失败命令各少一块灰底，深色截图中分隔线清晰可见。对话与 Agent 模块 72 个文件 595 项通过：并行跑时有 3 项与本次无关的用例超时（`assistant`、`instructions`、`ArtifactReview`），单独重跑和降低并发重跑均通过。`pnpm typecheck`、`pnpm build`、Prettier 与 `git diff --check` 通过。e2e 结果与第一轮相同：17 项通过，2 项为基线已有失败。
+- 第三轮（Q2=C）：收起状态的整轮高度 917 → 885 px，只剩“已完成 x 秒”“已执行 4 项操作”和最终回复。对话与 Agent 模块 72 个文件 596 项通过（`--maxWorkers=4`）。typecheck、build、`git diff --check` 通过。e2e 17 项通过，另有 2 项为基线已有失败。
 - 未验证：Electron 原生窗口、真实 Agent 运行。
 
 ## 问题与调整
@@ -61,7 +69,7 @@
 
 ## 影响面
 
-`ChatMarkdown` 还用于产物 Markdown 预览与批注模式，那里的表格、引用和分隔线会同步变化，保持一致。`AgentTextRow`、`ExecRow`、`ToolCallRow` 也用于 Agent 设置里的运行记录弹窗，那里的过程说明、命令块和工具行同样会变化。
+`ChatMarkdown` 还用于产物 Markdown 预览与批注模式，那里的表格、引用和分隔线会同步变化，保持一致。`TurnActivityList`、`ExecRow`、`ToolCallRow` 也用于 Agent 设置里的运行记录弹窗，那里结束后的过程说明同样默认收起，命令块和工具行也同样变化。
 
 ## 配置、SQL 与迁移
 
@@ -69,6 +77,7 @@
 
 ## 风险与回退
 
+- 过程说明默认收起后，若某次运行的结论只写在过程说明里，没有作为最终回复上报，结束后需要展开过程才能看到。按适配器契约，最终回复走 output 或消息正文，过程说明只承载 commentary。
 - 剩余风险：Electron 原生窗口和真实 Agent 长回复未实测。中文长表头在窄面板中依赖 `whitespace-nowrap` 加横向滚动，行为与改动前相同。
 - 后续：Markdown 排版令牌化，以及 `Markdown.tsx` 与 `ChatMarkdown` 的统一，可作为架构后续单独评估。
 - 回退：单个提交，`git revert` 即可，无数据影响。
