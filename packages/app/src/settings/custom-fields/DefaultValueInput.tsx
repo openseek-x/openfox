@@ -1,3 +1,4 @@
+import { AgentAvatar } from "../../agents/AgentAvatar";
 import { useRef, useState } from "react";
 
 import type { CustomFieldKind, CustomFieldMemberScope } from "@openfox/api";
@@ -256,7 +257,9 @@ function MemberDefault({
             value: `AGENT:${entry.id}`,
             label: entry.name,
             description: entry.space_name,
-            icon: <Avatar name={entry.name} kind="agent" size={16} />,
+            icon: (
+              <AgentAvatar agentId={entry.id} name={entry.name} size={16} />
+            ),
           }))),
   ];
   return (

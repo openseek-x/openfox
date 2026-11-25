@@ -292,6 +292,7 @@ const Row = memo(function Row({
               {shown && (
                 <TaskAssigneeAvatar
                   name={shown.name}
+                  id={shown.id}
                   kind={shown.kind}
                   size={20}
                 />

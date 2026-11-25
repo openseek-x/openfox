@@ -330,6 +330,11 @@ function TimelineRow({
   const t = useT();
   if (item.type === "activity" && item.activity) {
     const a = item.activity;
+    const viaAgent =
+      a.kind === "task.via_agent" && typeof a.safe_diff?.agent_id === "string"
+        ? a.safe_diff.agent_id
+        : undefined;
+    const agent = book.agents.find((item) => item.id === viaAgent);
     if (a.kind === "task.git_comment" && a.safe_diff?.provider === "bitbucket")
       return (
         <BitbucketCommentActivity
@@ -340,7 +345,16 @@ function TimelineRow({
       );
     return (
       <li className="flex items-center gap-2 text-body-sm text-fg-muted">
-        <Avatar name={a.actor_name || "?"} size={16} />
+        {viaAgent ? (
+          <AgentAvatar
+            agentId={viaAgent}
+            name={agent?.name ?? "Agent"}
+            avatar={agent?.avatar}
+            size={16}
+          />
+        ) : (
+          <Avatar name={a.actor_name || "?"} size={16} />
+        )}
         <span className="min-w-0 flex-1">{activityText(t, a, book)}</span>
         <time dateTime={a.created_at} className="shrink-0 text-caption">
           {formatRelativeTime(a.created_at, locale)}
@@ -493,7 +507,12 @@ function Author({
   return (
     <>
       {comment.author_agent_id ? (
-        <AgentAvatar name={name} avatar={agent?.avatar} size={size} />
+        <AgentAvatar
+          agentId={comment.author_agent_id}
+          name={name}
+          avatar={agent?.avatar}
+          size={size}
+        />
       ) : (
         <Avatar name={name} src={person?.avatar_url} size={size} />
       )}

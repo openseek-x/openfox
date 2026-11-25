@@ -23,6 +23,7 @@ import {
   handleMenuKeyDown,
 } from "@openfox/ui";
 
+import { AgentInfoProvider } from "../../agents/AgentInfoCard";
 import { keys, useApi } from "../../context";
 import { TaskDetailDrawer } from "../detail/TaskDetailDrawer";
 import { useTaskParam } from "../parts";
@@ -107,25 +108,27 @@ export function CreateTaskProvider({
   const value = useMemo(() => ({ openCreate }), [openCreate]);
   return (
     <CreateTaskContext.Provider value={value}>
-      {children}
-      {init && spaces.data && (
-        <CreateTaskDialog
-          key={session}
-          orgId={orgId}
-          spaces={spaces.data}
-          init={init}
-          onClose={() => setInit(null)}
-          onCreated={(displayId) => taskParam.open(displayId)}
-        />
-      )}
-      {taskParam.displayId && !triagePage && (
-        <TaskDetailDrawer
-          orgId={orgId}
-          displayId={taskParam.displayId}
-          onClose={taskParam.close}
-          onOpenTask={taskParam.open}
-        />
-      )}
+      <AgentInfoProvider orgId={orgId}>
+        {children}
+        {init && spaces.data && (
+          <CreateTaskDialog
+            key={session}
+            orgId={orgId}
+            spaces={spaces.data}
+            init={init}
+            onClose={() => setInit(null)}
+            onCreated={(displayId) => taskParam.open(displayId)}
+          />
+        )}
+        {taskParam.displayId && !triagePage && (
+          <TaskDetailDrawer
+            orgId={orgId}
+            displayId={taskParam.displayId}
+            onClose={taskParam.close}
+            onOpenTask={taskParam.open}
+          />
+        )}
+      </AgentInfoProvider>
     </CreateTaskContext.Provider>
   );
 }

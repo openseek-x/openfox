@@ -95,6 +95,11 @@ export const agentsEn: Messages["agents"] = {
     },
   },
   you: "You",
+  info: {
+    label: "View profile for {name}",
+    slots: "Slots in use {used} / {total}",
+    storage: "OpenFox storage {size}",
+  },
   crewBadge: "Crew",
   privateLock: "Private",
   offline: "Offline",

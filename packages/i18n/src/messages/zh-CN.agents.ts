@@ -89,6 +89,11 @@ export const agentsZh = {
     },
   },
   you: "你",
+  info: {
+    label: "查看 {name} 的信息",
+    slots: "并发占用 {used} / {total}",
+    storage: "OpenFox 存储 {size}",
+  },
   crewBadge: "小队",
   privateLock: "私有",
   offline: "离线",

@@ -1010,7 +1010,11 @@ function MessageBlock({
   // 系统消息居中显示，不加 Agent 头部
   if (system) return <div className="flex flex-col gap-2">{content}</div>;
   return (
-    <AgentTurn name={author.name} avatar={author.avatar}>
+    <AgentTurn
+      agentId={message.author_agent_id ?? author.id}
+      name={author.name}
+      avatar={author.avatar}
+    >
       {content}
     </AgentTurn>
   );
@@ -1031,7 +1035,11 @@ function RunAgentTurn({
   const run = useRun(orgId, runId);
   const author = authorOf(run.data?.agent_id);
   return (
-    <AgentTurn name={author.name} avatar={author.avatar}>
+    <AgentTurn
+      agentId={run.data?.agent_id ?? author.id}
+      name={author.name}
+      avatar={author.avatar}
+    >
       {children}
     </AgentTurn>
   );

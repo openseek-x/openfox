@@ -443,7 +443,13 @@ function NewConversation({
         }
         empty={
           <div className="flex min-w-0 flex-col items-center gap-3 text-center">
-            <AgentAvatar name={entry.name} avatar={entry.avatar} size={40} />
+            <AgentAvatar
+              agentId={entry.id}
+              spaceId={entry.space_id}
+              name={entry.name}
+              avatar={entry.avatar}
+              size={40}
+            />
             <h1 className="min-w-0 break-words text-heading font-semibold tracking-tight">
               {t("chat.page.startWith", { name: entry.name })}
             </h1>

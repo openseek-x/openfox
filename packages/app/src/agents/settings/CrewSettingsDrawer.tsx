@@ -683,6 +683,7 @@ function CrewMembers({
               >
                 {member.kind === "AGENT" ? (
                   <AgentAvatar
+                    agentId={member.id}
                     name={member.name}
                     size={24}
                     offline={member.online === false}
@@ -943,7 +944,14 @@ function AddMembersDialog({
                 value: `agent:${a.id}`,
                 label: a.name,
                 keywords: a.title,
-                icon: <AgentAvatar name={a.name} avatar={a.avatar} size={20} />,
+                icon: (
+                  <AgentAvatar
+                    agentId={a.id}
+                    name={a.name}
+                    avatar={a.avatar}
+                    size={20}
+                  />
+                ),
               })),
           },
           {

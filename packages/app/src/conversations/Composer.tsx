@@ -404,7 +404,14 @@ export function Composer({
     ...mentionAgents.map((item) => ({
       value: `agent:${item.id}`,
       label: item.name,
-      icon: <AgentAvatar name={item.name} avatar={item.avatar} size={20} />,
+      icon: (
+        <AgentAvatar
+          agentId={item.id}
+          name={item.name}
+          avatar={item.avatar}
+          size={20}
+        />
+      ),
     })),
     ...people.map((person) => ({
       value: `user:${person.id}`,
@@ -1036,9 +1043,7 @@ export function Composer({
                     index === mentionIndex && "bg-surface-active",
                   )}
                 >
-                  <span aria-hidden="true" className="shrink-0">
-                    {option.icon}
-                  </span>
+                  <span className="shrink-0">{option.icon}</span>
                   <span className="min-w-0 truncate">{option.label}</span>
                   {option.description && (
                     <span className="min-w-0 truncate text-caption text-fg-muted">

@@ -208,6 +208,7 @@ export function MarketAgentPicker({
                   className="size-4!"
                 />
                 <AgentAvatar
+                  agentId={a.id}
                   name={a.name}
                   avatar={a.avatar}
                   size={24}

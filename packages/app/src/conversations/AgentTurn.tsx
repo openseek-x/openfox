@@ -11,10 +11,12 @@ import type { ComposerAgent } from "./Composer";
  * group/turn 让操作栏在悬停整轮回复（含时间线）时就显示。
  */
 export function AgentTurn({
+  agentId,
   name,
   avatar,
   children,
 }: {
+  agentId: string;
   name: string;
   avatar?: ComposerAgent["avatar"];
   children: ReactNode;
@@ -25,9 +27,13 @@ export function AgentTurn({
       data-slot="agent-turn"
       className="group/turn grid min-w-0 grid-cols-[24px_minmax(0,1fr)] gap-x-2.5 gap-y-2"
     >
-      {/* 名字紧挨着显示，头像只作装饰，读屏不重复念名字 */}
-      <span aria-hidden="true" className="flex">
-        <AgentAvatar name={name} avatar={avatar ?? undefined} size={24} />
+      <span className="flex">
+        <AgentAvatar
+          agentId={agentId}
+          name={name}
+          avatar={avatar ?? undefined}
+          size={24}
+        />
       </span>
       <span className="flex min-w-0 items-center gap-1.5 text-body-sm font-medium text-fg-default">
         <span className="truncate">{name}</span>

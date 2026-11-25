@@ -27205,6 +27205,7 @@ components:
         space_id: { type: string, format: uuid }
         space_name: { type: string }
         agent_id: { type: string, format: uuid }
+        actor_agent_id: { type: string, format: uuid, description: 当前显示的 Agent 发起人 }
         actor_kind: { type: string, enum: [USER, AGENT] }
         actor_name: { type: string }
         safe_summary: { type: string }

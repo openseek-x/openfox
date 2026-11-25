@@ -90,6 +90,7 @@ export function GroupGlyph({ group }: { group: TaskGroup }): ReactNode {
     return (
       <TaskAssigneeAvatar
         name={group.name}
+        id={group.key.slice(6)}
         kind={group.assigneeKind}
         size={20}
       />

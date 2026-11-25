@@ -490,6 +490,8 @@ export function ArchivedDialog({
                 <CrewAvatar name={entry.name} members={[]} size={32} />
               ) : (
                 <AgentAvatar
+                  agentId={entry.id}
+                  spaceId={entry.space_id}
                   name={entry.name}
                   avatar={entry.avatar}
                   size={32}

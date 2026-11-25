@@ -18984,6 +18984,11 @@ export interface components {
             space_name?: string;
             /** Format: uuid */
             agent_id?: string;
+            /**
+             * Format: uuid
+             * @description 当前显示的 Agent 发起人
+             */
+            actor_agent_id?: string;
             /** @enum {string} */
             actor_kind?: "USER" | "AGENT";
             actor_name?: string;

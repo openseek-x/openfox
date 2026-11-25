@@ -109,7 +109,12 @@ export function AssigneePicker({
             value: `agent:${agent.id}`,
             label: agent.name,
             icon: (
-              <AgentAvatar name={agent.name} avatar={agent.avatar} size={20} />
+              <AgentAvatar
+                agentId={agent.id}
+                name={agent.name}
+                avatar={agent.avatar}
+                size={20}
+              />
             ),
           })),
       ],
@@ -187,6 +192,7 @@ export function AssigneeContent({
               className="flex min-w-0 items-center gap-2"
             >
               <TaskAssigneeAvatar
+                id={human.id}
                 kind={human.kind}
                 name={name}
                 src={person?.avatar_url}
@@ -229,6 +235,7 @@ export function AssigneeContent({
             className="shrink-0 text-fg-muted"
           />
           <AgentAvatar
+            agentId={agent.id}
             name={agent.name}
             avatar={agents.find((item) => item.id === agent.id)?.avatar}
             size={20}

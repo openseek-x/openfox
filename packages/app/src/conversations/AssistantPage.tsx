@@ -1,3 +1,4 @@
+import { AgentInfoTrigger } from "../agents/AgentInfoTrigger";
 import { runtimeSelectable } from "../computers/model";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useWorkDirectoryCopy } from "./useWorkDirectoryCopy";
@@ -318,6 +319,7 @@ function AssistantWorkspace({
 
   const header = (
     <AssistantHeader
+      assistant={assistant}
       orgId={orgId}
       deviceId={assistant.config?.computer_id}
       sessions={sessions.data ?? []}
@@ -367,11 +369,17 @@ function AssistantWorkspace({
                 sessionId ? "gap-3" : "gap-5",
               )}
             >
-              <Icon
-                name="hifox-bot"
-                size={sessionId ? 32 : 56}
-                className="opacity-30"
-              />
+              <AgentInfoTrigger
+                agentId={assistant.id}
+                spaceId={assistant.space_id}
+                name={assistant.name}
+              >
+                <Icon
+                  name="hifox-bot"
+                  size={sessionId ? 32 : 56}
+                  className="opacity-30"
+                />
+              </AgentInfoTrigger>
               <p className="text-body">
                 {sessionId
                   ? t("chat.page.readyEmpty", {
@@ -396,6 +404,7 @@ function AssistantWorkspace({
 
 /** Header/Assistant：头像 + 「小助手」 / 会话下拉 / 状态徽标 / 更多菜单 */
 function AssistantHeader({
+  assistant,
   orgId,
   deviceId,
   sessions,
@@ -406,6 +415,7 @@ function AssistantHeader({
   onNew,
 }: {
   orgId: string;
+  assistant: { id: string; name: string; space_id: string };
   deviceId?: string;
   sessions: AssistantSession[];
   sessionsLoading: boolean;
@@ -442,7 +452,13 @@ function AssistantHeader({
   return (
     <header className="flex h-11 shrink-0 items-center gap-1 border-b border-line-soft px-4">
       <span className="flex size-5 items-center justify-center rounded-full bg-surface-muted">
-        <Icon name="bot-face" size={12} />
+        <AgentInfoTrigger
+          agentId={assistant.id}
+          spaceId={assistant.space_id}
+          name={assistant.name}
+        >
+          <Icon name="bot-face" size={12} />
+        </AgentInfoTrigger>
       </span>
       <span className="text-body font-medium">{t("chat.assistant.title")}</span>
       <span className="text-fg-subtle">/</span>

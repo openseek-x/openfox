@@ -1,3 +1,4 @@
+import { AgentAvatar } from "../../agents/AgentAvatar";
 import { useQuery } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -421,11 +422,11 @@ function MemberName({ orgId, value }: { orgId: string; value: unknown }) {
   const display = name ?? member.id ?? "";
   return (
     <span className="flex items-center gap-1.5">
-      <Avatar
-        name={display}
-        kind={member.kind === "AGENT" ? "agent" : "user"}
-        size={16}
-      />
+      {member.kind === "AGENT" ? (
+        <AgentAvatar agentId={member.id} name={display} size={16} />
+      ) : (
+        <Avatar name={display} size={16} />
+      )}
       {display}
     </span>
   );

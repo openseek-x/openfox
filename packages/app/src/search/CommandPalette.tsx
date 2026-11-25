@@ -397,7 +397,12 @@ export function CommandPalette({
       return agent?.kind === "crew" ? (
         <Icon name="users" size={size} className="text-fg-muted" />
       ) : (
-        <AgentAvatar size={size} name={name} avatar={agent?.avatar} />
+        <AgentAvatar
+          agentId={id}
+          size={size}
+          name={name}
+          avatar={agent?.avatar}
+        />
       );
     }
     if (type === "person") {
@@ -416,10 +421,7 @@ export function CommandPalette({
     if (type !== "message" && type !== "conversation")
       return actorIcon(type, item.id, item.title);
     if (!item.sender_kind) return undefined;
-    if (
-      item.sender_kind === "system" ||
-      (type === "message" && item.sender_kind === "agent")
-    )
+    if (item.sender_kind === "system")
       return <Icon name="bot" size={16} className="text-fg-muted" />;
     return actorIcon(
       item.sender_kind === "user" ? "person" : "agent",

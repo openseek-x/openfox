@@ -546,6 +546,7 @@ function AgentNavRow({
       <button
         type="button"
         onClick={onOpen}
+        aria-label={entry.name}
         aria-current={selected ? "page" : undefined}
         className="flex min-w-0 flex-1 items-center gap-2 pl-2 text-left text-body"
       >
@@ -553,6 +554,7 @@ function AgentNavRow({
           <SmallCrewIcon />
         ) : (
           <AgentAvatar
+            agentId={entry.id}
             name={entry.name}
             avatar={entry.avatar}
             size={16}
@@ -621,6 +623,7 @@ function SessionsMode({ orgId }: { orgId: string }) {
                 className="flex min-w-0 flex-1 items-center gap-2 pl-2 text-left text-body"
               >
                 <AgentAvatar
+                  agentId={group.agent.id}
                   name={group.agent.name}
                   avatar={group.agent.avatar}
                   size={16}
