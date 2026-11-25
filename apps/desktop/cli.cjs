@@ -108,6 +108,28 @@ async function installBundledCli({ bundled, home }) {
   return { path: target, state: "installed" };
 }
 
+// 给独立运行的 daemon 留下安装包位置。只在 OpenFox 私有目录创建链接。
+async function linkBundledPi(bundleDir, home) {
+  await fs.access(path.join(bundleDir, "pi"), fs.constants.X_OK);
+  const parent = path.join(home, ".local", "share", "openfox");
+  const link = path.join(parent, "desktop-pi");
+  await fs.mkdir(parent, { recursive: true, mode: 0o700 });
+  try {
+    if ((await fs.readlink(link)) === bundleDir) return;
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+  // 将移位后的链接原子替换，daemon 并发清点时始终看到完整目录。
+  const temp = await fs.mkdtemp(path.join(parent, ".pi-link-"));
+  try {
+    const next = path.join(temp, "next");
+    await fs.symlink(bundleDir, next);
+    await fs.rename(next, link);
+  } finally {
+    await fs.rm(temp, { recursive: true, force: true });
+  }
+}
+
 /** shell 配置里追加的脚本：目录存在且不在 PATH 里时才加到最前面。 */
 function pathSnippet(binDir) {
   const quoted = binDir.replace(/(["\\$`])/g, "\\$1");
@@ -154,5 +176,6 @@ module.exports = {
   ensureOnPath,
   installBundledCli,
   installPaths,
+  linkBundledPi,
   pathSnippet,
 };

@@ -34,11 +34,11 @@ export function CodeCard({
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const revision = useRef(0);
+  const revision = useRef<symbol | undefined>(undefined);
   useEffect(() => {
     setCopied(false);
     return () => {
-      revision.current++;
+      revision.current = undefined;
       clearTimeout(timer.current);
     };
   }, [code]);
@@ -55,7 +55,8 @@ export function CodeCard({
           type="button"
           className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md px-2 text-caption text-fg-muted transition-colors hover:bg-surface-hover hover:text-fg-default"
           onClick={async () => {
-            const request = ++revision.current;
+            const request = Symbol();
+            revision.current = request;
             const ok = await copyText(code);
             if (request !== revision.current) return;
             if (!ok) {

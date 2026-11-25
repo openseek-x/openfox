@@ -65,17 +65,7 @@ func TestPreviewRejectsBadResponses(t *testing.T) {
 	}
 }
 
-func TestPreviewBoundsAndConfiguration(t *testing.T) {
-	for _, value := range []string{"file:///tmp/a", "https://u:p@host", "https://host/path", "https://host?url=x", "http://"} {
-		if ValidatePreviewURL(value) == nil {
-			t.Errorf("accepted %s", value)
-		}
-	}
-	for _, value := range []string{"", "http://office-preview:3000", "https://renderer.internal/"} {
-		if err := ValidatePreviewURL(value); err != nil {
-			t.Error(err)
-		}
-	}
+func TestPreviewBounds(t *testing.T) {
 	p := NewPreview("http://127.0.0.1:1")
 	p.slots <- struct{}{}
 	p.slots <- struct{}{}

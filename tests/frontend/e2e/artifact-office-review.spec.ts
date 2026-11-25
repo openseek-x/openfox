@@ -51,7 +51,8 @@ for (const [kind, mime] of Object.entries({
     const toggle = page.getByRole("button", { name: "批注", exact: true });
     await expect(toggle).toHaveAttribute("aria-pressed", "false");
     const canvas = page.locator("[data-pdf-page] canvas");
-    await expect(canvas).toHaveCount(1);
+    // 转换预览由独立的 PDF worker 绘制，冷启动时要等待第一页就绪。
+    await expect(canvas).toHaveCount(1, { timeout: 20000 });
     // 等待 PDF 真正绘制出文字或色块，而不只验证 canvas 已创建。
     await expect
       .poll(async () =>

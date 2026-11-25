@@ -95,13 +95,12 @@ so point `TMPDIR` at a volume with room for the artifact archive.
    COMMIT;
    ```
 
-   What this does and does not do (verified in the 2026-11-12 drill): a daemon
-   that still holds the old epoch has its heartbeat rejected, reports
-   `RECONCILE_REQUIRED`, shows as offline, and is not offered new Runs. It does
-   **not** invalidate device sessions, and it does **not** stop a daemon from
-   renewing the lease of a Run that was already in flight when the backup was
-   taken: the lease endpoint does not check the epoch. Step 9 is therefore
-   mandatory, not optional.
+   A daemon reporting the old epoch receives `RECONCILE_REQUIRED` on heartbeat
+   and appears offline. New work stays queued. Listing or claiming an offer and
+   starting a prepared Run require a heartbeat confirming the current epoch.
+   Existing device sessions remain valid. A Run already executing at backup time
+   can renew its lease and receive an administrator's cancellation. Resolve each
+   such Run in step 9 before readmitting the device.
 8. Start the center against the restored database URL file and artifact root
    (`OPENFOX_DATABASE_URL_FILE`, `OPENFOX_STORAGE_ROOT`). `/ready` reports ready as
    soon as the database answers; it does not know about the checks above, so keep

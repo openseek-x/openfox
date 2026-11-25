@@ -7,7 +7,6 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 )
@@ -22,17 +21,6 @@ type Preview struct {
 	endpoint string
 	client   *http.Client
 	slots    chan struct{}
-}
-
-func ValidatePreviewURL(value string) error {
-	if value == "" {
-		return nil
-	}
-	u, err := url.Parse(value)
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Hostname() == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || (u.Path != "" && u.Path != "/") {
-		return errors.New("office preview URL must be an http(s) origin without credentials, path, query or fragment")
-	}
-	return nil
 }
 
 func NewPreview(origin string) *Preview {

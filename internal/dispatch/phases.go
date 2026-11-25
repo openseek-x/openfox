@@ -1033,7 +1033,8 @@ func runStillAuthorized(ctx context.Context, tx pgx.Tx, organizationID string, r
 func deviceOnline(ctx context.Context, tx pgx.Tx, deviceID string, within time.Duration) (bool, error) {
 	var online bool
 	err := tx.QueryRow(ctx, `
-		SELECT status = 'ACTIVE' AND last_seen_at IS NOT NULL
+		SELECT status = 'ACTIVE' AND center_epoch = openfox_private.current_center_epoch()
+		       AND last_seen_at IS NOT NULL
 		       AND last_seen_at >= clock_timestamp() - make_interval(secs => $2)
 		  FROM openfox.physical_devices WHERE id = $1::uuid`, deviceID, within.Seconds()).Scan(&online)
 	if errors.Is(err, pgx.ErrNoRows) {

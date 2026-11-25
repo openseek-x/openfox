@@ -434,6 +434,13 @@ func TestConversationForkSessionExportDoesNotRecoverParent(t *testing.T) {
 	}
 	input := map[string]string{"public_key": base64.RawURLEncoding.EncodeToString(der)}
 	owner.must(http.StatusAccepted, http.MethodPost, conversationPath(source.ID)+"/runtime-session-exports", input, nil)
+	var fullHour bool
+	e.scalar(&fullHour, `SELECT expires_at = created_at + interval '1 hour' FROM openfox.runtime_session_exports
+		WHERE organization_id = $1::uuid AND conversation_id = $2::uuid`, e.org, source.ID)
+	if !fullHour {
+		t.Fatal("导出记录应从同一数据库时刻起算一小时")
+	}
+
 	fork := forkChat(t, owner, source.ID, boundary.ID, f.agentID, "session-export-fork")
 	owner.expectError(http.StatusNotFound, "SESSION_NOT_EXPORTABLE", http.MethodPost, conversationPath(fork.ID)+"/runtime-session-exports", input)
 	var count int
