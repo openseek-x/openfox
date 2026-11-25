@@ -76,6 +76,7 @@ test("目录头像独立打开资料，快捷操作保留 Agent 身份", async (
   await expect(card.getByText("工作台测试")).toBeVisible();
   await expect(card.getByRole("button").first()).toBeDisabled();
   await expect(page).not.toHaveURL(/agentSettings/);
+  await page.screenshot({ path: testInfo.outputPath("agent-info-page.png") });
   await card.screenshot({ path: testInfo.outputPath("agent-info.png") });
   await page.keyboard.press("Escape");
   await expect(card).toBeHidden();

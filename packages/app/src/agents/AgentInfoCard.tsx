@@ -1,3 +1,4 @@
+import "./agent-info-card.css";
 import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useI18n, useT } from "@openfox/i18n";
@@ -64,12 +65,12 @@ function Detail({
   children: ReactNode;
 }) {
   return (
-    <div className="grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-4 py-1">
-      <dt className="flex items-center gap-2 text-[12px] text-fg-muted">
+    <div className="flex min-w-0 flex-col gap-1">
+      <dt className="flex items-center gap-1.5 text-[11px] leading-4 text-fg-muted">
         <Icon name={icon} size={14} />
         {label}
       </dt>
-      <dd className="min-w-0 text-right text-[13px] leading-5 font-medium text-fg-default [overflow-wrap:anywhere]">
+      <dd className="min-w-0 text-[13px] leading-5 font-medium text-fg-default [overflow-wrap:anywhere]">
         {children}
       </dd>
     </div>
@@ -126,7 +127,7 @@ function AgentInfoCard({
       fitHeight
       role="dialog"
       aria-label={title}
-      className="w-[360px] max-w-[calc(100vw-16px)] overflow-y-auto rounded-2xl p-0"
+      className="of-agent-profile w-[352px] max-w-[calc(100vw-16px)] overflow-x-hidden overflow-y-auto"
     >
       {(!target.spaceId && location.notFound) || query.isError ? (
         <p role="status" className="p-4 text-body-sm text-fg-muted">
@@ -138,26 +139,17 @@ function AgentInfoCard({
         </div>
       ) : (
         <>
-          <div className="border-b border-line-soft bg-linear-to-br from-accent-soft/60 via-surface-card to-surface-card px-4 pt-4 pb-3.5">
-            <div className="flex items-center gap-3">
-              <span className="inline-flex shrink-0 rounded-full border border-line-soft bg-surface-card p-1 shadow-sm">
+          <div className="of-agent-cover" aria-hidden="true" />
+          <div className="relative px-5">
+            <div className="flex items-end justify-between gap-3">
+              <span className="-mt-8 inline-flex shrink-0 rounded-full bg-surface-card p-1 shadow-sm">
                 <AgentAvatar
                   name={agent.name}
                   avatar={agent.avatar}
-                  size={40}
+                  size={64}
                 />
               </span>
-              <div className="min-w-0 flex-1">
-                <h3 className="break-words text-[17px] leading-6 font-semibold tracking-tight">
-                  {agent.name}
-                </h3>
-                {agent.title && (
-                  <p className="break-words text-body-sm text-fg-muted">
-                    {agent.title}
-                  </p>
-                )}
-              </div>
-              <div className="flex shrink-0 items-center rounded-lg border border-line-soft bg-surface-card p-0.5">
+              <div className="flex items-center gap-0.5 pb-1">
                 <IconButton
                   size="28"
                   icon={<Icon name="plus" />}
@@ -198,13 +190,23 @@ function AgentInfoCard({
                 />
               </div>
             </div>
+            <div className="mt-2 min-w-0">
+              <h3 className="break-words text-[21px] leading-7 font-semibold tracking-tight">
+                {agent.name}
+              </h3>
+              {agent.title && (
+                <p className="break-words text-body-sm text-fg-muted">
+                  {agent.title}
+                </p>
+              )}
+            </div>
             {agent.description && (
-              <p className="mt-3 whitespace-pre-wrap break-words text-[13px] leading-5 text-fg-secondary">
+              <p className="mt-2 whitespace-pre-wrap break-words text-[13px] leading-5 text-fg-secondary">
                 {agent.description}
               </p>
             )}
           </div>
-          <dl className="px-4 py-2.5">
+          <dl className="mx-5 mt-4 grid grid-cols-2 gap-x-5 gap-y-3 border-t border-line-soft py-4">
             <Detail icon="orbit" label={t("agents.info.space")}>
               {space?.name ?? t("agents.unknownSpace")} ·{" "}
               {t(`agents.visibility.${agent.visibility}`)}
@@ -224,7 +226,7 @@ function AgentInfoCard({
             )}
           </dl>
           {device && (
-            <div className="mx-4 mb-3.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 rounded-lg bg-surface-muted px-3 py-2 text-[12px] tabular-nums text-fg-secondary">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 border-t border-line-soft bg-surface-muted/60 px-5 py-2.5 text-[12px] tabular-nums text-fg-secondary">
               <span className="inline-flex items-center gap-2">
                 <span
                   aria-hidden
