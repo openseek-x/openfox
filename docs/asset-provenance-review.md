@@ -9,3 +9,5 @@ Lucide 使用 ISC 许可证，其中源自 Feather 的图形适用 MIT 许可证
 OpenFox 的卷尾狐标志取自本项目生成并选定的设计。网页、macOS 应用及 Teams 安装包使用这张图的尺寸与配色变体。[网页标志](../packages/ui/src/icons/openfox.png)
 
 集成服务、运行时和操作系统标记使用系统字体渲染文字缩写。通用代码托管和分拣空状态使用 Lucide 图形。状态、优先级、进度、图表和加载动画由界面代码绘制，二维码和 PDF 选区几何由对应数据生成。测试 Office 文件及其中的图形来源见夹具说明。[Office 夹具](../tests/frontend/e2e/fixtures/office-preview/README.md)
+
+Agent 默认机器人、空间轨道、视图网格，以及任务、需求和缺陷符号采用 OpenFox 绘制的图形。轮廓和浅填充均继承当前颜色。任务状态按类别使用虚线、空环、半圆、勾、叉或叠框区分。
