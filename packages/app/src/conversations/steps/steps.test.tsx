@@ -1689,6 +1689,40 @@ describe("通用工具与过程层级", () => {
     expect(screen.getByText("files.list")).toBeInTheDocument();
   });
 
+  it("过程说明用弱化文字色，与最终回复区分；空说明不渲染", () => {
+    const events = [
+      stepEvent({
+        id: "note",
+        kind: "agent_text",
+        state: "done",
+        text: "先查看请求拦截器。",
+      }),
+      stepEvent({ id: "blank", kind: "agent_text", state: "done", text: "  " }),
+      legacy("output", "最终结论"),
+      stepEvent({
+        id: "end",
+        kind: "turn_end",
+        state: "done",
+        final_state: "done",
+      }),
+    ];
+    const turn = foldRunEvents(events, { terminal: true });
+    const { container } = render(
+      <Providers>
+        <RunTimelineView
+          turn={turn}
+          run={run({ state: "SUCCEEDED" })}
+          renderText={(text) => <p>{text}</p>}
+        />
+      </Providers>,
+    );
+    const note = screen.getByText("先查看请求拦截器。");
+    expect(note.closest("[data-step-text]")).toHaveClass("text-fg-muted");
+    // 最终回复不在过程说明的弱化容器里
+    expect(screen.getByText("最终结论").closest("[data-step-text]")).toBeNull();
+    expect(container.querySelectorAll("[data-step-text]")).toHaveLength(1);
+  });
+
   it("用户手动展开的工具在运行结束后保持展开", async () => {
     const user = userEvent.setup();
     const event = stepEvent({

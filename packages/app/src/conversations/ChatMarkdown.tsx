@@ -100,15 +100,16 @@ function createComponents(prefix: string, selectable: boolean): Components {
       );
     },
     img: ({ alt }) => <span className="text-fg-muted">{alt}</span>,
+    // 列表项之间只留 2px：正文行高已是 24px，再加大间距会显得松散
     ul: ({ children }) => (
-      <ul className="list-disc space-y-1 pl-5 marker:text-fg-subtle [&:has(>li.task-list-item)]:list-none">
+      <ul className="list-disc space-y-0.5 pl-5 marker:text-fg-subtle [&:has(>li.task-list-item)]:list-none">
         {children}
       </ul>
     ),
     ol: ({ children, start }) => (
       <ol
         start={start}
-        className="list-decimal space-y-1 pl-5 marker:text-fg-muted marker:tabular-nums"
+        className="list-decimal space-y-0.5 pl-5 marker:text-fg-muted marker:tabular-nums"
       >
         {children}
       </ol>
@@ -117,17 +118,21 @@ function createComponents(prefix: string, selectable: boolean): Components {
       <li
         id={id}
         tabIndex={id ? -1 : undefined}
-        className={cn("pl-0.5 [&>ol]:mt-1 [&>p]:my-1 [&>ul]:mt-1", className)}
+        className={cn(
+          "pl-0.5 [&>ol]:mt-0.5 [&>p]:my-1 [&>ul]:mt-0.5",
+          className,
+        )}
       >
         {children}
       </li>
     ),
+    // 引用只用细左边线与次要文字色区分，不加底色和圆角，避免像一张卡片
     blockquote: ({ children }) => (
-      <blockquote className="space-y-2 rounded-r-lg border-l-[3px] border-line-strong bg-surface-hover px-3 py-2 text-fg-secondary">
+      <blockquote className="space-y-2 border-l-2 border-line-strong pl-3 text-fg-secondary">
         {children}
       </blockquote>
     ),
-    hr: () => <hr className="my-1 border-line-default" />,
+    hr: () => <hr className="my-1 border-line-soft" />,
     code: ({ children }) => (
       <code className="rounded-[5px] border border-line-soft bg-surface-code-inline px-[5px] py-px font-mono text-[0.86em]">
         {children}
@@ -164,9 +169,10 @@ function createComponents(prefix: string, selectable: boolean): Components {
         />
       );
     },
+    // 外框随表格内容宽（最大占满一行，超宽时横向滚动），短表格不再被拉满；阅读场景不加行悬停底色
     table: ({ children }) => (
-      <div className="max-w-full overflow-x-auto rounded-lg border border-line-default">
-        <table className="w-full border-collapse text-body-sm leading-5 tabular-nums [&_tbody_tr:hover_td]:bg-surface-hover [&_tbody_tr+tr_td]:border-t [&_tbody_tr+tr_td]:border-line-soft [&_td]:min-w-20 [&_td]:px-3 [&_td]:py-2 [&_th]:border-b [&_th]:border-line-default [&_th]:bg-surface-hover [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-caption [&_th]:font-medium [&_th]:whitespace-nowrap [&_th]:text-fg-secondary">
+      <div className="w-fit max-w-full overflow-x-auto rounded-lg border border-line-default">
+        <table className="border-collapse text-body-sm leading-5 tabular-nums [&_tbody_tr+tr_td]:border-t [&_tbody_tr+tr_td]:border-line-soft [&_td]:min-w-20 [&_td]:px-3 [&_td]:py-2 [&_th]:border-b [&_th]:border-line-default [&_th]:bg-surface-hover [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-caption [&_th]:font-medium [&_th]:whitespace-nowrap [&_th]:text-fg-secondary">
           {children}
         </table>
       </div>

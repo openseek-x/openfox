@@ -212,6 +212,45 @@ describe("chat-only prompt-kit Markdown", () => {
     ).toBeInTheDocument();
   });
 
+  it("keeps quotes, tables and rules light: no card fill, content-width tables that still scroll", () => {
+    const columns = Array.from({ length: 12 }, (_, i) => `Column ${i}`);
+    const { container } = render(
+      markdown(
+        [
+          "> Refresh tokens are single use.",
+          "",
+          "| Module | Risk |",
+          "| --- | --- |",
+          "| api | low |",
+          "",
+          "---",
+          "",
+          `| ${columns.join(" | ")} |`,
+          `| ${columns.map(() => "---").join(" | ")} |`,
+          `| ${columns.map(() => "value").join(" | ")} |`,
+        ].join("\n"),
+      ),
+    );
+    const quote = container.querySelector("blockquote")!;
+    expect(quote).toHaveTextContent("Refresh tokens are single use.");
+    expect(quote.className).not.toMatch(/\bbg-|rounded/);
+    expect(quote).toHaveClass("border-l-2", "text-fg-secondary");
+    const tables = container.querySelectorAll("table");
+    expect(tables).toHaveLength(2);
+    for (const table of tables) {
+      // 表格按内容宽排版，外框最大占满并可横向滚动
+      expect(table).not.toHaveClass("w-full");
+      // 只检查行悬停选择器；表头底色令牌名里也带 hover，不能按子串判断
+      expect(table.className).not.toContain("tr:hover");
+      expect(table.parentElement).toHaveClass(
+        "w-fit",
+        "max-w-full",
+        "overflow-x-auto",
+      );
+    }
+    expect(container.querySelector("hr")).toHaveClass("border-line-soft");
+  });
+
   it("does not fold code of 30 lines or fewer and labels plain text blocks", () => {
     const code = Array.from({ length: 30 }, (_, i) => `row ${i}`).join("\n");
     const { container } = render(markdown("```text\n" + code + "\n```"));

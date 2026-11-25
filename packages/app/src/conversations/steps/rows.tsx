@@ -384,9 +384,17 @@ export function StepText({ text }: { text: string }) {
   return render ? <>{render(text)}</> : <PlainText text={text} />;
 }
 
+/**
+ * 过程说明用弱化文字色（与思考详情一致），和最终回复区分开；代码块等自带颜色的内容不受影响。
+ * fg-secondary 与正文色过于接近，实测无法区分，所以用 fg-muted（白底对比度约 4.8:1，满足 AA）。
+ */
 export function AgentTextRow({ step }: { step: StepView }) {
   if (!step.text?.trim()) return null;
-  return <StepText text={step.text} />;
+  return (
+    <div data-step-text="" className="min-w-0 text-fg-muted">
+      <StepText text={step.text} />
+    </div>
+  );
 }
 
 // ------------------------------------------------------------------- Row/Exec
