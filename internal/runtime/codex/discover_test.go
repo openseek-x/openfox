@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	domainruntime "openfox/internal/runtime"
+	"openfox/internal/runtime/discovery"
 )
 
 // installFakeCodex 在 dir 下写一个可执行的 codex；broken=true 时 --version 失败。
@@ -29,12 +30,13 @@ func installFakeCodex(t *testing.T, dir string, version string, broken bool) str
 	return path
 }
 
-func fakeDiscovery(home string, env map[string]string, goos string, shellResult string) *discovery {
-	return &discovery{
-		getenv: func(key string) string { return env[key] },
-		home:   home, goos: goos,
-		loginShell: func(context.Context, string) string { return shellResult },
-	}
+func fakeDiscovery(home string, env map[string]string, goos, shellResult string) *discovery.Search {
+	return &discovery.Search{Home: home, OS: goos, Getenv: func(key string) string { return env[key] }, LoginPath: func(context.Context, string) string {
+		if shellResult == "" {
+			return ""
+		}
+		return filepath.Dir(shellResult)
+	}}
 }
 
 func discoveredPath(t *testing.T, adapter *Adapter) string {
@@ -150,7 +152,31 @@ func TestLoginShellLookupParsesMarker(t *testing.T) {
 	if err := os.WriteFile(shell, []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if got := loginShellLookup(context.Background(), shell); got != codexPath {
+	a := New("")
+	d := discovery.Local()
+	d.Getenv = func(k string) string {
+		if k == "SHELL" {
+			return shell
+		}
+		return ""
+	}
+	a.discovery = &d
+	if got := discoveredPath(t, a); got != codexPath {
 		t.Fatalf("login shell lookup = %q, want %q", got, codexPath)
+	}
+}
+
+func TestDifferentProgramDoesNotShadowBundledCodex(t *testing.T) {
+	home := t.TempDir()
+	path := installFakeCodex(t, filepath.Join(home, "bin"), "1.0.0", false)
+	if err := os.WriteFile(path, []byte("#!/bin/sh\necho 'another program 1.0.0'\n"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(home, "Applications", "ChatGPT.app", "Contents", "Resources", "codex-cli", "bin")
+	expected := installFakeCodex(t, dir, "0.171.0-alpha.13", false)
+	a := New("")
+	a.discovery = fakeDiscovery(home, map[string]string{"PATH": filepath.Dir(path)}, "darwin", "")
+	if got := discoveredPath(t, a); got != expected {
+		t.Fatalf("发现 %s，预期 %s", got, expected)
 	}
 }

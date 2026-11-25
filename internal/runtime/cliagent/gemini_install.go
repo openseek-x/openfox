@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 	goruntime "runtime"
 	"strings"
+
+	"openfox/internal/runtime/discovery"
 )
 
 const geminiVersion = "0.67.0"
@@ -26,24 +28,40 @@ const geminiNodeSHA = "2e3f1286a7eb3736346ed1803e458a0ff909e2b2d5bc746144dcb7697
 //go:embed gemini-artifacts.json
 var geminiArtifacts []byte
 
-type geminiInstall struct{ Root, Entry, Node string }
+type geminiInstall struct {
+	Root, Entry, Node string
+	Candidate         discovery.Candidate
+}
 
 func (a *Adapter) geminiInstallation(ctx context.Context) (geminiInstall, error) {
 	var out geminiInstall
 	if goruntime.GOOS != "darwin" || goruntime.GOARCH != "arm64" {
 		return out, fmt.Errorf("Gemini requires macOS arm64")
 	}
-	entry := a.Executable
-	if entry == "" {
-		entry = os.Getenv("OPENFOX_GEMINI_PATH")
+	var install geminiInstall
+	candidate, _, err := discovery.Local().Resolve(ctx, a.tool(), a.configuredPath(), func(entry string) (string, error) {
+		node := os.Getenv("OPENFOX_GEMINI_NODE_PATH")
+		if node == "" {
+			node = filepath.Join(filepath.Dir(entry), "node")
+			if _, err := os.Stat(node); err != nil {
+				node, _ = exec.LookPath("node")
+			}
+		}
+		var err error
+		install, err = verifyGeminiInstall(ctx, entry, node)
+		return "", err
+	})
+	if err != nil {
+		out.Candidate = candidate
+		return out, err
 	}
-	if entry == "" {
-		entry, _ = exec.LookPath("gemini")
-	}
-	node := os.Getenv("OPENFOX_GEMINI_NODE_PATH")
-	if node == "" {
-		node, _ = exec.LookPath("node")
-	}
+	install.Candidate = candidate
+	return install, nil
+}
+
+// verifyGeminiInstall 仅验证指定候选和配套 Node，不继承项目路径。
+func verifyGeminiInstall(ctx context.Context, entry, node string) (geminiInstall, error) {
+	var out geminiInstall
 	entry, e := filepath.EvalSymlinks(entry)
 	if e != nil || !filepath.IsAbs(entry) || filepath.Base(entry) != "gemini.js" || filepath.Base(filepath.Dir(entry)) != "bundle" {
 		return out, fmt.Errorf("Gemini requires the installed official bundle/gemini.js path")

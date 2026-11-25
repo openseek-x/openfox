@@ -2,9 +2,16 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"log/slog"
+	"maps"
+	"os"
+	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -15,6 +22,7 @@ import (
 	"openfox/internal/devices"
 	"openfox/internal/runtime"
 	"openfox/internal/runtime/codex"
+	"openfox/internal/runtime/discovery"
 	"openfox/internal/runtime/mcpconfig"
 	"openfox/internal/runtimepolicy"
 )
@@ -25,6 +33,10 @@ const capabilityRefreshInterval = 10 * time.Minute
 // runtimeCapabilities 是心跳能力 JSON 中 runtimes.codex 的结构。中心按不透明 JSON 保存（上限 64KiB），
 // UI 从设备列表的 capabilities.runtimes.codex.models 读取可选模型。
 type runtimeCapabilities struct {
+	InstallPath              string        `json:"install_path,omitempty"`
+	DiscoverySource          string        `json:"discovery_source,omitempty"`
+	DiscoveryCached          bool          `json:"discovery_cached,omitempty"`
+	DiscoveryOnly            bool          `json:"discovery_only,omitempty"`
 	Version                  string        `json:"version,omitempty"`
 	Login                    string        `json:"login_status,omitempty"`
 	Runnable                 bool          `json:"runnable"`
@@ -85,6 +97,8 @@ type capabilityReporter struct {
 	directoryRoots        map[string]string
 	gitRoots              map[string]bool
 	prober                capabilityProber
+	cachePath             string
+	cacheFingerprint      func() string
 	developmentToolsProbe func(context.Context) []devices.DevelopmentTool
 	timezoneProbe         func() string
 	extras                []*namedProber
@@ -104,6 +118,7 @@ type capabilityReporter struct {
 	timezone         string
 	inventoryOrg     string
 	inventoryWake    chan struct{}
+	refreshWake      chan struct{}
 	storeInventory   func(context.Context, string, map[string]mcpconfig.Inventory) error
 	inventoryMu      sync.Mutex
 	// additional 是阶段 12e 起附加的能力位与本机状态（本机并发上限、受保护根、密钥轮换、多组织、配置版本），
@@ -136,42 +151,61 @@ func (r *capabilityReporter) run(ctx context.Context) {
 			return
 		case <-ticker.C:
 			r.refresh(ctx)
+		case <-r.refreshWake:
+			r.refresh(ctx)
 		case <-r.inventoryWake:
 			_ = r.uploadInventory(ctx)
 		}
 	}
 }
 
-// probe 探测一个 Runtime：已登录或登录状态未知（但命令可执行）时列模型。
-// found 为 false 表示没有找到可执行文件（调用方可据此不上报）。
-func (r *capabilityReporter) probe(ctx context.Context, prober capabilityProber, models *[]codex.Model) (value runtimeCapabilities, found bool) {
-	value = runtimeCapabilities{Models: []codex.Model{}, ApprovalModes: approvalModesOf(prober), ReasoningEfforts: reasoningEffortsOf(prober),
-		CollaborationModes: collaborationModesOf(prober)}
+// recordDiscovery 仅上报通过版本探测的路径，用户目录用 ~ 缩写。
+func (v *runtimeCapabilities) recordDiscovery(c runtime.Capabilities) {
+	v.DiscoveryOnly = c.DiscoveryOnly
+	if c.Version == "" || c.Version == "unknown" || c.Executable == "" {
+		return
+	}
+	path := c.Executable
+	if home, err := os.UserHomeDir(); err == nil && strings.HasPrefix(path, home+string(filepath.Separator)) {
+		path = "~" + strings.TrimPrefix(path, home)
+	}
+	v.InstallPath, v.DiscoverySource = path, c.DiscoverySource
+}
+
+// detect 先取得安装和协议状态，模型目录的阻塞不会延迟其他 CLI 的登记。
+func (r *capabilityReporter) detect(ctx context.Context, entry *namedProber) (runtimeCapabilities, bool, bool) {
+	prober := entry.prober
+	value := runtimeCapabilities{Models: entry.models, ApprovalModes: approvalModesOf(prober), ReasoningEfforts: reasoningEffortsOf(prober), CollaborationModes: collaborationModesOf(prober), CheckedAt: r.clock().UTC().Truncate(time.Second)}
+	if value.Models == nil {
+		value.Models = []codex.Model{}
+	}
 	report, err := prober.Detect(ctx)
-	found = err == nil || report.Executable != ""
+	value.recordDiscovery(report)
+	value.Version, value.Login, value.Runnable, value.Reason = report.Version, string(report.Login), report.Runnable, report.Reason
+	value.ProtocolReady, value.RequiresRunConfiguration = report.ProtocolReady, report.RequiresRunConfiguration
 	if err != nil {
 		value.Reason = boundedText(err.Error())
-	} else {
-		value.Version, value.Login, value.Runnable, value.Reason = report.Version, string(report.Login), report.Runnable, report.Reason
-		value.ProtocolReady, value.RequiresRunConfiguration = report.ProtocolReady, report.RequiresRunConfiguration
+		value.Runnable = false
+		value.ProtocolReady = false
 	}
-	// 已登录即可列模型；版本不在支持矩阵内时仍上报列表，便于用户先完成配置。
-	if err == nil && report.Login != runtime.LoginLoggedOut {
-		listed, listErr := prober.ListModels(ctx)
-		if listErr == nil {
-			*models = listed
-		} else {
-			value.ModelsError = boundedText(listErr.Error())
-			if *models == nil && len(listed) > 0 {
-				*models = listed
-			}
-		}
+	found := err == nil || report.Executable != ""
+	list := err == nil && !report.DiscoveryOnly && report.Login != runtime.LoginLoggedOut && (entry.name != codex.RuntimeName || report.Runnable)
+	return value, found, list
+}
+
+// publishRuntimes 发布一份独立快照，使模型刷新期间的读者始终看到完整清单。
+func (r *capabilityReporter) publishRuntimes(values map[string]runtimeCapabilities) {
+	value, hasCodex := values[codex.RuntimeName]
+	others := maps.Clone(values)
+	delete(others, codex.RuntimeName)
+	r.mu.Lock()
+	r.others = others
+	r.runtimes = nil
+	if hasCodex {
+		r.runtimes = &value
 	}
-	if *models != nil {
-		value.Models = *models
-	}
-	value.CheckedAt = r.clock().UTC().Truncate(time.Second)
-	return value, found
+	r.mu.Unlock()
+	r.publish()
 }
 
 // refresh 重新探测全部 Runtime，更新心跳并返回 Codex 的结果（runtime_probe 命令复用 allRuntimes 取全部）。
@@ -200,41 +234,100 @@ func (r *capabilityReporter) refreshWithInventory(ctx context.Context) (runtimeC
 	if r.prober == nil {
 		return runtimeCapabilities{}, nil
 	}
-	probeCtx, cancel := context.WithTimeout(ctx, time.Minute)
+	probeCtx, cancel := context.WithTimeout(discovery.WithScan(ctx), time.Minute)
 	defer cancel()
-	// Configured API keys can be runnable before a request verifies authentication.
-	value := runtimeCapabilities{Models: []codex.Model{}, ApprovalModes: approvalModesOf(r.prober), ReasoningEfforts: reasoningEffortsOf(r.prober),
-		CollaborationModes: collaborationModesOf(r.prober)}
-	report, err := r.prober.Detect(probeCtx)
-	if err != nil {
-		value.Reason = boundedText(err.Error())
-	} else {
-		value.Version, value.Login, value.Runnable, value.Reason = report.Version, string(report.Login), report.Runnable, report.Reason
-		value.ProtocolReady, value.RequiresRunConfiguration = report.ProtocolReady, report.RequiresRunConfiguration
+	var fingerprint string
+	if r.cacheFingerprint != nil {
+		fingerprint = r.cacheFingerprint()
 	}
-	if err == nil && report.Runnable {
-		models, listErr := r.prober.ListModels(probeCtx)
-		if listErr == nil {
-			r.models = models
-		} else {
-			value.ModelsError = boundedText(listErr.Error())
+	primary := &namedProber{name: codex.RuntimeName, prober: r.prober, models: r.models}
+	entries := append([]*namedProber{primary}, r.extras...)
+	values := make(map[string]runtimeCapabilities, len(entries))
+	var catalogs []*namedProber
+	for _, entry := range entries {
+		value, found, list := r.detect(probeCtx, entry)
+		if probeCtx.Err() != nil {
+			return runtimeCapabilities{}, probeCtx.Err()
+		}
+		if found || entry == primary {
+			values[entry.name] = value
+		}
+		if list {
+			catalogs = append(catalogs, entry)
 		}
 	}
-	if r.models != nil {
-		value.Models = r.models
-	}
-	value.CheckedAt = r.clock().UTC().Truncate(time.Second)
-	others := make(map[string]runtimeCapabilities, len(r.extras))
-	for _, extra := range r.extras {
-		if other, found := r.probe(probeCtx, extra.prober, &extra.models); found {
-			others[extra.name] = other
+	r.publishRuntimes(values)
+	if fingerprint != "" && fingerprint == r.cacheFingerprint() {
+		entries := make(map[string]daemon.DiscoveryEntry, len(values))
+		for name, value := range values {
+			if value.InstallPath != "" && value.DiscoverySource != "" {
+				entries[name] = daemon.DiscoveryEntry{Path: value.InstallPath, Source: value.DiscoverySource, Version: value.Version}
+			}
+		}
+		if err := daemon.WriteDiscoveryCache(r.cachePath, fingerprint, r.clock(), entries); err != nil {
+			slog.Warn("runtime discovery cache write failed", "error", err)
 		}
 	}
-	r.mu.Lock()
-	r.runtimes, r.others = &value, others
-	r.mu.Unlock()
-	r.publish()
-	return value, r.uploadInventory(ctx)
+	for _, entry := range catalogs {
+		if probeCtx.Err() != nil {
+			break
+		}
+		value := values[entry.name]
+		models, err := entry.prober.ListModels(probeCtx)
+		if err != nil {
+			value.ModelsError = boundedText(err.Error())
+		}
+		if err == nil || (entry.models == nil && len(models) > 0 && entry != primary) {
+			entry.models = models
+		}
+		if entry.models != nil {
+			value.Models = entry.models
+		}
+		values[entry.name] = value
+	}
+	r.models = primary.models
+	r.publishRuntimes(values)
+	return values[codex.RuntimeName], r.uploadInventory(ctx)
+}
+
+// restoreDiscovery 在首次心跳前登记同一环境中仍有效的安装记录。
+func (r *capabilityReporter) restoreDiscovery() {
+	entries, checked := daemon.ReadDiscoveryCache(r.cachePath, r.cacheFingerprint(), r.clock())
+	if len(entries) == 0 {
+		return
+	}
+	values := make(map[string]runtimeCapabilities, len(entries))
+	for name, entry := range entries {
+		if _, ok := r.proberFor(name); !ok {
+			continue
+		}
+		values[name] = runtimeCapabilities{
+			InstallPath: entry.Path, DiscoverySource: entry.Source, Version: entry.Version,
+			DiscoveryCached: true, DiscoveryOnly: name == "cursor", CheckedAt: checked,
+			Models: []codex.Model{},
+		}
+	}
+	r.publishRuntimes(values)
+}
+
+// discoveryFingerprint 只包含影响发现顺序和显式路径的设置，不读取凭据。
+func discoveryFingerprint(executable string, preferences runtimepolicy.DevicePreferences) string {
+	hash := sha256.New()
+	// 空映射经设置 JSON 往返后会变成 nil，两者代表同一自动发现配置。
+	if len(preferences.RuntimePaths) == 0 {
+		preferences.RuntimePaths = nil
+	}
+	input := []any{executable, preferences.CodexPath, preferences.RuntimePaths}
+	for _, key := range []string{
+		"HOME", "PATH", "SHELL", "NVM_BIN", "NVM_DIR", "FNM_DIR", "FNM_MULTISHELL_PATH",
+		"HOMEBREW_PREFIX", "VOLTA_HOME", "MISE_DATA_DIR", "OPENFOX_CODEX_PATH", "CODEX_PATH",
+		"OPENFOX_CLAUDE_PATH", "OPENFOX_OPENCODE_PATH", "OPENFOX_PI_PATH", "OPENFOX_CURSOR_PATH",
+		"OPENFOX_CODEBUDDY_PATH", "OPENFOX_GEMINI_PATH", "OPENFOX_GEMINI_NODE_PATH",
+	} {
+		input = append(input, os.Getenv(key))
+	}
+	_ = json.NewEncoder(hash).Encode(input)
+	return hex.EncodeToString(hash.Sum(nil))
 }
 
 // allRuntimes 返回当前全部 Runtime 的上报（心跳 capabilities.runtimes 的结构）。

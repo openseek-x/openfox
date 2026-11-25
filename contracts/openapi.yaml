@@ -28265,7 +28265,11 @@ components:
       properties:
         provider:
           type: string
-          description: Runtime 名称：codex、claude-code、opencode、pi、codebuddy、hermes、gemini
+          description: Runtime 名称：codex、claude-code、opencode、pi、codebuddy、hermes、gemini、cursor
+        install_path: {type: string, description: 已验证的 CLI 安装入口，用户目录用 ~ 表示}
+        discovery_source: {type: string, description: 本地 CLI 的命中来源}
+        discovery_cached: {type: boolean, description: 安装信息来自缓存，本次启动正在探测运行状态}
+        discovery_only: {type: boolean, description: 已发现但没有执行适配器}
         version:
           type:
             - string
@@ -30882,6 +30886,11 @@ components:
       properties:
         session_idle_minutes: {type: integer, minimum: 1, maximum: 1440, default: 10}
         session_max_minutes: {type: integer, minimum: 1, maximum: 10080, default: 120}
+        runtime_paths:
+          type: object
+          description: 每个供应商经本机验证的 CLI 启动路径，提交空字符串恢复自动发现
+          propertyNames: {enum: [claude-code, opencode, pi, codebuddy, gemini, cursor]}
+          additionalProperties: {type: string, maxLength: 1024}
         codex_path: {type: string, maxLength: 1024}
         codex_args: {type: array, maxItems: 16, items: {type: string, maxLength: 512}}
         memory_guard: {type: boolean}
