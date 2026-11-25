@@ -3,6 +3,8 @@ import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useI18n, useT } from "@openfox/i18n";
 import { Icon, IconButton, Popover, Spinner, type IconName } from "@openfox/ui";
+import { canWriteTasksIn } from "../spaces/readonly";
+import { isRetired, useOrgRole } from "../spaces/queries";
 import { useOrgPeople } from "../tasks/queries";
 import { effectiveMaxSlots, formatBytes } from "../computers/model";
 import { AgentAvatar } from "./AgentAvatar";
@@ -11,7 +13,13 @@ import { AssignTaskPalette, type AssignTarget } from "./AssignTaskPalette";
 import { chatPath } from "./AgentsPage";
 import { runtimeLabel } from "./model";
 import { useAgentSettingsParam } from "./params";
-import { useAgent, useDevices, useEntitySpace, useSpaces } from "./queries";
+import {
+  useAgent,
+  useDevices,
+  useStandaloneAgent,
+  useEntitySpace,
+  useSpaces,
+} from "./queries";
 
 export function AgentInfoProvider({
   orgId,
@@ -118,11 +126,23 @@ function AgentInfoCard({
     (person) => person.id === agent?.owner_user_id,
   );
   const space = spaces.data?.find((item) => item.id === agent?.space_id);
+  const orgRole = useOrgRole(orgId);
+  const canWriteTasks =
+    spaces.isSuccess &&
+    !!orgRole &&
+    !isRetired(space) &&
+    canWriteTasksIn(space, orgRole);
+  // 独立目录与单聊入口共用服务端的小队专属成员过滤；内置助手有自己的入口。
+  const standaloneAgent = useStandaloneAgent(orgId, target.id);
+  const standalone =
+    !agent?.archived_at &&
+    (agent?.builtin_kind === "ASSISTANT" || !!standaloneAgent.entry);
   const title = t("agents.info.label", { name: agent?.name ?? target.name });
   return (
     <Popover
       open
       anchorRef={anchorRef}
+      returnFocusTo={target.returnFocusTo}
       onOpenChange={onClose}
       fitHeight
       role="dialog"
@@ -154,7 +174,9 @@ function AgentInfoCard({
                   size="28"
                   icon={<Icon name="plus" />}
                   label={t("agents.contacts.assign")}
-                  disabled={!!agent.archived_at || !agent.allow_assign}
+                  disabled={
+                    !standalone || !canWriteTasks || !agent.allow_assign
+                  }
                   onClick={() => {
                     onClose();
                     onAssign({
@@ -169,7 +191,7 @@ function AgentInfoCard({
                   size="28"
                   icon={<Icon name="message" />}
                   label={t("agents.contacts.chat")}
-                  disabled={!!agent.archived_at || !agent.allow_direct_chat}
+                  disabled={!standalone || !agent.allow_direct_chat}
                   onClick={() => {
                     onClose();
                     navigate(

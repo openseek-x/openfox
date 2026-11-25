@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useT } from "@openfox/i18n";
 
 import { AgentAvatar } from "../agents/AgentAvatar";
+import { useAgent, useEntitySpace } from "../agents/queries";
 import type { ComposerAgent } from "./Composer";
 
 /**
@@ -11,17 +12,29 @@ import type { ComposerAgent } from "./Composer";
  * group/turn 让操作栏在悬停整轮回复（含时间线）时就显示。
  */
 export function AgentTurn({
+  orgId,
+  spaceId,
   agentId,
-  name,
-  avatar,
+  author,
   children,
 }: {
-  agentId: string;
-  name: string;
-  avatar?: ComposerAgent["avatar"];
+  orgId: string;
+  spaceId: string;
+  agentId?: string;
+  author?: ComposerAgent;
   children: ReactNode;
 }) {
   const t = useT();
+  // 小队成员摘要只有名字；历史作者也可能已退队。按同一 ID 读取头像和卡片使用的资料。
+  const lookup = agentId && author?.avatar === undefined ? agentId : null;
+  const location = useEntitySpace(orgId, "agent", lookup);
+  const authorSpace =
+    location.spaceId ?? (location.notFound ? spaceId : undefined);
+  const query = useAgent(orgId, authorSpace, lookup);
+  const detail = lookup && query.isSuccess ? query.data : undefined;
+  const profile = detail ?? author;
+  const name = profile?.name ?? t("chat.messages.unknownAuthor");
+  const resolved = !!profile || !lookup || query.isError;
   return (
     <div
       data-slot="agent-turn"
@@ -29,9 +42,10 @@ export function AgentTurn({
     >
       <span className="flex">
         <AgentAvatar
-          agentId={agentId}
+          agentId={resolved ? agentId : undefined}
+          spaceId={detail?.space_id ?? authorSpace}
           name={name}
-          avatar={avatar ?? undefined}
+          avatar={profile?.avatar ?? undefined}
           size={24}
         />
       </span>

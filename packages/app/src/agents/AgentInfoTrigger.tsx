@@ -12,6 +12,7 @@ export interface AgentInfoTarget {
   name: string;
   spaceId?: string;
   anchor: HTMLElement;
+  returnFocusTo?: HTMLElement;
 }
 
 export const AgentInfoContext = createContext<{
@@ -45,7 +46,19 @@ export function AgentInfoTrigger({
   }, [open, dismiss]);
   if (!agentId || !info) return children;
   const activate = (anchor: HTMLElement) =>
-    info.toggle({ id: agentId, spaceId: spaceId ?? undefined, name, anchor });
+    info.toggle({
+      id: agentId,
+      spaceId: spaceId ?? undefined,
+      name,
+      anchor,
+      // 鼠标从提及候选开卡时焦点仍在编辑器；关闭卡片后应能从原光标继续输入。
+      returnFocusTo:
+        document.activeElement instanceof HTMLTextAreaElement &&
+        document.activeElement.getAttribute("aria-controls") ===
+          anchor.closest('[role="listbox"]')?.id
+          ? document.activeElement
+          : undefined,
+    });
   return (
     <span
       ref={ref}

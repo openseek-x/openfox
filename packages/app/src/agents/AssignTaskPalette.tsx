@@ -88,7 +88,8 @@ export function AssignTaskPalette({
     queryFn: async (): Promise<Task[]> => {
       if (pasted) {
         try {
-          return [await api.tasks.byDisplayId(orgId, pasted)];
+          const task = await api.tasks.byDisplayId(orgId, pasted);
+          return task.space_id === target.spaceId ? [task] : [];
         } catch {
           return [];
         }

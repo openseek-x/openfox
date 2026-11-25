@@ -605,7 +605,7 @@ const Row = memo(function Row({
           group.unread && !cleared ? "bg-info" : "bg-info/10",
         )}
       />
-      <span className="pointer-events-none relative grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-center gap-4">
+      <span className="pointer-events-none relative grid min-w-0 [&_[aria-haspopup=dialog]]:pointer-events-auto flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-center gap-4">
         <span className="flex min-w-0 items-center gap-2">
           {group.task_status_category && (
             <StatusIcon category={group.task_status_category} labelled />

@@ -1030,6 +1030,7 @@ export function Composer({
                   key={option.value}
                   id={`${mentionId}-${option.value}`}
                   role="option"
+                  aria-label={option.label}
                   aria-selected={index === mentionIndex}
                   onMouseDown={(event) => event.preventDefault()}
                   onMouseMove={() => setActiveMention(index)}

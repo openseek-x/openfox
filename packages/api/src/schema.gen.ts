@@ -38303,6 +38303,8 @@ export interface operations {
     listAgentDirectory: {
         parameters: {
             query?: {
+                /** @description 仅查询该 Agent 的独立目录条目，应用相同的可见性与专属规则 */
+                agent_id?: string;
                 /** @description true 只看已归档 */
                 archived?: boolean;
             };

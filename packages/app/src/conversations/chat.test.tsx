@@ -323,13 +323,13 @@ describe("对话页", () => {
     const last = screen
       .getByText("第二条回复")
       .closest('[data-slot="agent-turn"]') as HTMLElement;
-    expect(within(first).getByText("熊猫")).toBeInTheDocument();
+    expect(await within(first).findByText("阿虎")).toBeVisible();
     expect(within(first).getByText("Agent")).toBeInTheDocument();
     await userEvent.click(
       within(first).getByRole("button", { name: /查看.*信息/ }),
     );
     expect(
-      await screen.findByRole("dialog", { name: "查看 a2 的信息" }),
+      await screen.findByRole("dialog", { name: "查看 阿虎 的信息" }),
     ).toBeInTheDocument();
     await userEvent.keyboard("{Escape}");
     const firstActions = first.querySelector('[data-slot="message-actions"]')!;

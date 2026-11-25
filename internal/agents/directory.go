@@ -81,6 +81,8 @@ type Directory struct {
 type DirectoryOptions struct {
 	// Archived 为 true 时只列已归档的条目（「显示已归档」对话框）。
 	Archived bool
+	// AgentID 只查指定的独立目录条目，沿用可见性与小队专属过滤。
+	AgentID string
 }
 
 // PinTarget 只能填一个：Agent 或小队。
@@ -125,6 +127,14 @@ func (s PostgresStore) Directory(ctx context.Context, selection tenancy.Organiza
 	if err := s.validate(selection, actor); err != nil {
 		return Directory{}, err
 	}
+	var agentID *string
+	if options.AgentID != "" {
+		id, err := normalizeUUID(options.AgentID)
+		if err != nil {
+			return Directory{}, err
+		}
+		agentID = &id
+	}
 	role := strings.ToUpper(string(actor.Role))
 	result := Directory{Entries: make([]DirectoryEntry, 0)}
 	err := s.run(ctx, selection, func(ctx context.Context, tx pgx.Tx) error {
@@ -148,14 +158,22 @@ func (s PostgresStore) Directory(ctx context.Context, selection tenancy.Organiza
 			   AND `+directorySpaceSQL+`
 			   AND `+directoryAgentVisibleSQL+` AND `+agentNotExclusiveSQL+`
 			   AND (a.archived_at IS NOT NULL) = $2
+			   AND ($4::uuid IS NULL OR a.id = $4::uuid)
 			 ORDER BY a.created_at, a.id
-			 LIMIT $3`, role, options.Archived, MaxDirectoryEntries+1)
+			 LIMIT $3`, role, options.Archived, MaxDirectoryEntries+1, agentID)
 		if err != nil {
 			return err
 		}
 		agents, truncated, err := scanDirectoryRows(agentRows, actor.UserID, DirectoryTypeAgent)
 		if err != nil {
 			return err
+		}
+		if agentID != nil {
+			result.Entries = agents
+			if options.Archived {
+				result.ArchivedCount = len(agents)
+			}
+			return nil
 		}
 		crewRows, err := tx.Query(ctx, `
 			SELECT cr.id::text, cr.space_id::text, s.name, cr.name, cr.description, '', cr.visibility,

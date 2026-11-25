@@ -45,6 +45,8 @@ test("目录头像独立打开资料，快捷操作保留 Agent 身份", async (
             name: "研发空间",
             prefix: "DEV",
             status: "active",
+            visibility: "shared",
+            my_role: "OWNER",
             features: {},
           },
         ],

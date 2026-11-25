@@ -445,6 +445,15 @@ func TestAgentsCrews(t *testing.T) {
 			t.Fatal("exclusive Agent listed in the directory")
 		}
 	}
+	// 精确查询沿用同一个专属过滤，普通成员可独立操作。
+	manager.must(http.StatusOK, http.MethodGet, "agent-directory?agent_id="+leader.ID, nil, &directory)
+	if len(directory.Entries) != 0 {
+		t.Fatal("exclusive Agent returned by exact directory lookup")
+	}
+	manager.must(http.StatusOK, http.MethodGet, "agent-directory?agent_id="+worker.ID, nil, &directory)
+	if len(directory.Entries) != 1 || directory.Entries[0].ID != worker.ID || directory.Entries[0].Type != "agent" {
+		t.Fatalf("exact directory lookup = %+v", directory.Entries)
+	}
 	conversation := func(agentID, taskID string) agResponse {
 		body := map[string]any{"space_id": space, "agent_id": agentID, "visibility": "PRIVATE"}
 		if taskID != "" {
