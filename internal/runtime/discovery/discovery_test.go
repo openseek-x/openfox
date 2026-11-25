@@ -59,6 +59,45 @@ func TestPriorityFallbackAndRescan(t *testing.T) {
 	}
 }
 
+func TestBundledPiOnMac(t *testing.T) {
+	home := t.TempDir()
+	bundle := filepath.Join(home, ".local/share/openfox/desktop-pi")
+	if err := os.MkdirAll(bundle, 0700); err != nil {
+		t.Fatal(err)
+	}
+	pi := filepath.Join(bundle, "pi")
+	if err := os.WriteFile(pi, nil, 0700); err != nil {
+		t.Fatal(err)
+	}
+	env := map[string]string{}
+	search := Search{Home: home, OS: "darwin", Getenv: func(k string) string { return env[k] }}
+	tool := Tool{Name: "pi", EnvKeys: []string{"OPENFOX_PI_PATH"}}
+	probe := func(string) (string, error) { return "1.5.0", nil }
+	check := func(source string) {
+		t.Helper()
+		c, _, err := search.Resolve(t.Context(), tool, "", probe)
+		if err != nil || c.Source != source || c.Path != pi {
+			t.Fatalf("candidate=%+v err=%v", c, err)
+		}
+	}
+	check("macos_app")
+	if got, err := search.KnownPath(t.Context(), tool, "", pi); err != nil || got != pi {
+		t.Fatalf("known path=%q err=%v", got, err)
+	}
+	env["PATH"] = bundle
+	check("path")
+	env["OPENFOX_PI_PATH"] = filepath.Join(home, "missing")
+	if _, _, err := search.Resolve(t.Context(), tool, "", probe); err == nil {
+		t.Fatal("显式选择无效时不应改用内置 Pi")
+	}
+	delete(env, "OPENFOX_PI_PATH")
+	delete(env, "PATH")
+	search.OS = "linux"
+	if _, _, err := search.Resolve(t.Context(), tool, "", probe); err == nil {
+		t.Fatal("其他平台不应发现 macOS 安装包")
+	}
+}
+
 func TestOneLoginShellPerScan(t *testing.T) {
 	home := t.TempDir()
 	calls := 0
