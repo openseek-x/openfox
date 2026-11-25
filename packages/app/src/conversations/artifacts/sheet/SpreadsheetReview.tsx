@@ -1,5 +1,13 @@
 import { useViewState, usePreviewScroll } from "../viewState";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffectEvent,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type {
   ArtifactAnnotation,
   ArtifactReviewAnchor,
@@ -192,41 +200,47 @@ export function SpreadsheetReview({
     setOffset({ x: 0, y: 0 });
     request.current({ kind: "sheet", index: next });
   };
-  const rangeBox = (r: Range) => {
-    const rows = rowTracks.filter((v) => v.index >= r.r1 && v.index <= r.r2),
-      cols = colTracks.filter((v) => v.index >= r.c1 && v.index <= r.c2);
-    if (!rows.length || !cols.length) return null;
-    return {
-      x: cols[0]!.start,
-      y: rows[0]!.start,
-      w: cols.at(-1)!.end - cols[0]!.start,
-      h: rows.at(-1)!.end - rows[0]!.start,
-    };
-  };
-  const anchorRange = (a: ArtifactReviewAnchor): Range | undefined => {
-    if (a.kind === "office") {
-      const u = byID.get(a.target ?? "")?.cell_source;
-      if (u?.sheet === index)
-        return { r1: u.row, r2: u.row, c1: u.column, c2: u.column };
-    }
-    if (a.kind === "office_range" && a.target === sheets[index]!.part) {
-      const match = /^([A-Z]+)([1-9][0-9]*)(?::([A-Z]+)([1-9][0-9]*))?$/.exec(
-        a.range ?? "",
-      );
-      if (match) {
-        const col = (s: string) =>
-          [...s].reduce((n, c) => n * 26 + c.charCodeAt(0) - 64, 0) - 1;
-        return {
-          r1: Number(match[2]) - 1,
-          c1: col(match[1]!),
-          r2: Number(match[4] ?? match[2]) - 1,
-          c2: col(match[3] ?? match[1]!),
-        };
+  const rangeBox = useCallback(
+    (r: Range) => {
+      const rows = rowTracks.filter((v) => v.index >= r.r1 && v.index <= r.r2),
+        cols = colTracks.filter((v) => v.index >= r.c1 && v.index <= r.c2);
+      if (!rows.length || !cols.length) return null;
+      return {
+        x: cols[0]!.start,
+        y: rows[0]!.start,
+        w: cols.at(-1)!.end - cols[0]!.start,
+        h: rows.at(-1)!.end - rows[0]!.start,
+      };
+    },
+    [rowTracks, colTracks],
+  );
+  const anchorRange = useCallback(
+    (a: ArtifactReviewAnchor): Range | undefined => {
+      if (a.kind === "office") {
+        const u = byID.get(a.target ?? "")?.cell_source;
+        if (u?.sheet === index)
+          return { r1: u.row, r2: u.row, c1: u.column, c2: u.column };
       }
-    }
-    return undefined;
-  };
-  useEffect(() => {
+      if (a.kind === "office_range" && a.target === sheets[index]!.part) {
+        const match = /^([A-Z]+)([1-9][0-9]*)(?::([A-Z]+)([1-9][0-9]*))?$/.exec(
+          a.range ?? "",
+        );
+        if (match) {
+          const col = (s: string) =>
+            [...s].reduce((n, c) => n * 26 + c.charCodeAt(0) - 64, 0) - 1;
+          return {
+            r1: Number(match[2]) - 1,
+            c1: col(match[1]!),
+            r2: Number(match[4] ?? match[2]) - 1,
+            c2: col(match[3] ?? match[1]!),
+          };
+        }
+      }
+      return undefined;
+    },
+    [byID, index, sheets],
+  );
+  const locateSelection = useEffectEvent(() => {
     if (!located) return;
     const target =
       located.kind === "region"
@@ -249,8 +263,11 @@ export function SpreadsheetReview({
           Math.max(0, b.y - frame.frozenHeight) * scale,
         );
     } else if (located.kind === "region") setObject(located);
-  }, [located, frame, index]);
-  const panes = () => {
+  });
+  useEffect(() => {
+    locateSelection();
+  }, [located, frame, index, byID, scale]);
+  const bands = useMemo(() => {
     if (!frame) return [];
     const vw = Math.max(0, (size.width - LEFT) / scale),
       vh = Math.max(0, (size.height - TOP) / scale),
@@ -276,7 +293,7 @@ export function SpreadsheetReview({
         })),
       )
       .filter((p) => p.w > 0 && p.h > 0);
-  };
+  }, [frame, size.width, size.height, scale, offset.x, offset.y]);
   useLayoutEffect(() => {
     const c = canvas.current;
     if (!c) return;
@@ -288,7 +305,6 @@ export function SpreadsheetReview({
     ctx.fillStyle = "#fff";
     ctx.fillRect(0, 0, size.width, size.height);
     if (!frame || !image.current) return;
-    const bands = panes();
     for (const p of bands)
       ctx.drawImage(
         image.current,
@@ -417,6 +433,12 @@ export function SpreadsheetReview({
     object,
     annotations,
     located,
+    index,
+    bands,
+    anchorRange,
+    rangeBox,
+    rowTracks,
+    colTracks,
   ]);
   const point = (e: { clientX: number; clientY: number }) => {
     const b = canvas.current!.getBoundingClientRect();

@@ -1,0 +1,49 @@
+name: Quality checks
+on:
+  pull_request:
+    branches: [develop, master]
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: macos-15
+    timeout-minutes: 90
+    env:
+      GOFLAGS: -p=2
+      VITEST_MAX_WORKERS: '2'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22.23.1'
+      - name: Install build and test tools
+        run: |
+          brew list --versions postgresql@17 || brew install postgresql@17
+          echo "$(brew --prefix postgresql@17)/bin" >> "$GITHUB_PATH"
+          npm install --global pnpm@11.15.1
+          pnpm install --frozen-lockfile
+      - name: Go, isolated PostgreSQL and migrations
+        run: |
+          make check
+          git diff --exit-code
+      - name: Frontend and API contracts
+        run: pnpm check
+      - name: Browser tests with the live API
+        run: |
+          pnpm exec playwright install chromium
+          python3 tests/integration/run_all.py --browser-only
+      - name: Static deployment tests
+        run: python3 deploy/test_publish_static.py
+  center:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - run: docker build --build-arg OPENFOX_VERSION="$GITHUB_SHA" -t openfox:center-check .
+      - run: bash deploy/test-center.sh openfox:center-check "$GITHUB_SHA"

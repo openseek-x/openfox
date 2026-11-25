@@ -67,13 +67,14 @@ export function DeviceSettingsEditor({
       setDraft(settings);
     },
   });
+  const startCommand = command.start;
   const requested = useRef(false);
   useEffect(() => {
     if (inline && !disabled && !requested.current) {
       requested.current = true;
-      command.start({});
+      startCommand({});
     }
-  }, [inline, disabled, command.start]);
+  }, [inline, disabled, startCommand]);
   const label =
     section === "cli" && provider !== "codex"
       ? t("connect.devicePolicy.providerPath", { name: runtimeName(provider) })

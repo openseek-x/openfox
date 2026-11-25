@@ -16,6 +16,50 @@ import (
 	"openfox/internal/tenancy"
 )
 
+func TestDispatchRequiresMatchingHeartbeatEpoch(t *testing.T) {
+	h := newHarness(t)
+	task := h.createAssignedTask(statusTodo, gateAgent, "设备纪元核对")
+	pass := h.runOnce()
+	run, _ := h.taskRun(task)
+	offer, ok := offerFor(pass, run)
+	if !ok {
+		t.Fatalf("没有获得预期的派发: %+v", pass)
+	}
+
+	// 仅改变夹具设备的心跳纪元，保留已生成的 offer 和准备中的租约。
+	setEpoch := func(offset int) {
+		h.exec(`UPDATE openfox.physical_devices SET center_epoch = openfox_private.current_center_epoch() + $2 WHERE id = $1::uuid`, gateDevice, offset)
+	}
+	setEpoch(1)
+	h.inDevice(gateDevice, func(ctx context.Context, tx pgx.Tx) error {
+		offers, err := h.store.ListOffers(ctx, tx, orgA, gateDevice, 10)
+		if len(offers) != 0 {
+			t.Fatalf("设备纪元不同仍能列出派发: %+v", offers)
+		}
+		return err
+	})
+	err := h.tryDevice(gateDevice, func(ctx context.Context, tx pgx.Tx) error {
+		_, err := h.store.Claim(ctx, tx, orgA, gateDevice, offer.OfferID)
+		return err
+	})
+	if !errors.Is(err, dispatch.ErrNotFound) {
+		t.Fatalf("设备纪元不同时领取结果: %v", err)
+	}
+	setEpoch(0)
+	lease := h.claim(gateDevice, offer.OfferID)
+	setEpoch(1)
+	err = h.tryDevice(gateDevice, func(ctx context.Context, tx pgx.Tx) error {
+		_, err := h.store.Start(ctx, tx, orgA, gateDevice, lease.RunID, lease.Generation)
+		return err
+	})
+	if !errors.Is(err, dispatch.ErrReconciliationRequired) {
+		t.Fatalf("设备纪元不同时启动结果: %v", err)
+	}
+	h.expectRow(`SELECT state FROM openfox.runs WHERE id = $1::uuid`, []any{run}, "PREPARING")
+	setEpoch(0)
+	h.finish(gateDevice, lease)
+}
+
 // G-02：待规划任务的自动触发排队等待（TASK_GATE），不占容量、不挡同一 Agent 的其他任务，任务可执行后自动推进。
 func TestTaskGateWaitsWithoutCapacityThenRuns(t *testing.T) {
 	h := newHarness(t)

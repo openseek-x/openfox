@@ -81,18 +81,25 @@ export function useMySource(
   extra: Pick<MyTaskListQuery, "scope" | "space_id">,
 ): TaskSource {
   const api = useApi();
-  const spaceKey = (extra.space_id ?? []).join(",");
+  const { scope } = extra;
+  const spaceKey = extra.space_id?.join(",");
   return useMemo(
-    () => ({
-      scope: `my:${extra.scope ?? "all"}:${spaceKey}`,
-      list: (query) => api.myTasks.list(orgId, myQuery(query, extra)),
-      counts: (query) => api.myTasks.counts(orgId, myQuery(query, extra)),
-      stats: (query, tz) =>
-        api.myTasks.stats(orgId, { ...myQuery(query, extra), tz }),
-      manualSort: false,
-    }),
+    () => {
+      const filters = {
+        scope,
+        space_id: spaceKey ? spaceKey.split(",") : undefined,
+      };
+      return {
+        scope: `my:${scope ?? "all"}:${spaceKey ?? ""}`,
+        list: (query) => api.myTasks.list(orgId, myQuery(query, filters)),
+        counts: (query) => api.myTasks.counts(orgId, myQuery(query, filters)),
+        stats: (query, tz) =>
+          api.myTasks.stats(orgId, { ...myQuery(query, filters), tz }),
+        manualSort: false,
+      };
+    },
     // extra 按值比较：scope 与空间列表不变时复用同一个来源
-    [api, orgId, extra.scope, spaceKey],
+    [api, orgId, scope, spaceKey],
   );
 }
 

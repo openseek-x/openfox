@@ -7,7 +7,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { App, createQueryClient } from "../App";
 import { entry } from "../agents/fixtures";
@@ -175,6 +175,38 @@ describe("空间任务看板", () => {
 });
 
 describe("新建任务", () => {
+  it("本机存储拒绝访问时仍可切换创建方式", async () => {
+    const user = userEvent.setup();
+    renderAt(spaceTasks);
+    await screen.findByRole("region", { name: "待处理 2" });
+    const getItem = Storage.prototype.getItem;
+    const setItem = Storage.prototype.setItem;
+    const key = `openfox:task-create-mode:${ORG}`;
+    const read = vi
+      .spyOn(Storage.prototype, "getItem")
+      .mockImplementation(function (this: Storage, name) {
+        if (name === key) throw new DOMException("存储不可用", "SecurityError");
+        return getItem.call(this, name);
+      });
+    const write = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(function (this: Storage, name, value) {
+        if (name === key) throw new DOMException("存储不可用", "SecurityError");
+        return setItem.call(this, name, value);
+      });
+    try {
+      await user.keyboard("c");
+      const dialog = await screen.findByRole("dialog", { name: "新建任务" });
+      await user.click(
+        within(dialog).getByRole("button", { name: "切换到智能体" }),
+      );
+      expect(dialog).toHaveAccessibleName("通过智能体创建");
+    } finally {
+      read.mockRestore();
+      write.mockRestore();
+    }
+  });
+
   it("通过智能体提交需求，保留切换前的文字并记住创建方式", async () => {
     let attempts = 0;
     const user = userEvent.setup();

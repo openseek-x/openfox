@@ -35,7 +35,7 @@ type FeishuBotRef struct {
 	Name string `json:"name"`
 }
 
-type FeishuBotRuntime struct {
+type IMBotRuntime struct {
 	ComputerID   string `json:"computer_id"`
 	ComputerName string `json:"computer_name"`
 	GrantID      string `json:"grant_id"`
@@ -45,21 +45,21 @@ type FeishuBotRuntime struct {
 
 // FeishuBot 对应契约 FeishuBot。
 type FeishuBot struct {
-	ID           string            `json:"id"`
-	Kind         string            `json:"kind"`
-	ConnectionID string            `json:"connection_id"`
-	AppID        string            `json:"app_id"`
-	BotName      string            `json:"bot_name"`
-	BotAvatarURL string            `json:"bot_avatar_url"`
-	Status       string            `json:"status"`
-	StatusReason string            `json:"status_reason"`
-	Agent        FeishuBotRef      `json:"agent"`
-	Space        *FeishuBotRef     `json:"space"`
-	ExtraPrompt  string            `json:"extra_prompt"`
-	Runtime      *FeishuBotRuntime `json:"runtime"`
-	CanManage    bool              `json:"can_manage"`
-	CreatedAt    time.Time         `json:"created_at"`
-	Version      uint64            `json:"version"`
+	ID           string        `json:"id"`
+	Kind         string        `json:"kind"`
+	ConnectionID string        `json:"connection_id"`
+	AppID        string        `json:"app_id"`
+	BotName      string        `json:"bot_name"`
+	BotAvatarURL string        `json:"bot_avatar_url"`
+	Status       string        `json:"status"`
+	StatusReason string        `json:"status_reason"`
+	Agent        FeishuBotRef  `json:"agent"`
+	Space        *FeishuBotRef `json:"space"`
+	ExtraPrompt  string        `json:"extra_prompt"`
+	Runtime      *IMBotRuntime `json:"runtime"`
+	CanManage    bool          `json:"can_manage"`
+	CreatedAt    time.Time     `json:"created_at"`
+	Version      uint64        `json:"version"`
 }
 
 type FeishuAssistantRow struct {
@@ -186,7 +186,7 @@ func (s Service) fillBotDetails(ctx context.Context, tx pgx.Tx, organizationID s
 		return err
 	}
 	if runtime != nil {
-		r.bot.Runtime = &FeishuBotRuntime{ComputerID: runtime.ComputerID, ComputerName: runtime.ComputerName, GrantID: runtime.GrantID,
+		r.bot.Runtime = &IMBotRuntime{ComputerID: runtime.ComputerID, ComputerName: runtime.ComputerName, GrantID: runtime.GrantID,
 			Runtime: runtime.Runtime, Model: runtime.Model}
 	}
 	return nil

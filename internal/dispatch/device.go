@@ -26,9 +26,11 @@ func (s Store) ListOffers(ctx context.Context, tx pgx.Tx, organizationID, device
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT id::text, run_id::text, generation, expires_at
-		  FROM openfox.dispatch_offers
+		  FROM openfox.dispatch_offers o
 		 WHERE organization_id = openfox_private.current_organization_id()
 		   AND target_device_id = $1::uuid AND status = 'LIVE' AND expires_at > clock_timestamp()
+		   AND EXISTS (SELECT 1 FROM openfox.physical_devices d WHERE d.id = o.target_device_id
+		               AND d.center_epoch = openfox_private.current_center_epoch())
 		 ORDER BY expires_at, id LIMIT $2`, deviceID, limit)
 	if err != nil {
 		return nil, err
@@ -56,8 +58,10 @@ func (s Store) Claim(ctx context.Context, tx pgx.Tx, organizationID, deviceID, o
 	var generation int64
 	err := tx.QueryRow(ctx, `
 		SELECT run_id::text, generation, target_device_id::text, status
-		  FROM openfox.dispatch_offers
-		 WHERE organization_id = openfox_private.current_organization_id() AND id = $1::uuid`, offerID).
+		  FROM openfox.dispatch_offers o
+		 WHERE organization_id = openfox_private.current_organization_id() AND id = $1::uuid
+		   AND EXISTS (SELECT 1 FROM openfox.physical_devices d WHERE d.id = o.target_device_id
+		               AND d.center_epoch = openfox_private.current_center_epoch())`, offerID).
 		Scan(&runID, &generation, &targetDevice, &status)
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && targetDevice != deviceID) {
 		// 其他设备的 offer 与不存在的 offer 不可区分。
@@ -461,6 +465,17 @@ func (s Store) Start(ctx context.Context, tx pgx.Tx, organizationID, deviceID, r
 	}
 	if !leaseLive(run) {
 		return Lease{}, ErrStateConflict
+	}
+	// 恢复前已经领取但仍在准备的任务，也要在实际启动前核对设备纪元。
+	if run.State == execution.StatePreparing {
+		var current bool
+		if err := tx.QueryRow(ctx, `SELECT center_epoch = openfox_private.current_center_epoch()
+			FROM openfox.physical_devices WHERE id = $1::uuid`, deviceID).Scan(&current); err != nil {
+			return Lease{}, err
+		}
+		if !current {
+			return Lease{}, ErrReconciliationRequired
+		}
 	}
 	allowed, err := runStillAuthorized(ctx, tx, organizationID, run)
 	if err != nil {
