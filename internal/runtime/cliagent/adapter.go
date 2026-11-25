@@ -24,6 +24,7 @@ import (
 
 	"openfox/internal/runtime"
 	"openfox/internal/runtime/codex"
+	"openfox/internal/runtime/discovery"
 	"openfox/internal/runtime/toolbridge"
 	"openfox/internal/runtimepolicy"
 )
@@ -66,6 +67,7 @@ type protocol struct {
 
 	probe         func(context.Context, *Adapter, string) (string, error)
 	versionArgs   []string
+	helpSignature [2]string
 	login         func(ctx context.Context, a *Adapter, path string, env map[string]string) runtime.LoginStatus
 	listModels    func(ctx context.Context, a *Adapter, path string, env map[string]string) ([]Model, error)
 	defaultModels []Model
@@ -98,8 +100,8 @@ type Adapter struct {
 	geminiEndpoint string
 	proto          protocol
 	mu             sync.Mutex
-	// resolved 缓存上次发现成功的路径。
-	resolved string
+	// devicePath 是设备所有者验证并保存的启动入口。
+	devicePath string
 }
 
 // ApprovalModes 返回适配器真正支持的权限档位（一定含 FOLLOW_RUNTIME），写进心跳 capabilities。
@@ -161,7 +163,8 @@ func (a *Adapter) Detect(ctx context.Context) (runtime.Capabilities, error) {
 	if a.Name() == NameGemini {
 		return a.detectGemini(ctx)
 	}
-	path, output, err := a.locate(ctx)
+	candidate, output, err := a.locate(ctx)
+	path := candidate.Path
 	if err != nil {
 		if path != "" {
 			return runtime.Capabilities{Runtime: a.proto.name, Executable: path, Login: runtime.LoginUnknown, Reason: "version probe failed"}, err
@@ -180,7 +183,7 @@ func (a *Adapter) Detect(ctx context.Context) (runtime.Capabilities, error) {
 		cancel()
 	}
 	report := runtime.Capabilities{
-		Runtime: a.proto.name, Version: version, Executable: path, Login: login,
+		Runtime: a.proto.name, Version: version, Executable: path, DiscoverySource: candidate.Source, Login: login,
 		// 登录状态判断不了（unknown）时不拦截：能否运行取决于命令可执行，失败原因由 Run 结果说明。
 		Runnable:           login != runtime.LoginLoggedOut,
 		SupportsJSONEvents: true, SupportsCancel: true, SupportsResume: true,
@@ -212,7 +215,8 @@ func (a *Adapter) ListModels(ctx context.Context) ([]Model, error) {
 	if a.proto.listModels == nil {
 		return defaults, nil
 	}
-	path, _, err := a.locate(ctx)
+	candidate, _, err := a.locate(ctx)
+	path := candidate.Path
 	if err != nil {
 		return defaults, err
 	}
@@ -461,85 +465,71 @@ func (a *Adapter) makeStateDir() (string, error) {
 	return dir, nil
 }
 
-// locate 返回可执行文件路径及其 --version 输出。显式配置失败时直接报错。
-func (a *Adapter) locate(ctx context.Context) (string, string, error) {
-	probe := func(path string) (string, error) {
-		probeCtx, cancel := context.WithTimeout(ctx, a.probeTimeout())
-		defer cancel()
+func (a *Adapter) tool() discovery.Tool {
+	return discovery.Tool{Name: a.proto.executables[0], EnvKeys: []string{a.proto.envPath}, UserBins: a.proto.wellKnown}
+}
+
+func (a *Adapter) configuredPath() string {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.devicePath != "" {
+		return a.devicePath
+	}
+	return a.Executable
+}
+
+// locate 返回可执行文件路径及其版本。显式配置失败时直接报错。
+func (a *Adapter) locate(ctx context.Context) (discovery.Candidate, string, error) {
+	ctx, cancel := context.WithTimeout(ctx, a.probeTimeout()+discovery.ShellTimeout)
+	defer cancel()
+	return discovery.Local().Resolve(ctx, a.tool(), a.configuredPath(), func(path string) (string, error) {
+		probeCtx, stop := context.WithTimeout(ctx, a.probeTimeout())
+		defer stop()
 		if a.proto.probe != nil {
 			return a.proto.probe(probeCtx, a, path)
 		}
-		return runProbe(probeCtx, path, a.baseEnv(path), a.proto.versionArgs...)
-	}
-	explicit := strings.TrimSpace(a.Executable)
-	if explicit == "" {
-		explicit = strings.TrimSpace(os.Getenv(a.proto.envPath))
-	}
-	if explicit != "" {
-		path := explicit
-		if !filepath.IsAbs(path) {
-			resolved, err := exec.LookPath(path)
-			if err != nil {
-				return "", "", fmt.Errorf("%w: %s executable %q not found", runtime.ErrUnavailable, a.proto.display, explicit)
+		out, err := runProbe(probeCtx, path, a.baseEnv(path), a.proto.versionArgs...)
+		if err != nil {
+			return "", err
+		}
+		if !versionPattern.MatchString(out) {
+			return "", fmt.Errorf("%w: %s returned no version", runtime.ErrUnsupported, a.DisplayName())
+		}
+		// Pi 和 OpenCode 的版本输出只有数字，核对供应商命令才能排除同名程序。
+		signature := a.proto.helpSignature
+		if signature[0] != "" {
+			help, err := runProbe(probeCtx, path, a.baseEnv(path), "--help")
+			if err != nil || !strings.Contains(help, signature[0]) || !strings.Contains(help, signature[1]) {
+				return "", fmt.Errorf("%w: incompatible %s CLI", runtime.ErrUnsupported, a.DisplayName())
 			}
-			path = resolved
 		}
-		if !isExecutableFile(path) {
-			return "", "", fmt.Errorf("%w: %s executable %q is not executable", runtime.ErrUnavailable, a.proto.display, explicit)
-		}
-		output, err := probe(path)
-		if err != nil {
-			return path, "", fmt.Errorf("%w: version probe: %s", runtime.ErrUnavailable, safeError(err))
-		}
-		return path, output, nil
-	}
-	a.mu.Lock()
-	cached := a.resolved
-	a.mu.Unlock()
-	if cached != "" && isExecutableFile(cached) {
-		if output, err := probe(cached); err == nil {
-			return cached, output, nil
-		}
-	}
-	for _, path := range a.candidates() {
-		output, err := probe(path)
-		if err != nil {
-			continue
-		}
-		a.mu.Lock()
-		a.resolved = path
-		a.mu.Unlock()
-		return path, output, nil
-	}
-	return "", "", fmt.Errorf("%w: %s executable not found", runtime.ErrUnavailable, a.proto.display)
+		return out, nil
+	})
 }
 
-// candidates 按顺序返回候选路径：PATH、HOME 下的常见安装目录、系统目录；去重。
-func (a *Adapter) candidates() []string {
-	var dirs []string
-	for _, dir := range filepath.SplitList(os.Getenv("PATH")) {
-		if filepath.IsAbs(dir) {
-			dirs = append(dirs, dir)
-		}
+// ValidateDevicePath 先对照本机供应商的安装清单，再用该适配器验证版本或协议。
+func (a *Adapter) ValidateDevicePath(ctx context.Context, path string) (string, error) {
+	if path == "" {
+		return "", nil
 	}
-	if home, err := os.UserHomeDir(); err == nil && home != "" {
-		for _, rel := range a.proto.wellKnown {
-			dirs = append(dirs, filepath.Join(home, rel))
-		}
+	known, err := discovery.Local().KnownPath(ctx, a.tool(), a.Executable, path)
+	if err != nil {
+		return "", err
 	}
-	dirs = append(dirs, "/opt/homebrew/bin", "/usr/local/bin")
-	seen := map[string]bool{}
-	var result []string
-	for _, dir := range dirs {
-		for _, name := range a.proto.executables {
-			path := filepath.Join(dir, name)
-			if !seen[path] && isExecutableFile(path) {
-				seen[path] = true
-				result = append(result, path)
-			}
-		}
+	probe := New(a.Name(), known)
+	probe.StateRoot = a.StateRoot
+	cap, err := probe.Detect(ctx)
+	if err != nil || cap.Version == "" || cap.Version == "unknown" || a.Name() == NameCodeBuddy && !cap.ProtocolReady {
+		return "", runtime.ErrUnavailable
 	}
-	return result
+
+	return known, nil
+}
+
+func (a *Adapter) UseDevicePath(path string) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.devicePath = path
 }
 
 func (a *Adapter) probeTimeout() time.Duration {
@@ -580,24 +570,9 @@ func (a *Adapter) baseEnv(executable string) map[string]string {
 		env[key] = value
 	}
 	if executable != "" {
-		dir := filepath.Dir(executable)
-		// 可执行文件所在目录放到 PATH 最前，使 node 等同目录的依赖可被找到。
-		if path := env["PATH"]; path == "" {
-			env["PATH"] = dir
-		} else if !containsDir(path, dir) {
-			env["PATH"] = dir + string(os.PathListSeparator) + path
-		}
+		env["PATH"] = discovery.ExecutablePath(env["PATH"], executable)
 	}
 	return env
-}
-
-func containsDir(path, dir string) bool {
-	for _, item := range filepath.SplitList(path) {
-		if item == dir {
-			return true
-		}
-	}
-	return false
 }
 
 func hasAnyPrefix(value string, prefixes []string) bool {
@@ -631,31 +606,23 @@ func validEnvName(value string) bool {
 	return true
 }
 
-func isExecutableFile(path string) bool {
-	info, err := os.Stat(path)
-	return err == nil && info.Mode().IsRegular() && info.Mode().Perm()&0o111 != 0
-}
-
 // runProbe 运行探测命令并返回合并的输出（上限 64 KiB）；非零退出返回错误，但输出仍然返回。
 func runProbe(ctx context.Context, executable string, env map[string]string, args ...string) (string, error) {
 	cmd := exec.CommandContext(ctx, executable, args...)
 	cmd.Env = environmentSlice(env)
 	cmd.Dir = os.TempDir()
+	cmd.WaitDelay = 250 * time.Millisecond
 	var output limitedBuffer
 	cmd.Stdout, cmd.Stderr = &output, &output
 	err := cmd.Run()
-	return output.String(), err
+	return output.buf.String(), err
 }
 
-type limitedBuffer struct{ bytes.Buffer }
+type limitedBuffer struct{ buf bytes.Buffer }
 
 func (b *limitedBuffer) Write(p []byte) (int, error) {
-	if remaining := 64*1024 - b.Len(); remaining > 0 {
-		if len(p) > remaining {
-			b.Buffer.Write(p[:remaining])
-		} else {
-			b.Buffer.Write(p)
-		}
+	if remaining := 64*1024 - b.buf.Len(); remaining > 0 {
+		b.buf.Write(p[:min(len(p), remaining)])
 	}
 	return len(p), nil
 }

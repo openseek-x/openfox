@@ -12,6 +12,7 @@ import {
   useToast,
 } from "@openfox/ui";
 import { commandRequestError, commandSettledError } from "./ComputerStorage";
+import { runtimeName } from "./model";
 import { useDeviceCommand } from "./commands";
 
 type Section = "cli" | "args" | "protection";
@@ -21,12 +22,14 @@ export function DeviceSettingsEditor({
   disabled,
   section,
   inline = false,
+  provider = "codex",
 }: {
   orgId: string;
   deviceId: string;
   disabled: boolean;
   section: Section;
   inline?: boolean;
+  provider?: string;
 }) {
   const t = useT(),
     toast = useToast();
@@ -71,7 +74,24 @@ export function DeviceSettingsEditor({
       command.start({});
     }
   }, [inline, disabled, command.start]);
-  const label = t(`connect.devicePolicy.${section}`);
+  const label =
+    section === "cli" && provider !== "codex"
+      ? t("connect.devicePolicy.providerPath", { name: runtimeName(provider) })
+      : t(`connect.devicePolicy.${section}`);
+  const binary =
+    provider === "cursor"
+      ? "cursor-agent"
+      : provider === "claude-code"
+        ? "claude"
+        : provider;
+  const lookup = "command -v " + binary;
+  const cliPath =
+    provider === "codex" ? draft?.codex_path : draft?.runtime_paths?.[provider];
+  function setPath(value: string) {
+    if (provider === "codex") change({ codex_path: value });
+    else
+      change({ runtime_paths: { ...draft?.runtime_paths, [provider]: value } });
+  }
   function change(patch: Partial<DevicePreferences>) {
     if (draft) setDraft({ ...draft, ...patch });
     setError("");
@@ -130,13 +150,13 @@ export function DeviceSettingsEditor({
         <>
           <p>{t("connect.devicePolicy.findCli")}</p>
           <div className="flex items-center justify-between rounded-md bg-surface-muted px-3 py-2">
-            <code>command -v codex</code>
+            <code>{lookup}</code>
             <Button
               size="28"
               variant="ghost"
               onClick={() =>
                 void navigator.clipboard
-                  .writeText("command -v codex")
+                  .writeText(lookup)
                   .catch(() => setError(t("connect.remote.requestFailed")))
               }
             >
@@ -144,18 +164,18 @@ export function DeviceSettingsEditor({
             </Button>
           </div>
           <label className="grid gap-1">
-            {t("connect.devicePolicy.cli")}
+            {label}
             <TextInput
-              value={draft.codex_path}
-              placeholder="~/.local/bin/codex"
-              onChange={(e) => change({ codex_path: e.target.value })}
+              value={cliPath ?? ""}
+              placeholder={`~/.local/bin/${binary}`}
+              onChange={(e) => setPath(e.target.value)}
             />
           </label>
           <Button
             variant="ghost"
             size="28"
-            disabled={!draft.codex_path}
-            onClick={() => change({ codex_path: "" })}
+            disabled={!cliPath}
+            onClick={() => setPath("")}
           >
             {t("connect.devicePolicy.restore")}
           </Button>

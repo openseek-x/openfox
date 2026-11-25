@@ -155,6 +155,10 @@ func ParseRuntimes(capabilities json.RawMessage) []Runtime {
 	sort.Strings(providers)
 	for _, provider := range providers {
 		var item struct {
+			InstallPath              string         `json:"install_path"`
+			DiscoverySource          string         `json:"discovery_source"`
+			DiscoveryCached          bool           `json:"discovery_cached,omitempty"`
+			DiscoveryOnly            bool           `json:"discovery_only"`
 			Version                  string         `json:"version"`
 			Login                    string         `json:"login_status"`
 			Runnable                 bool           `json:"runnable"`
@@ -173,6 +177,8 @@ func ParseRuntimes(capabilities json.RawMessage) []Runtime {
 		}
 		runtime := Runtime{
 			Provider: provider, Version: nullable(item.Version), Runnable: item.Runnable,
+			InstallPath: item.InstallPath, DiscoverySource: item.DiscoverySource,
+			DiscoveryOnly: item.DiscoveryOnly, DiscoveryCached: item.DiscoveryCached,
 			ProtocolReady: item.ProtocolReady, RequiresRunConfiguration: item.RequiresRunConfiguration,
 			Reason: nullable(item.Reason), LoginStatus: nullable(item.Login), Models: item.Models,
 			ApprovalModes:      runtimepolicy.NormalizeApprovalModes(item.ApprovalModes),

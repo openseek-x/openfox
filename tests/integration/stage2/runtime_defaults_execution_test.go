@@ -91,6 +91,8 @@ func TestRuntimeDefaultsContextToProcess(t *testing.T) {
 import os,sys,json
 if '--version' in sys.argv:
  print('1.0.0');sys.exit(0)
+if '--help' in sys.argv:
+ print('--mode --session-dir');sys.exit(0)
 sys.stdin.read()
 with open(` + strconvQuote(capture) + `, 'w') as f:
  os.chmod(f.name,0o600)

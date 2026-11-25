@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"maps"
 
 	"openfox/internal/runtimepolicy"
 )
@@ -14,7 +15,7 @@ type DeviceSettings struct {
 	Settings runtimepolicy.DevicePreferences `json:"settings"`
 }
 
-type configurableCodex interface {
+type DevicePathSettings interface {
 	ValidateDevicePath(context.Context, string) (string, error)
 	UseDevicePath(string)
 }
@@ -32,16 +33,32 @@ func (s *Supervisor) loadDeviceSettings() error {
 	if err = json.Unmarshal([]byte(data), &s.preferences.Settings); err != nil {
 		return err
 	}
-	if a, ok := s.config.Adapter.(configurableCodex); ok {
+	for name, path := range s.preferences.Settings.RuntimePaths {
+		if a := s.pathSettings(name); a != nil {
+			a.UseDevicePath(path)
+		}
+	}
+	if a := s.pathSettings("codex"); a != nil {
 		a.UseDevicePath(s.preferences.Settings.CodexPath)
 	}
 	return nil
 }
+
+func (s *Supervisor) pathSettings(name string) DevicePathSettings {
+	if a, ok := s.adapterFor(name).(DevicePathSettings); ok {
+		return a
+	}
+	return s.config.DiscoveryPaths[name]
+}
+
 func (s *Supervisor) DeviceSettings() DeviceSettings {
 	s.prefsMu.RLock()
 	defer s.prefsMu.RUnlock()
-	return s.preferences
+	v := s.preferences
+	v.Settings.RuntimePaths = maps.Clone(v.Settings.RuntimePaths)
+	return v
 }
+
 func (s *Supervisor) ConfigureDevice(ctx context.Context, cmd runtimepolicy.DeviceSettingsCommand) (DeviceSettings, error) {
 	if cmd.Settings == nil {
 		return s.DeviceSettings(), nil
@@ -57,16 +74,39 @@ func (s *Supervisor) ConfigureDevice(ctx context.Context, cmd runtimepolicy.Devi
 	if next.SessionMaxMinutes == 0 {
 		next.SessionMaxMinutes = current.Settings.SessionMaxMinutes
 	}
-	a, ok := s.config.Adapter.(configurableCodex)
+	if current.Version != cmd.Version {
+		return DeviceSettings{}, errors.New("settings changed")
+	}
+	changes := map[string]string{}
 	if next.CodexPath != current.Settings.CodexPath {
-		if !ok {
+		changes["codex"] = next.CodexPath
+	}
+	for name, path := range next.RuntimePaths {
+		if path != current.Settings.RuntimePaths[name] {
+			changes[name] = path
+		}
+	}
+	next.RuntimePaths = maps.Clone(current.Settings.RuntimePaths)
+	for name, path := range changes {
+		a := s.pathSettings(name)
+		if a == nil {
 			return DeviceSettings{}, errors.New("runtime unavailable")
 		}
-		path, err := a.ValidateDevicePath(ctx, next.CodexPath)
+		validated, err := a.ValidateDevicePath(ctx, path)
 		if err != nil {
 			return DeviceSettings{}, err
 		}
-		next.CodexPath = path
+		changes[name] = validated
+		if name == "codex" {
+			next.CodexPath = validated
+		} else if validated == "" {
+			delete(next.RuntimePaths, name)
+		} else {
+			if next.RuntimePaths == nil {
+				next.RuntimePaths = map[string]string{}
+			}
+			next.RuntimePaths[name] = validated
+		}
 	}
 	s.prefsMu.Lock()
 	defer s.prefsMu.Unlock()
@@ -84,8 +124,8 @@ func (s *Supervisor) ConfigureDevice(ctx context.Context, cmd runtimepolicy.Devi
 	if n, err := result.RowsAffected(); err != nil || n != 1 {
 		return DeviceSettings{}, errors.New("settings changed")
 	}
-	if ok && current.Settings.CodexPath != next.CodexPath {
-		a.UseDevicePath(next.CodexPath)
+	for name, path := range changes {
+		s.pathSettings(name).UseDevicePath(path)
 	}
 	s.preferences = DeviceSettings{Version: cmd.Version + 1, Settings: next}
 	return s.preferences, nil

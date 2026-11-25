@@ -104,6 +104,12 @@ func (h *commandHandlers) baseHandlers() map[string]commands.Handler {
 			if e != nil {
 				return nil, &commands.CodedError{Code: "SETTINGS_REJECTED"}
 			}
+			if v.Settings != nil && h.reporter != nil {
+				select {
+				case h.reporter.refreshWake <- struct{}{}:
+				default:
+				}
+			}
 			return result, nil
 		},
 		commands.KindRuntimeProbe:         h.runtimeProbe,
