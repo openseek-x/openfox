@@ -1,7 +1,14 @@
 import { useViewState, usePreviewScroll } from "./viewState";
 import { Icon, IconButton } from "@openfox/ui";
 import { PreviewNavigation } from "./PreviewNavigation";
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import {
+  useEffectEvent,
+  lazy,
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import type { ArtifactAnnotation, ArtifactReviewAnchor } from "@openfox/api";
 import type { SelectionRect } from "./selection";
 import { useT } from "@openfox/i18n";
@@ -56,12 +63,15 @@ export function VisualReview({
     setDraft(null);
     start.current = null;
   }, [page, rotation, editable]);
-  useEffect(() => {
+  const locatePage = useEffectEvent(() => {
     if (located?.kind !== "region" && located?.kind !== "pdf_text") return;
     if ((located.page ?? 1) !== page) setReady(false);
     setPage(located.page ?? 1);
     setDraft(located);
     stage.current?.scrollIntoView?.({ block: "nearest" });
+  });
+  useEffect(() => {
+    locatePage();
   }, [located]);
   const point = (e: React.PointerEvent<HTMLDivElement>) => {
     const b = e.currentTarget.getBoundingClientRect();

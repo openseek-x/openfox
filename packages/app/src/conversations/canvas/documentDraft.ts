@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffectEvent, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { DocNodeDetail } from "@openfox/api";
 import { useApi, keys } from "../../context";
@@ -91,6 +91,9 @@ export function useCanvasDocument(
       if (mounted.current) setBusy(false);
     }
   };
+  const restoreDraft = useEffectEvent(() => {
+    if (initial && node.can_edit) save.schedule({ body: initial.body });
+  });
   const flushRef = useRef(flush);
   flushRef.current = flush;
   useEffect(() => {
@@ -98,13 +101,12 @@ export function useCanvasDocument(
     const id = `${store.scope}:${key}`;
     const fn = () => flushRef.current();
     writers.set(id, fn);
-    // Restored changes use their original baseline, not the refreshed server version.
-    if (initial && node.can_edit) save.schedule({ body: initial.body });
+    restoreDraft();
     return () => {
       mounted.current = false;
       if (writers.get(id) === fn) writers.delete(id);
     };
-  }, []);
+  }, [store.scope, key]);
   useEffect(() => {
     if (store.read(key) || node.version <= base.current.version) return;
     // Clean editors follow accepted proposals/history; dirty editors keep their baseline.
@@ -112,7 +114,7 @@ export function useCanvasDocument(
     base.current = node;
     body.current = node.body ?? "";
     setEpoch((v) => v + 1);
-  }, [node]);
+  }, [node, store, key]);
   const merge = async () => {
     if (!(save.error instanceof DocSaveConflict)) return;
     base.current = save.error.remote;

@@ -29,6 +29,7 @@ import {
   useInvitationAssignees,
 } from "../invitationAssignees";
 import { keys, useApi } from "../../context";
+import { readLocal, writeLocal } from "../../storage";
 import { workflowStatuses } from "../model";
 import {
   LabelDot,
@@ -129,8 +130,7 @@ export function CreateTaskDialog({
     !init.sourceComment &&
     (!init.assignee || /^(agent|crew):/.test(init.assignee.value));
   const [agentMode, setAgentMode] = useState(
-    () =>
-      canUseAgent && !init.manual && localStorage.getItem(modeKey) === "agent",
+    () => canUseAgent && !init.manual && readLocal(modeKey) === "agent",
   );
   const directory = useDirectory(orgId, agentMode);
   const creators = (directory.data?.entries ?? []).filter(
@@ -274,7 +274,7 @@ export function CreateTaskDialog({
       }
     } else setDescription(brief);
     setAgentMode(next);
-    localStorage.setItem(modeKey, next ? "agent" : "manual");
+    writeLocal(modeKey, next ? "agent" : "manual");
     requestAnimationFrame(() =>
       panel.current?.querySelector<HTMLElement>("[data-autofocus]")?.focus(),
     );

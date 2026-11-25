@@ -162,7 +162,7 @@ export function BrowserPanel({ session }: { session: BrowserSession }) {
   }, [active?.id, active?.url]);
   useEffect(() => {
     if (active?.url === "about:blank") addressInput.current?.focus();
-  }, [active?.id]);
+  }, [active?.id, active?.url]);
   useEffect(() => {
     const element = viewport.current;
     if (!element || !state?.lease) return;
@@ -238,7 +238,7 @@ export function BrowserPanel({ session }: { session: BrowserSession }) {
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [command, active?.id]);
+  }, [command, active]);
   return (
     <div
       className="flex min-h-0 flex-1 flex-col"

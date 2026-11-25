@@ -127,7 +127,7 @@ export function useBrowserSession(
           .browserCommand?.({ lease: current, action: "hide" })
           .catch(() => {});
     };
-  }, [orgId, conversationId, attempt, enabled, disarm]);
+  }, [orgId, conversationId, attempt, enabled, disarm, store]);
   useEffect(() => {
     if (!state?.lease) return;
     const locate = () => {

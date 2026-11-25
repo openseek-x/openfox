@@ -86,6 +86,7 @@ export function BitbucketSections({
     void cache.invalidateQueries({ queryKey: keys.integrations(orgId) });
     void cache.invalidateQueries({ queryKey: keys.accountBindings(orgId) });
   }, [session.data?.status, cache, orgId]);
+  const refetchSession = session.refetch;
   useEffect(() => {
     if (!pending) return;
     const receive = (event: MessageEvent) => {
@@ -94,11 +95,11 @@ export function BitbucketSections({
         message?.provider === "bitbucket" &&
         message.session === pending.session
       )
-        void session.refetch();
+        void refetchSession();
     };
     window.addEventListener("message", receive);
     return () => window.removeEventListener("message", receive);
-  }, [pending, session.refetch]);
+  }, [pending, refetchSession]);
   const connections = detail.connections.filter(
     (c) => c.status !== "DISCONNECTED",
   );

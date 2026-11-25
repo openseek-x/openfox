@@ -64,13 +64,14 @@ export function DeviceSettingsEditor({
       setDraft(settings);
     },
   });
+  const startCommand = command.start;
   const requested = useRef(false);
   useEffect(() => {
     if (inline && !disabled && !requested.current) {
       requested.current = true;
-      command.start({});
+      startCommand({});
     }
-  }, [inline, disabled, command.start]);
+  }, [inline, disabled, startCommand]);
   const label = t(`connect.devicePolicy.${section}`);
   function change(patch: Partial<DevicePreferences>) {
     if (draft) setDraft({ ...draft, ...patch });

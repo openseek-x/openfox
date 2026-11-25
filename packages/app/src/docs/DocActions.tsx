@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  useEffectEvent,
   createContext,
   useContext,
   useEffect,
@@ -133,7 +134,7 @@ export function DocActionsProvider({
       return new Set([...prev, ...keys]);
     });
   // 打开某个节点时，展开它所在的文档集与所有祖先，让树里能看到当前位置
-  useEffect(() => {
+  const expandCurrentNode = useEffectEvent(() => {
     if (!current) return;
     expandKeys([
       ...(current.container.kind === "set" && current.container.set_id
@@ -143,6 +144,9 @@ export function DocActionsProvider({
       ...(current.kind === "folder" ? [current.id] : []),
     ]);
     // 只在切换打开的节点时展开，不随 current 的其他字段变化重复执行
+  });
+  useEffect(() => {
+    expandCurrentNode();
   }, [current?.id]);
   // 选择文件后要上传到哪里：点击菜单项时记下位置，change 事件里使用
   const target = useRef<DocLocation | null>(null);

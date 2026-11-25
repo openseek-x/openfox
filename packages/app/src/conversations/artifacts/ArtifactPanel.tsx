@@ -129,7 +129,7 @@ function ArtifactPanelContent({
   );
   const lastBrowserActive = useRef<string | null>(null);
   const lastBrowserTabs = useRef(new Set<string>());
-  const { syncBrowserTabs, select } = panel;
+  const { syncBrowserTabs, select, tabs, closePanel } = panel;
   useEffect(() => {
     const state = browser.state;
     if (!state) return;
@@ -143,20 +143,13 @@ function ArtifactPanelContent({
     )
       select(browserTabKey(state.activeTab));
     else if (!state.activeTab && isBrowserTab(selected)) {
-      const remaining = panel.tabs.filter((id) => !isBrowserTab(id));
+      const remaining = tabs.filter((id) => !isBrowserTab(id));
       if (remaining.length) select(remaining.at(-1)!);
-      else panel.closePanel();
+      else closePanel();
     }
     lastBrowserActive.current = state.activeTab;
     lastBrowserTabs.current = new Set(state.tabs.map((tab) => tab.id));
-  }, [
-    browser.state,
-    selected,
-    syncBrowserTabs,
-    select,
-    panel.tabs,
-    panel.closePanel,
-  ]);
+  }, [browser.state, selected, syncBrowserTabs, select, tabs, closePanel]);
   const openBrowser = () => {
     if (browser.state) void browser.command({ action: "open" });
     else select(BROWSER_PANEL);
