@@ -24,6 +24,7 @@ copy after the delivery lease expires. An expired notification can also end unde
 
 ```sh
 mkdir -p -m 700 deploy/secrets
+chmod 700 deploy/secrets
 if [ ! -e deploy/secrets/database.url ]; then
   printf '%s\n' 'postgresql://openfox_migrate:change-me-for-local-use-only@postgres/openfox?sslmode=disable' > deploy/secrets/database.url
   chmod 444 deploy/secrets/database.url
