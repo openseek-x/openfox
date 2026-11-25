@@ -175,23 +175,6 @@ const Body = ({ children }: { children: ReactNode }) => (
   <div className="mt-1 mb-2 ml-8 flex min-w-0 flex-col gap-2">{children}</div>
 );
 
-const CodeBlock = ({
-  children,
-  className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) => (
-  <div
-    className={cn(
-      "rounded-md bg-surface-muted px-3 py-2 font-mono text-code text-fg-default",
-      className,
-    )}
-  >
-    {children}
-  </div>
-);
-
 const Note = ({ children }: { children: ReactNode }) => (
   <p className="text-caption text-fg-muted">{children}</p>
 );
@@ -408,8 +391,19 @@ const EXEC_ICON: Record<StepStatus, IconName> = {
   denied: "triangle-alert",
 };
 
-/** 输出区：最高 400px 滚动；运行中且用户停在底部时自动跟随到底。 */
-function ExecOutput({ output, follow }: { output: string; follow: boolean }) {
+/**
+ * 输出区：最高 400px 滚动；运行中且用户停在底部时自动跟随到底。
+ * 缺省自带灰底圆角；放进命令终端块时由外层提供底色，传 className 覆盖。
+ */
+function ExecOutput({
+  output,
+  follow,
+  className = "rounded-md bg-surface-muted",
+}: {
+  output: string;
+  follow: boolean;
+  className?: string;
+}) {
   const ref = useRef<HTMLPreElement>(null);
   const stick = useRef(true);
   useLayoutEffect(() => {
@@ -424,7 +418,10 @@ function ExecOutput({ output, follow }: { output: string; follow: boolean }) {
         const el = event.currentTarget;
         stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
       }}
-      className="max-h-[400px] overflow-auto whitespace-pre-wrap break-all rounded-md bg-surface-muted px-3 py-2 font-mono text-code text-fg-default"
+      className={cn(
+        "max-h-[400px] overflow-auto whitespace-pre-wrap break-all px-3 py-2 font-mono text-code text-fg-default",
+        className,
+      )}
     >
       {output}
     </pre>
@@ -463,37 +460,49 @@ export function ExecRow({
       />
       {open && (
         <Body>
-          {/* 适配器把工作目录内的路径转成相对路径，工作目录本身是「.」，不显示 */}
-          {step.cwd && step.cwd !== "." && (
-            <p className="font-mono text-caption text-fg-muted">{step.cwd}</p>
-          )}
-          <CodeBlock className="flex items-start gap-2">
-            <span className="min-w-0 flex-1 whitespace-pre-wrap break-all">
-              <span className="select-none text-fg-muted">$ </span>
-              {step.command}
-            </span>
-            <IconButton
-              label={t("steps.exec.copy")}
-              icon={<Icon name="copy" size={16} />}
-              size="28"
-              variant="ghost"
-              className="-my-1.5 -mr-2"
-              onClick={() =>
-                void copy(step.command ?? "", t("steps.exec.copied"))
-              }
-            />
-          </CodeBlock>
-          {output ? (
-            <ExecOutput output={output} follow={step.status === "running"} />
-          ) : step.status !== "running" ? (
-            <CodeBlock className="font-sans text-body-sm text-fg-muted">
-              {step.status === "denied"
-                ? t("steps.exec.deniedBeforeOutput")
-                : step.status === "interrupted" || step.terminated_before_output
-                  ? t("steps.exec.interruptedBeforeOutput")
-                  : t("steps.exec.noOutput")}
-            </CodeBlock>
-          ) : null}
+          {/*
+            命令与输出合成一个终端块：标题行已有命令摘要，展开后只再出现一次完整命令，
+            输出用细分隔线接在下面，不再叠两块灰底。深色主题里 line-default / line-soft 与
+            surface-muted 同色，分隔线用 line-strong 才看得见。
+          */}
+          <div className="min-w-0 overflow-hidden rounded-md border border-line-soft bg-surface-muted">
+            <div className="flex items-start gap-2 px-3 py-2 font-mono text-code text-fg-default">
+              <span className="min-w-0 flex-1 whitespace-pre-wrap break-all">
+                {/* 适配器把工作目录内的路径转成相对路径，工作目录本身是「.」，不显示 */}
+                {step.cwd && step.cwd !== "." && (
+                  <span className="text-fg-muted">{step.cwd} </span>
+                )}
+                <span className="select-none text-fg-muted">$ </span>
+                {step.command}
+              </span>
+              <IconButton
+                label={t("steps.exec.copy")}
+                icon={<Icon name="copy" size={16} />}
+                size="28"
+                variant="ghost"
+                className="-my-1.5 -mr-2"
+                onClick={() =>
+                  void copy(step.command ?? "", t("steps.exec.copied"))
+                }
+              />
+            </div>
+            {output ? (
+              <ExecOutput
+                output={output}
+                follow={step.status === "running"}
+                className="border-t border-line-strong"
+              />
+            ) : step.status !== "running" ? (
+              <p className="border-t border-line-strong px-3 py-1.5 text-caption text-fg-muted">
+                {step.status === "denied"
+                  ? t("steps.exec.deniedBeforeOutput")
+                  : step.status === "interrupted" ||
+                      step.terminated_before_output
+                    ? t("steps.exec.interruptedBeforeOutput")
+                    : t("steps.exec.noOutput")}
+              </p>
+            ) : null}
+          </div>
           {step.truncated && <Note>{t("steps.exec.truncated")}</Note>}
           {footer.length > 0 && <Note>{footer.join(" · ")}</Note>}
         </Body>
@@ -513,10 +522,8 @@ export function ToolCallRow({ step }: { step: StepView }) {
   const status = step.status === "settled" ? "done" : step.status;
   const name = step.tool_name || t("steps.tool.unnamed");
   return (
-    <div
-      className="min-w-0 rounded-lg border border-line-soft"
-      data-tool-call={step.id}
-    >
+    // 不再单独加外框卡片：与命令、读取等步骤行同一层级，展开内容按同样的缩进排在标题下
+    <div className="min-w-0" data-tool-call={step.id}>
       <ChainOfThoughtTrigger
         expanded={open}
         aria-controls={open ? id : undefined}
@@ -545,25 +552,23 @@ export function ToolCallRow({ step }: { step: StepView }) {
         </span>
       </ChainOfThoughtTrigger>
       {open && (
-        <div
-          id={id}
-          className="flex min-w-0 flex-col gap-3 border-t border-line-default p-3"
-        >
+        <div id={id} className="mt-1 mb-2 ml-8 flex min-w-0 flex-col gap-2">
           {step.tool_input && (
             <div className="min-w-0">
-              <div className="mb-1 flex items-center justify-between text-caption text-fg-muted">
+              <div className="mb-1 flex h-5 items-center justify-between text-caption text-fg-muted">
                 <span>{t("steps.tool.input")}</span>
                 <IconButton
                   label={t("steps.tool.copyInput")}
                   icon={<Icon name="copy" size={16} />}
                   size="28"
                   variant="ghost"
+                  className="-mr-1"
                   onClick={() =>
                     void copy(step.tool_input!, t("steps.tool.copied"))
                   }
                 />
               </div>
-              <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-md bg-surface-muted p-3 font-mono text-code text-fg-default">
+              <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-md bg-surface-muted px-3 py-2 font-mono text-code text-fg-default">
                 {step.tool_input}
               </pre>
             </div>

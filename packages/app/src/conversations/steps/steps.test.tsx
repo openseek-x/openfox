@@ -282,6 +282,54 @@ describe("步骤行", () => {
     expect(screen.queryByTestId("exec-output")).not.toBeInTheDocument();
   });
 
+  it("Exec 展开后命令与输出在同一个终端块里，无输出说明也不另起灰底块", async () => {
+    const user = userEvent.setup();
+    renderTurn([
+      stepEvent({
+        id: "x",
+        kind: "exec",
+        state: "done",
+        command: "pnpm test",
+        output: "ok",
+        exit_code: 0,
+      }),
+      stepEvent({
+        id: "y",
+        kind: "exec",
+        state: "done",
+        command: "git status --short",
+        output: "",
+        exit_code: 0,
+      }),
+    ]);
+    for (const header of screen.getAllByRole("button", { name: /已运行命令/ }))
+      await user.click(header);
+    const output = screen.getByTestId("exec-output");
+    const terminal = output.parentElement!;
+    // 输出不再自带底色，由终端块统一提供；命令行与输出同属一个块
+    expect(terminal).toHaveClass("bg-surface-muted");
+    expect(output).not.toHaveClass("bg-surface-muted");
+    expect(terminal).toHaveTextContent("$ pnpm test");
+    const empty = screen.getByText("命令没有输出。");
+    expect(empty.parentElement).toHaveClass("bg-surface-muted");
+    expect(empty.parentElement).toHaveTextContent("$ git status --short");
+  });
+
+  it("工具调用不单独加外框，与其他步骤行同一层级", () => {
+    const { container } = renderTurn([
+      stepEvent({
+        id: "tool",
+        kind: "tool_call",
+        state: "failed",
+        tool_name: "tasks.get",
+        output: "unavailable",
+      }),
+    ]);
+    const card = container.querySelector("[data-tool-call]")!;
+    expect(card.className).not.toMatch(/\bborder\b|rounded/);
+    expect(screen.getByText("unavailable")).toBeInTheDocument();
+  });
+
   it("Exec 运行中默认展开，被拒绝 / 中断且没有输出时给出说明", async () => {
     const user = userEvent.setup();
     renderTurn([
