@@ -52,6 +52,7 @@ type executorRuntime struct {
 	// others 是 Claude Code / OpenCode / pi 适配器（未安装时探测不到，不上报，也不会被派发）。
 	others         []*cliagent.Adapter
 	hermes         *hermes.Adapter
+	cursor         *cliagent.CursorDiscovery
 	client         *supervisor.Client
 	root           string
 	directoryRoots map[string]string
@@ -218,8 +219,10 @@ func newExecutor(options executorOptions) (*executorRuntime, error) {
 	hermesAdapter := hermes.New()
 	hermesAdapter.StateRoot = filepath.Join(filepath.Dir(journalPath), "runtime-tmp")
 	extra = append(extra, hermesAdapter)
+	cursor := cliagent.NewCursorDiscovery("")
 	instance, err := supervisor.New(supervisor.Config{
-		Browser: browser, BrowserRoot: browserRoot,
+		DiscoveryPaths: map[string]supervisor.DevicePathSettings{"cursor": cursor},
+		Browser:        browser, BrowserRoot: browserRoot,
 		MachineProxy: options.machineProxy,
 		DeviceID:     options.deviceID, Client: client, Adapter: adapter, Extra: extra, Workdir: manager, DirectoryRoots: directoryRoots, Journal: journal, Organizations: options.organizations,
 		PollInterval: options.pollInterval, MaxConcurrent: options.maxRuns,
@@ -234,7 +237,7 @@ func newExecutor(options executorOptions) (*executorRuntime, error) {
 		_ = journal.Close()
 		return nil, err
 	}
-	return &executorRuntime{browser: browser, browserSocket: filepath.Join(browserRoot, "browser.sock"), supervisor: instance, journal: journal, adapter: adapter, others: others, hermes: hermesAdapter, client: client, root: manager.ManagedRoot(), directoryRoots: directoryRoots, protectedRoots: protectedRoots}, nil
+	return &executorRuntime{browser: browser, browserSocket: filepath.Join(browserRoot, "browser.sock"), supervisor: instance, journal: journal, adapter: adapter, others: others, hermes: hermesAdapter, cursor: cursor, client: client, root: manager.ManagedRoot(), directoryRoots: directoryRoots, protectedRoots: protectedRoots}, nil
 }
 
 // defaultProtectedDirectories 返回本机内置受保护目录名单；stateDir 为 OpenFox 本机状态目录（含私钥与令牌）。

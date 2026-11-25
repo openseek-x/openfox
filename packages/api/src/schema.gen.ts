@@ -20192,8 +20192,16 @@ export interface components {
         };
         /** @description 从心跳 capabilities.runtimes 解析出的 Runtime：codex、claude-code、opencode、pi、codebuddy、hermes、gemini（未安装的不上报） */
         DeviceRuntime: {
-            /** @description Runtime 名称：codex、claude-code、opencode、pi、codebuddy、hermes、gemini */
+            /** @description Runtime 名称：codex、claude-code、opencode、pi、codebuddy、hermes、gemini、cursor */
             provider: string;
+            /** @description 已验证的 CLI 安装入口，用户目录用 ~ 表示 */
+            install_path?: string;
+            /** @description 本地 CLI 的命中来源 */
+            discovery_source?: string;
+            /** @description 安装信息来自缓存，本次启动正在探测运行状态 */
+            discovery_cached?: boolean;
+            /** @description 已发现但没有执行适配器 */
+            discovery_only?: boolean;
             version: string | null;
             /**
              * @description READY = 可运行；NEEDS_LOGIN = 未登录；UNAVAILABLE = 其他不可运行原因（见 reason）
@@ -22100,6 +22108,10 @@ export interface components {
             session_idle_minutes: number;
             /** @default 120 */
             session_max_minutes: number;
+            /** @description 每个供应商经本机验证的 CLI 启动路径，提交空字符串恢复自动发现 */
+            runtime_paths?: {
+                [key: string]: string;
+            };
             codex_path: string;
             codex_args: string[];
             memory_guard: boolean;

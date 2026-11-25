@@ -35,7 +35,9 @@ test("验证码登录、建任务、看板拖动、评论 @、收件箱与租户
 
   // 新建任务：快捷键 C，指派给 carol，优先级高
   await page.goto(`/o/${org}/spaces/${space}/tasks`);
-  await expect(page.getByRole("heading", { name: "任务" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "任务", exact: true, level: 1 }),
+  ).toBeVisible();
   await page.keyboard.press("c");
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("textbox", { name: "标题" }).pressSequentially(title);
@@ -311,7 +313,9 @@ test("浏览器拒绝保存创建方式时仍能打开和切换新建任务", as
     };
   }, `openfox:task-create-mode:${org}`);
   await page.goto(`/o/${org}/spaces/${space}/tasks`);
-  await expect(page.getByRole("heading", { name: "任务" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "任务", exact: true, level: 1 }),
+  ).toBeVisible();
   await page.keyboard.press("c");
   await page
     .getByRole("dialog")
