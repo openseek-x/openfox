@@ -90,6 +90,10 @@ export const agentsZh = {
   },
   you: "你",
   info: {
+    space: "空间",
+    owner: "负责人",
+    runtime: "运行时",
+    computer: "电脑",
     label: "查看 {name} 的信息",
     slots: "并发占用 {used} / {total}",
     storage: "OpenFox 存储 {size}",

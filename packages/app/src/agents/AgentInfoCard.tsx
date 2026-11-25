@@ -54,11 +54,24 @@ export function AgentInfoProvider({
   );
 }
 
-function Detail({ icon, children }: { icon: IconName; children: ReactNode }) {
+function Detail({
+  icon,
+  label,
+  children,
+}: {
+  icon: IconName;
+  label: string;
+  children: ReactNode;
+}) {
   return (
-    <div className="flex min-w-0 items-center gap-2 text-body-sm">
-      <Icon name={icon} size={15} className="shrink-0 text-fg-muted" />
-      <span className="min-w-0 break-words">{children}</span>
+    <div className="grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-4 py-1">
+      <dt className="flex items-center gap-2 text-[12px] text-fg-muted">
+        <Icon name={icon} size={14} />
+        {label}
+      </dt>
+      <dd className="min-w-0 text-right text-[13px] leading-5 font-medium text-fg-default [overflow-wrap:anywhere]">
+        {children}
+      </dd>
     </div>
   );
 }
@@ -113,106 +126,132 @@ function AgentInfoCard({
       fitHeight
       role="dialog"
       aria-label={title}
-      className="w-80 max-w-[calc(100vw-16px)] overflow-y-auto p-3"
+      className="w-[360px] max-w-[calc(100vw-16px)] overflow-y-auto rounded-2xl p-0"
     >
       {(!target.spaceId && location.notFound) || query.isError ? (
-        <p role="status" className="text-body-sm text-fg-muted">
+        <p role="status" className="p-4 text-body-sm text-fg-muted">
           {t("agents.drawer.notFound")}
         </p>
       ) : !agent ? (
-        <Spinner />
+        <div className="flex justify-center p-5">
+          <Spinner />
+        </div>
       ) : (
         <>
-          <div className="flex items-start gap-2">
-            <AgentAvatar name={agent.name} avatar={agent.avatar} size={40} />
-            <div className="min-w-0 flex-1">
-              <h3 className="break-words text-body font-semibold">
-                {agent.name}
-              </h3>
-              {agent.title && (
-                <p className="break-words text-body-sm text-fg-muted">
-                  {agent.title}
-                </p>
-              )}
+          <div className="border-b border-line-soft bg-linear-to-br from-accent-soft/60 via-surface-card to-surface-card px-4 pt-4 pb-3.5">
+            <div className="flex items-center gap-3">
+              <span className="inline-flex shrink-0 rounded-full border border-line-soft bg-surface-card p-1 shadow-sm">
+                <AgentAvatar
+                  name={agent.name}
+                  avatar={agent.avatar}
+                  size={40}
+                />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h3 className="break-words text-[17px] leading-6 font-semibold tracking-tight">
+                  {agent.name}
+                </h3>
+                {agent.title && (
+                  <p className="break-words text-body-sm text-fg-muted">
+                    {agent.title}
+                  </p>
+                )}
+              </div>
+              <div className="flex shrink-0 items-center rounded-lg border border-line-soft bg-surface-card p-0.5">
+                <IconButton
+                  size="28"
+                  icon={<Icon name="plus" />}
+                  label={t("agents.contacts.assign")}
+                  disabled={!!agent.archived_at || !agent.allow_assign}
+                  onClick={() => {
+                    onClose();
+                    onAssign({
+                      kind: "agent",
+                      id: agent.id,
+                      name: agent.name,
+                      spaceId: agent.space_id,
+                    });
+                  }}
+                />
+                <IconButton
+                  size="28"
+                  icon={<Icon name="message" />}
+                  label={t("agents.contacts.chat")}
+                  disabled={!!agent.archived_at || !agent.allow_direct_chat}
+                  onClick={() => {
+                    onClose();
+                    navigate(
+                      agent.builtin_kind === "ASSISTANT"
+                        ? `/o/${orgId}/assistant`
+                        : chatPath(orgId, { type: "agent", id: agent.id }),
+                    );
+                  }}
+                />
+                <IconButton
+                  size="28"
+                  icon={<Icon name="sliders-horizontal" />}
+                  label={t("agents.contacts.settings")}
+                  onClick={() => {
+                    onClose();
+                    settings.open(agent.id, agent.space_id);
+                  }}
+                />
+              </div>
             </div>
-            <div className="flex shrink-0">
-              <IconButton
-                size="28"
-                icon={<Icon name="plus" />}
-                label={t("agents.contacts.assign")}
-                disabled={!!agent.archived_at || !agent.allow_assign}
-                onClick={() => {
-                  onClose();
-                  onAssign({
-                    kind: "agent",
-                    id: agent.id,
-                    name: agent.name,
-                    spaceId: agent.space_id,
-                  });
-                }}
-              />
-              <IconButton
-                size="28"
-                icon={<Icon name="message" />}
-                label={t("agents.contacts.chat")}
-                disabled={!!agent.archived_at || !agent.allow_direct_chat}
-                onClick={() => {
-                  onClose();
-                  navigate(
-                    agent.builtin_kind === "ASSISTANT"
-                      ? `/o/${orgId}/assistant`
-                      : chatPath(orgId, { type: "agent", id: agent.id }),
-                  );
-                }}
-              />
-              <IconButton
-                size="28"
-                icon={<Icon name="sliders-horizontal" />}
-                label={t("agents.contacts.settings")}
-                onClick={() => {
-                  onClose();
-                  settings.open(agent.id, agent.space_id);
-                }}
-              />
-            </div>
+            {agent.description && (
+              <p className="mt-3 whitespace-pre-wrap break-words text-[13px] leading-5 text-fg-secondary">
+                {agent.description}
+              </p>
+            )}
           </div>
-          {agent.description && (
-            <p className="mt-2 whitespace-pre-wrap break-words text-body-sm text-fg-secondary">
-              {agent.description}
-            </p>
-          )}
-          <div className="mt-3 flex flex-col gap-1.5 border-t border-line-soft pt-2">
-            <Detail icon="orbit">
+          <dl className="px-4 py-2.5">
+            <Detail icon="orbit" label={t("agents.info.space")}>
               {space?.name ?? t("agents.unknownSpace")} ·{" "}
               {t(`agents.visibility.${agent.visibility}`)}
             </Detail>
-            <Detail icon="user">
+            <Detail icon="user" label={t("agents.info.owner")}>
               {owner?.name || owner?.email || agent.owner_user_id}
             </Detail>
             {agent.config?.runtime && (
-              <Detail icon="terminal">
+              <Detail icon="terminal" label={t("agents.info.runtime")}>
                 {runtimeLabel(agent.config.runtime)}
               </Detail>
             )}
             {agent.computer_name && (
-              <Detail icon="monitor">{agent.computer_name}</Detail>
+              <Detail icon="monitor" label={t("agents.info.computer")}>
+                {agent.computer_name}
+              </Detail>
             )}
-            {device && (
-              <Detail icon="activity">
+          </dl>
+          {device && (
+            <div className="mx-4 mb-3.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 rounded-lg bg-surface-muted px-3 py-2 text-[12px] tabular-nums text-fg-secondary">
+              <span className="inline-flex items-center gap-2">
+                <span
+                  aria-hidden
+                  className="h-1.5 w-9 overflow-hidden rounded-full bg-line-default"
+                >
+                  <span
+                    className="block h-full rounded-full bg-accent"
+                    style={{
+                      width: `${Math.min(100, (device.reserved_slots / Math.max(1, effectiveMaxSlots(device))) * 100)}%`,
+                    }}
+                  />
+                </span>
                 {t("agents.info.slots", {
                   used: device.reserved_slots,
                   total: effectiveMaxSlots(device),
                 })}
-              </Detail>
-            )}
-            {device?.storage && (
-              <Detail icon="hard-drive">
-                {t("agents.info.storage", {
-                  size: formatBytes(device.storage.total_bytes, locale),
-                })}
-              </Detail>
-            )}
-          </div>
+              </span>
+              {device.storage && (
+                <span className="inline-flex items-center gap-1.5">
+                  <Icon name="hard-drive" size={13} />
+                  {t("agents.info.storage", {
+                    size: formatBytes(device.storage.total_bytes, locale),
+                  })}
+                </span>
+              )}
+            </div>
+          )}
         </>
       )}
     </Popover>

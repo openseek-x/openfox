@@ -96,6 +96,10 @@ export const agentsEn: Messages["agents"] = {
   },
   you: "You",
   info: {
+    space: "Space",
+    owner: "Owner",
+    runtime: "Runtime",
+    computer: "Computer",
     label: "View profile for {name}",
     slots: "Slots in use {used} / {total}",
     storage: "OpenFox storage {size}",
