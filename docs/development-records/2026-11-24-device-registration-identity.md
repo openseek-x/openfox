@@ -41,3 +41,11 @@ SELECT count(*) FROM (
 - `go test ./cmd/openfox ./internal/daemon ./internal/api ./internal/devices ./internal/deviceauth` 相关包通过。一次并行检查中无关的 `TestDevelopmentToolFailureBounds/empty` 超过两秒，独立重跑整个 CLI 包通过。`go vet` 已检查上述包和 WP05 集成测试。迁移清单校验通过。CLI 注册回归也通过了 Go 竞态检测，HTTP 层单测覆盖令牌或 key ID 改变后的签名拒绝。
 - `pnpm exec vitest run packages/app/src/computers` 的 132 项测试通过，包含本机与同名离线设备并存、设置页分组及弹层详情导航。`pnpm --filter @openfox/desktop test` 的 126 项测试通过。`pnpm typecheck` 和 `pnpm --filter @openfox/web build` 通过。
 - 本次验证使用本地 macOS 和临时数据库。没有发布安装包，也未在用户的已安装应用上执行真实升级、替换凭据或迁移旧设备。浏览器端运行时集成夹具已更新签名并通过类型检查，未运行依赖完整外部环境的 Playwright 套件。
+
+## 2026-11-25 本机在不同工作台中的识别
+
+开发版桌面窗口连接本地验收工作台，其中的 `Organization A` 和 UUID 尾号 `0022` 来自数据库测试样例。同时运行的本机服务连接到用户原有的中心。打开 macOS 安装版后，在已登录组织中核对了在线设备的名称、UUID、CLI 版本及日志入口。设备沿用原有注册身份。
+
+此前侧栏在没有匹配注册记录时按本机进程状态显示「可用」，详情抽屉又遗漏了附加组织。现在电脑列表、详情抽屉、离线修复、迁移目标及本机 CLI 路径共用中心地址、组织和设备 ID 的匹配规则。无法验证身份时显示连接状态，已知注册在其他服务器时显示对应提示。附加组织可以识别本机，本机服务和代理设置仍须由所有者在最初注册的组织中操作。
+
+电脑模块 145 项测试通过，包含跨中心的同 UUID 记录、附加组织、缺失中心地址和离线修复。此次调整仅涉及工作台，未变更配置或 SQL，也未执行数据库迁移。回退只需恢复前一版工作台静态资源。

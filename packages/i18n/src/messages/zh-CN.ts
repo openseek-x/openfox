@@ -1580,6 +1580,7 @@ export const zhCN = {
       desktopOnly: "请在这台电脑的桌面应用中操作。",
       macOnly: "当前仅支持 macOS 本机服务。",
       upgrade: "请更新桌面应用和 OpenFox CLI 后使用。",
+      primaryOrgOnly: "请切换到这台电脑最初注册的组织，管理本机服务。",
       notLocal: "无法确认是当前中心注册的本机，请在目标电脑上操作。",
       ownerOnly: "仅本机的设备所有者可以查看和控制本机服务。",
       notInstalled: "尚未安装本机后台服务，请先连接这台电脑。",
@@ -1635,6 +1636,10 @@ export const zhCN = {
     local: {
       name: "这台电脑",
       suffix: "(本机)",
+      otherCenter: "已连接其他服务器",
+      notConnected: "未连接当前组织",
+      unverified: "尚未确认本机连接",
+      serviceRunning: "本机后台服务正在运行。",
       available: "可用",
       stopped: "已停止",
       starting: "启动中",

@@ -26,6 +26,8 @@ export function LocalMachineProxy({
     bridge?.platform === "darwin" &&
     bridge.getMachineProxy &&
     bridge.saveMachineProxy &&
+    local.data?.registration?.registered &&
+    local.data.registration.organization_id === orgId &&
     isLocalDevice(local.data, orgId, deviceId, center.data?.center_url),
   );
   const target = { orgId, deviceId, centerUrl: center.data?.center_url ?? "" };

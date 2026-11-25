@@ -68,7 +68,9 @@ export const connectEn: Messages["connect"] = {
     connect: "Connect this computer",
     retry: "Retry",
     otherOrg:
-      "This computer is connected to another organization ({name}). A computer can join only one organization.",
+      "This computer is connected to another organization ({name}). Manage it from a connected organization.",
+    otherCenter:
+      "This computer is registered at {url}. Open that server’s workspace to view its details.",
     otherOrgUnknown: "another organization",
     stale:
       "This computer was removed from the organization, but its old connection settings are still here.",

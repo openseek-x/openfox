@@ -43,8 +43,15 @@ export function useLocalService(
     bridge.readLocalLogs &&
     bridge.localDaemonAction,
   );
+  const registration = local.data?.registration;
+  const primaryOrg =
+    registration?.registered && registration.organization_id === orgId;
   const enabled =
-    supported && bridge?.platform === "darwin" && matches && isOwner;
+    supported &&
+    bridge?.platform === "darwin" &&
+    matches &&
+    primaryOrg &&
+    isOwner;
   const target: DesktopLocalTarget = {
     orgId,
     deviceId,
@@ -73,7 +80,9 @@ export function useLocalService(
           ? "notLocal"
           : !isOwner
             ? "ownerOnly"
-            : "failed";
+            : !primaryOrg
+              ? "primaryOrgOnly"
+              : "failed";
   const ready =
     enabled &&
     service.data?.supported &&

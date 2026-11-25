@@ -1634,6 +1634,8 @@ export const enUS: Messages = {
       desktopOnly: "Use the desktop app on this computer.",
       macOnly: "Local service management currently supports macOS only.",
       upgrade: "Update the desktop app and OpenFox CLI to use this feature.",
+      primaryOrgOnly:
+        "Switch to the organization where this computer was registered to manage its local service.",
       notLocal:
         "This device could not be verified as local to the current center. Use the target computer.",
       ownerOnly:
@@ -1694,6 +1696,10 @@ export const enUS: Messages = {
     local: {
       name: "This computer",
       suffix: "(local)",
+      otherCenter: "Connected to another server",
+      notConnected: "Not connected to this organization",
+      unverified: "Local connection unverified",
+      serviceRunning: "The local background service is running.",
       available: "Available",
       stopped: "Stopped",
       starting: "Starting",

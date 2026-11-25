@@ -56,7 +56,8 @@ export const connectZh = {
     notRegistered: "这台电脑还没有连接到当前组织。",
     connect: "连接这台电脑",
     retry: "重试",
-    otherOrg: "这台电脑已连接到其他组织（{name}），一台电脑只能连接一个组织。",
+    otherOrg: "这台电脑已连接到其他组织（{name}），请在已连接的组织中管理它。",
+    otherCenter: "本机已注册在 {url}。请打开该服务器的工作台查看本机详情。",
     otherOrgUnknown: "其他组织",
     stale: "这台电脑已从组织中移除，本机还保留着旧的连接配置。",
     centerChanged:

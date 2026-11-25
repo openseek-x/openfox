@@ -897,7 +897,7 @@ describe("本机卡片 · 防止休眠", () => {
       devicesRoute(() => []),
     );
     const local = await screen.findByRole("region", { name: "这台电脑" });
-    await within(local).findByText("可用");
+    await within(local).findByText("尚未确认本机连接");
     expect(within(local).queryByRole("switch")).toBeNull();
   });
 });

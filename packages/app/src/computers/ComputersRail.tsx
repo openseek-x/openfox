@@ -8,8 +8,17 @@ import { Avatar, Button, Drawer, Icon, Popover, cn } from "@openfox/ui";
 import { isDesktop } from "../desktop";
 import { ComputerDetailBody } from "./ComputerDetailPage";
 import { ConnectComputerDialog } from "./ConnectComputer";
-import { isLocalDevice, useComputerGroups } from "./localRegistration";
-import { localOs, localState } from "./LocalComputerCard";
+import {
+  useComputerGroups,
+  useLocalRegistrationView,
+  useRegisteredLocalDeviceId,
+} from "./localRegistration";
+import {
+  localOs,
+  localState,
+  localStatusLabel,
+  useConnectingStuck,
+} from "./LocalComputerCard";
 import {
   computerStatus,
   railStatus,
@@ -36,7 +45,6 @@ import {
   useDevices,
   useLocalStatus,
   useMe,
-  useServerCenterUrl,
 } from "./queries";
 
 /** 悬停打开 / 离开关闭的延迟（与 HiFox HoverCard 一致） */
@@ -329,7 +337,13 @@ function LocalPopoverCard({
   const t = useT();
   const navigate = useNavigate();
   const local = useLocalStatus();
-  const state = localState(local.data, null);
+  const view = useLocalRegistrationView(orgId);
+  const stuck = useConnectingStuck(local.data, local.dataUpdatedAt);
+  const state = localStatusLabel(
+    localState(local.data, null, stuck),
+    view,
+    false,
+  );
   return (
     <button
       type="button"
@@ -342,7 +356,7 @@ function LocalPopoverCard({
       <OsBadge os={localOs()} size={32} />
       <span className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="truncate text-body font-medium text-fg-default">
-          {t("computers.local.name")}
+          {local.data?.machine_name?.trim() || t("computers.local.name")}
           <span className="font-normal text-fg-muted">
             {" "}
             {t("computers.local.suffix")}
@@ -380,17 +394,7 @@ export function ComputerDrawer({
   const detail = useDevice(orgId, deviceId);
   const device = detail.data;
   const me = useMe();
-  const local = useLocalStatus();
-  const center = useServerCenterUrl(
-    orgId,
-    Boolean(local.data?.registration?.registered),
-  );
-  const isLocal = isLocalDevice(
-    local.data,
-    orgId,
-    deviceId,
-    center.data?.center_url,
-  );
+  const isLocal = useRegisteredLocalDeviceId(orgId) === deviceId;
   const gone = isNotFound(detail.error);
   useEffect(() => {
     if (gone) onClose();

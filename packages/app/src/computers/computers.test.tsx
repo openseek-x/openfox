@@ -264,7 +264,7 @@ describe("电脑设置页 · 列表", () => {
     expect(within(popover).getAllByText(active.name)).toHaveLength(2);
     await userEvent.click(within(localGroup).getByText(active.name));
     expect(
-      await screen.findByRole("dialog", { name: "电脑详情" }),
+      await screen.findByRole("dialog", { name: "本机电脑详情" }),
     ).toBeVisible();
   });
 
@@ -287,9 +287,11 @@ describe("电脑设置页 · 列表", () => {
     };
     renderSettings("/o/o1/settings/computers", listRoute([]));
     const local = await screen.findByRole("region", { name: "这台电脑" });
-    expect(await within(local).findByText("可用")).toBeInTheDocument();
     expect(
-      within(local).getByText("正在此处运行 · 1 个 Runtime 可执行任务。"),
+      await within(local).findByText("尚未确认本机连接"),
+    ).toBeInTheDocument();
+    expect(
+      within(local).getByText("本机后台服务正在运行。"),
     ).toBeInTheDocument();
     await userEvent.click(
       within(local).getByRole("button", { name: "停止服务" }),

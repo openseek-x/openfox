@@ -66,19 +66,8 @@ export type LocalRegistrationView =
       /** 本机注册的中心地址与服务端当前地址不同时，为本机注册的（旧）地址 */
       staleCenterUrl?: string;
     }
-  | { kind: "other_org"; organizationId: string };
-
-/** 中心地址的比较键：scheme + host + port；忽略末尾 /、默认端口与大小写。无法解析返回 null。 */
-function centerKey(value: string): string | null {
-  try {
-    const url = new URL(value.trim());
-    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
-    const port = url.port || (url.protocol === "https:" ? "443" : "80");
-    return `${url.protocol}//${url.hostname}:${port}`;
-  } catch {
-    return null;
-  }
-}
+  | { kind: "other_org"; organizationId: string }
+  | { kind: "other_center"; centerUrl: string };
 
 function canonicalCenter(value: string | undefined) {
   try {
@@ -97,40 +86,43 @@ function canonicalCenter(value: string | undefined) {
   }
 }
 
-/** Strict control identity; unlike sameCenter, missing/invalid URLs never match. */
+/** 本机身份由中心、所属组织和设备 ID 共同确定。 */
+function registeredDeviceId(
+  status: DesktopLocalStatus | undefined,
+  orgId: string,
+  serverCenterUrl: string | undefined,
+) {
+  const registration = status?.registration;
+  if (!registration?.registered || !registrationHasOrg(registration, orgId))
+    return undefined;
+  const local = canonicalCenter(registration.center_url);
+  return local !== null && local === canonicalCenter(serverCenterUrl)
+    ? registration.device_id
+    : undefined;
+}
+
 export function isLocalDevice(
   status: DesktopLocalStatus | undefined,
   orgId: string,
   deviceId: string,
   serverCenterUrl: string | undefined,
 ): boolean {
-  const registration = status?.registration;
-  if (
-    !registration?.registered ||
-    registration.organization_id !== orgId ||
-    registration.device_id !== deviceId
-  )
-    return false;
-  const local = canonicalCenter(registration.center_url);
-  return local !== null && local === canonicalCenter(serverCenterUrl);
+  return registeredDeviceId(status, orgId, serverCenterUrl) === deviceId;
+}
+
+export function useRegisteredLocalDeviceId(orgId: string) {
+  const status = useLocalStatus().data;
+  const center = useServerCenterUrl(
+    orgId,
+    Boolean(status?.registration?.registered),
+  );
+  return registeredDeviceId(status, orgId, center.data?.center_url);
 }
 
 /** Place the visible registration in exactly one group. Names are display-only. */
 export function useComputerGroups(orgId: string, devices: Device[]) {
-  const registration = useLocalStatus().data?.registration;
-  const inOrg =
-    registration?.registered && registrationHasOrg(registration, orgId);
-  const center = useServerCenterUrl(
-    orgId,
-    Boolean(inOrg && registration.center_url),
-  );
-  const localCenter = inOrg ? canonicalCenter(registration.center_url) : null;
-  const local =
-    inOrg &&
-    localCenter &&
-    localCenter === canonicalCenter(center.data?.center_url)
-      ? devices.find((device) => device.id === registration.device_id)
-      : undefined;
+  const localId = useRegisteredLocalDeviceId(orgId);
+  const local = devices.find((device) => device.id === localId);
   const me = useMe();
   const others = sortComputers(
     devices.filter((device) => device !== local),
@@ -145,17 +137,6 @@ export function useComputerGroups(orgId: string, devices: Device[]) {
   };
 }
 
-/** 两个中心地址是否指向同一个服务；任一方缺失或无法解析时不判定为不同。 */
-export function sameCenter(
-  local: string | undefined,
-  server: string | undefined,
-): boolean {
-  if (!local || !server) return true;
-  const a = centerKey(local);
-  const b = centerKey(server);
-  return a === null || b === null || a === b;
-}
-
 export function registrationView(
   status: DesktopLocalStatus | undefined,
   orgId: string,
@@ -168,16 +149,21 @@ export function registrationView(
     return registration.reason === "not_registered"
       ? { kind: "not_registered" }
       : { kind: "unknown" };
-  if (!registrationHasOrg(registration, orgId))
+  const localCenter = canonicalCenter(registration.center_url);
+  const serverCenter = canonicalCenter(serverCenterUrl);
+  const differentCenter =
+    localCenter && serverCenter && localCenter !== serverCenter;
+  if (!registrationHasOrg(registration, orgId)) {
+    if (differentCenter)
+      return { kind: "other_center", centerUrl: localCenter };
     return { kind: "other_org", organizationId: registration.organization_id };
+  }
   return {
     kind: "this_org",
     deviceId: registration.device_id,
     // 电脑列表已加载、却没有这台电脑：服务端已删除，本机还留着旧配置
     stale: Boolean(deviceIds && !deviceIds.includes(registration.device_id)),
-    staleCenterUrl: sameCenter(registration.center_url, serverCenterUrl)
-      ? undefined
-      : registration.center_url,
+    staleCenterUrl: differentCenter ? registration.center_url : undefined,
   };
 }
 
@@ -331,7 +317,6 @@ export function useLocalRegistrationView(orgId: string | undefined) {
     orgId ?? "",
     registration?.registered === true &&
       orgId !== undefined &&
-      registrationHasOrg(registration, orgId) &&
       registration.center_url !== undefined,
   );
   // 电脑列表要比本机状态新才可信：刚注册完时列表缓存还没有这台电脑，不能当成已被删除

@@ -379,6 +379,29 @@ describe("本机详情服务控制", () => {
       ),
     ).toBe(false);
   });
+  it("附加组织能识别本机，但系统服务和代理只能在最初注册的组织管理", async () => {
+    const getMachineProxy = vi.fn();
+    const local = bridge({
+      getLocalStatus: async () => ({
+        ...status,
+        registration: {
+          registered: true,
+          organization_id: "o2",
+          organization_ids: ["o2", "o1"],
+          device_id: "d1",
+          center_url: centerUrl,
+        },
+      }),
+      getMachineProxy,
+      saveMachineProxy: vi.fn(),
+    });
+    renderSettings("/o/o1/settings/computers?computer=d1", route());
+    await screen.findAllByText(
+      "请切换到这台电脑最初注册的组织，管理本机服务。",
+    );
+    expect(local.getLocalService).not.toHaveBeenCalled();
+    expect(getMachineProxy).not.toHaveBeenCalled();
+  });
   it("启动方式切换持久化并保留停止确认，失败不显示成功", async () => {
     const local = bridge();
     renderSettings("/o/o1/settings/computers?computer=d1", route());
