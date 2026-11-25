@@ -97,12 +97,47 @@ test("C02 同一历史回复在退队前后显示原作者，资料缺失时保�
   await page.reload();
   const unknown = trigger(turn(page), "未知作者");
   await expect(turn(page).getByText("青禾", { exact: true })).toHaveCount(0);
-  const requested = page.waitForRequest((req) =>
-    new URL(req.url()).pathname.endsWith("/agents/" + second),
+  await expect(unknown).toBeVisible();
+  const authorUrl = "**/agents/" + second;
+  const notice = card(page, "未知作者").getByText(
+    "找不到这个 Agent，可能已被删除或你没有访问权限。",
+    { exact: true },
   );
-  await unknown.click();
-  await requested;
-  await expect(card(page, "未知作者").getByRole("status")).toBeVisible();
+  for (let attempt = 0; attempt < 2; attempt++) {
+    // 让重新读取资料的请求停在途中，直接验证触发按钮在此期间仍是卡片锚点。
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route(
+      authorUrl,
+      async (route) => {
+        await gate;
+        await route.fallback();
+      },
+      { times: 1 },
+    );
+    const requested = page.waitForRequest(authorUrl);
+    await unknown.click();
+    try {
+      await requested;
+      await page.evaluate(
+        () =>
+          new Promise<void>((done) =>
+            requestAnimationFrame(() => requestAnimationFrame(() => done())),
+          ),
+      );
+      await expect(unknown).toHaveAttribute("aria-expanded", "true", {
+        timeout: 1500,
+      });
+    } finally {
+      release();
+    }
+    await expect(notice).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(notice).toHaveCount(0);
+    await expect(unknown).toBeFocused();
+  }
 });
 
 for (const mode of ["viewer", "exclusive"] as const) {

@@ -34,7 +34,8 @@ export function AgentTurn({
   const detail = lookup && query.isSuccess ? query.data : undefined;
   const profile = detail ?? author;
   const name = profile?.name ?? t("chat.messages.unknownAuthor");
-  const resolved = !!profile || !lookup || query.isError;
+  // 首次读取结束后保留头像按钮。打开卡片会重查失败的资料，期间不能卸载它的锚点。
+  const resolved = !!profile || !lookup || query.isFetched;
   return (
     <div
       data-slot="agent-turn"
