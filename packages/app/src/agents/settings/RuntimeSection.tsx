@@ -70,7 +70,8 @@ export function RuntimeSection({
   agent,
   writes,
   setDirty,
-}: SectionProps) {
+  chooseComputer = false,
+}: SectionProps & { chooseComputer?: boolean }) {
   const t = useT();
   const devices = useDevices(orgId);
   const me = useMe();
@@ -80,14 +81,14 @@ export function RuntimeSection({
       runtimeChoices(devices.data ?? [], agent.space_id, agent.owner_user_id),
     [devices.data, agent.space_id, agent.owner_user_id],
   );
-  const currentValue = config
+  const currentValue = config?.computer_id
     ? `${config.computer_id}:${config.runtime}`
     : null;
   const current = choices.find((choice) => choice.value === currentValue);
   const options = runtimeOptions(choices, t).map((option) =>
     option.value === currentValue ? { ...option, disabled: false } : option,
   );
-  if (config && !current)
+  if (config?.computer_id && !current)
     options.unshift({
       value: currentValue!,
       label: `${runtimeLabel(config.runtime)} · ${agent.computer_name ?? config.computer_id.slice(0, 8)}`,
@@ -119,7 +120,62 @@ export function RuntimeSection({
     return () => setDirty("runtime", false);
   }, [argsDirty, modelDirty, setDirty]);
 
-  if (!config) return null;
+  const pickRuntime = (value: string) => {
+    const choice = choices.find((item) => item.value === value);
+    if (!choice || value === currentValue) return;
+    void writes.saveConfig({
+      computer_id: choice.deviceId,
+      grant_id: choice.grantId,
+      runtime: choice.provider,
+      model: "default",
+    });
+  };
+
+  const runtimeSelect = devices.isPending ? (
+    <span role="status">{t("common.loading")}</span>
+  ) : devices.isError ? (
+    <div role="alert" className="flex items-center gap-2 text-body-sm">
+      {t("computers.loadFailed")}
+      <Button
+        size="28"
+        variant="outline"
+        onClick={() => void devices.refetch()}
+      >
+        {t("common.retry")}
+      </Button>
+    </div>
+  ) : (
+    <Select
+      defaultOpen={chooseComputer && options.length > 0}
+      className="w-72 max-w-full"
+      aria-label={t("agents.sections.runtime.runtime")}
+      value={currentValue}
+      onChange={pickRuntime}
+      options={options}
+      disabled={writes.configPending || options.length === 0}
+      placeholder={
+        options.length
+          ? t("chat.proposal.pickRuntime")
+          : t("agents.create.runtimeNone")
+      }
+    />
+  );
+  const emptyHint = !config?.computer_id &&
+    devices.isSuccess &&
+    options.length === 0 && (
+      <p className="text-body-sm text-fg-muted">
+        {t("chat.proposal.runtimeEmpty")}
+      </p>
+    );
+  if (!config)
+    return (
+      <div>
+        <SettingRow label={t("agents.sections.runtime.runtime")}>
+          {runtimeSelect}
+        </SettingRow>
+        {emptyHint}
+      </div>
+    );
   const restricted =
     config.runtime === "codebuddy" ||
     config.runtime === "hermes" ||
@@ -173,17 +229,6 @@ export function RuntimeSection({
     };
   });
 
-  const pickRuntime = (value: string) => {
-    const choice = choices.find((item) => item.value === value);
-    if (!choice || value === currentValue) return;
-    void writes.saveConfig({
-      computer_id: choice.deviceId,
-      grant_id: choice.grantId,
-      runtime: choice.provider,
-      model: "default",
-    });
-  };
-
   const updateRow = (index: number, patch: Partial<ArgRow>) =>
     setRows((list) =>
       list.map((row, i) => (i === index ? { ...row, ...patch } : row)),
@@ -232,14 +277,9 @@ export function RuntimeSection({
           model={config.model}
           meId={me.data?.id}
         />
-        <Select
-          className="w-72"
-          aria-label={t("agents.sections.runtime.runtime")}
-          value={currentValue}
-          onChange={pickRuntime}
-          options={options}
-        />
+        {runtimeSelect}
       </SettingRow>
+      {emptyHint}
       <SettingRow label={t("agents.sections.runtime.model")}>
         <div className="flex w-72 flex-col gap-2">
           {manualModel || !modelKnown ? (

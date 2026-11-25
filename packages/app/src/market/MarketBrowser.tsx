@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import type {
   InfiniteData,
@@ -44,6 +44,8 @@ import {
 
 type Kind = "skills" | "templates";
 
+const CROSSFADE_MS = 160;
+
 export function MarketBrowser({
   orgId,
   skillsOnly = false,
@@ -59,6 +61,16 @@ export function MarketBrowser({
   const { locale } = useI18n();
   const catalog = useMarketCatalog(orgId);
   const [kind, setKind] = useState<Kind>("skills");
+  // 退出中的面板沿用点击时的内容，避免新分类或加载状态出现在旧画面里。
+  const [outgoing, setOutgoing] = useState<{
+    kind: Kind;
+    content: ReactNode;
+  } | null>(null);
+  useEffect(() => {
+    if (!outgoing) return;
+    const timer = setTimeout(() => setOutgoing(null), CROSSFADE_MS);
+    return () => clearTimeout(timer);
+  }, [outgoing]);
   const [search, setSearch] = useState("");
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("");
@@ -77,7 +89,18 @@ export function MarketBrowser({
     { ...filters, ...(sort !== "default" ? { sort } : {}) },
     kind === "skills",
   );
-  const templates = useMarketTemplates(orgId, filters, kind === "templates");
+  // 技能首屏就绪后预载模板首页；搜索和分类查询等用户实际切到模板时再发。
+  const warmTemplates =
+    !skillsOnly &&
+    Boolean(catalog.data?.counts.templates) &&
+    skills.isSuccess &&
+    !search.trim() &&
+    !q;
+  const templates = useMarketTemplates(
+    orgId,
+    kind === "templates" ? filters : {},
+    kind === "templates" || warmTemplates,
+  );
 
   const categories = useMemo(
     () =>
@@ -130,46 +153,8 @@ export function MarketBrowser({
   const total = list.data?.pages[0]?.total ?? 0;
   const showPacks = kind === "skills" && (catalog.data.packs ?? []).length > 0;
 
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-3">
-        {!skillsOnly && (
-          <Segmented
-            label={t("market.kind.label")}
-            value={kind}
-            onChange={(value) => {
-              setKind(value);
-              setCategory("");
-            }}
-            options={[
-              {
-                value: "skills" as Kind,
-                label: t("market.kind.skills"),
-                icon: <Icon name="sparkles" />,
-              },
-              {
-                value: "templates" as Kind,
-                label: t("market.kind.templates"),
-                icon: <Icon name="bot" />,
-              },
-            ]}
-          />
-        )}
-        <TextInput
-          variant="field"
-          aria-label={t("market.search.label")}
-          placeholder={
-            kind === "skills"
-              ? t("market.search.skills")
-              : t("market.search.templates")
-          }
-          leading={<Icon name="search" />}
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          className="ml-auto !w-[290px] shrink-0"
-        />
-      </div>
-
+  const content = (
+    <>
       {showPacks && (
         <PackRail packs={catalog.data.packs} onOpenSkill={onOpenSkill} />
       )}
@@ -284,6 +269,76 @@ export function MarketBrowser({
           )}
         </>
       )}
+    </>
+  );
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-3">
+        {!skillsOnly && (
+          <Segmented
+            equalWidth
+            label={t("market.kind.label")}
+            value={kind}
+            onChange={(value) => {
+              if (value === kind) return;
+              const reduceMotion = window.matchMedia?.(
+                "(prefers-reduced-motion: reduce)",
+              ).matches;
+              setOutgoing(reduceMotion ? null : { kind, content });
+              setKind(value);
+              setCategory("");
+            }}
+            options={[
+              {
+                value: "skills" as Kind,
+                label: t("market.kind.skills"),
+                icon: <Icon name="sparkles" />,
+              },
+              {
+                value: "templates" as Kind,
+                label: t("market.kind.templates"),
+                icon: <Icon name="bot" />,
+              },
+            ]}
+          />
+        )}
+        <TextInput
+          variant="field"
+          aria-label={t("market.search.label")}
+          placeholder={
+            kind === "skills"
+              ? t("market.search.skills")
+              : t("market.search.templates")
+          }
+          leading={<Icon name="search" />}
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          className="ml-auto !w-[290px] shrink-0"
+        />
+      </div>
+
+      <div className="isolate grid">
+        {(["skills", "templates"] as const).map((pane) => {
+          const active = pane === kind;
+          if (!active && outgoing?.kind !== pane) return null;
+          return (
+            <div
+              key={pane}
+              inert={!active}
+              aria-hidden={active ? undefined : true}
+              style={{ transitionDuration: `${CROSSFADE_MS}ms` }}
+              className={cn(
+                "col-start-1 row-start-1 flex min-w-0 flex-col gap-4 self-start transition-opacity ease-in-out motion-reduce:transition-none",
+                active ? "z-[1]" : "pointer-events-none opacity-0",
+                active && outgoing && "motion-safe:starting:opacity-0",
+              )}
+            >
+              {active ? content : outgoing?.content}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

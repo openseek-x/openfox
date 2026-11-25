@@ -272,7 +272,7 @@ export const artifactsZh = {
     nativeHint:
       "先保存正文，再选择你的私有 Codex 会话。批注会加入该聊天草稿，由你发送后处理。",
     nativeConversation: "选择私有 Codex 会话",
-    nativeNone: "没有可用会话，请先创建一个个人 Codex 会话。",
+    nativeNone: "请先在当前空间创建私有 Codex 会话，再开始批注。",
     nativeStart: "保存并打开批注",
     nativeFailed:
       "无法打开或刷新批注。请确认保存成功、文档未被其他人修改，且会话没有其他成员。",

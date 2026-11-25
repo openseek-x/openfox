@@ -6,6 +6,7 @@ import { parseBlocks, safeHref } from "./Markdown";
 import {
   buildMentions,
   directRows,
+  dispatchRejection,
   displayStatus,
   groupByAgent,
   lastUserMessage,
@@ -181,4 +182,11 @@ describe("最小安全 Markdown", () => {
     );
     expect(plainPreview("# 标题\n> 引用 a_b_c")).toBe("标题 引用 a_b_c");
   });
+});
+
+it("只翻译已知的系统派发失败，保留用户原文及未知原因", () => {
+  const body = "The Agent could not start this request: AGENT_UNAVAILABLE";
+  expect(dispatchRejection("SYSTEM", body)?.code).toBe("AGENT_UNAVAILABLE");
+  expect(dispatchRejection("USER", body)).toBeNull();
+  expect(dispatchRejection("SYSTEM", body + " (extra context)")).toBeNull();
 });

@@ -10,7 +10,7 @@ import { DocRowMenu, QuickAddMenu } from "./DocMenus";
 import type { DocLocation } from "./model";
 import { docsPath } from "./model";
 import { NodeIcon } from "./parts";
-import { useDocChildren } from "./queries";
+import { useDocChildren, useRecentPersonalFiles } from "./queries";
 
 // 阶段 5b · 目录内容（Figma 3.1、3.5）：名称（N 项）/ 更新人 / 更新时间的表格，
 // 行 hover 显示「···」，空态与「快速添加」在内容区右上。
@@ -19,10 +19,12 @@ export function FolderView({
   orgId,
   spaceId,
   location,
+  showPersonalList,
 }: {
   orgId: string;
   spaceId: string;
   location: DocLocation;
+  showPersonalList: boolean;
 }) {
   const t = useT();
   const nodes = useDocChildren(
@@ -31,17 +33,22 @@ export function FolderView({
     location.container,
     location.parentId,
   );
-  const list = nodes.data ?? [];
   const isPersonalRoot =
     location.container.kind === "personal" && location.parentId === null;
+  const recent = useRecentPersonalFiles(orgId, spaceId, isPersonalRoot);
+  const visible = isPersonalRoot ? recent : nodes;
+  const list = visible.data ?? [];
+  const folders =
+    isPersonalRoot && showPersonalList
+      ? nodes.data?.filter((n) => n.kind === "folder")
+      : undefined;
 
   return (
     <div className="mx-auto flex w-full max-w-[896px] flex-col gap-4 p-6">
       <div className="flex flex-wrap items-center justify-end gap-3">
         {isPersonalRoot && (
           <h2 className="mr-auto flex items-center gap-2 text-title font-bold">
-            <Icon name="folder" className="text-fg-muted" />
-            {t("docs.nav.groupPersonal")}
+            {t("docs.recentlyModified")}
           </h2>
         )}
         <QuickAddMenu
@@ -63,7 +70,7 @@ export function FolderView({
           )}
         />
       </div>
-      {nodes.isPending ? (
+      {visible.isPending || (isPersonalRoot && nodes.isPending) ? (
         <div aria-busy="true" className="flex flex-col gap-2">
           {[0, 1, 2].map((index) => (
             <div
@@ -72,22 +79,35 @@ export function FolderView({
             />
           ))}
         </div>
-      ) : nodes.isError ? (
+      ) : visible.isError || nodes.isError ? (
         <p role="alert" className="py-8 text-center text-body text-danger">
           {t("docs.loadFailed")}
         </p>
       ) : list.length === 0 ? (
-        <EmptyFolder location={location} />
-      ) : !isPersonalRoot ? (
+        isPersonalRoot && nodes.data?.length ? (
+          <p className="text-body-sm text-fg-muted">
+            {t("docs.noRecentFiles")}
+          </p>
+        ) : (
+          <EmptyFolder location={location} />
+        )
+      ) : (
         <>
-          <div className="overflow-x-auto">
+          <div className="@container">
             <NodeTable orgId={orgId} spaceId={spaceId} nodes={list} />
           </div>
-          <p className="py-4 text-center text-caption text-fg-muted">
-            {t("docs.endOfList")}
-          </p>
+          {!isPersonalRoot && (
+            <p className="py-4 text-center text-caption text-fg-muted">
+              {t("docs.endOfList")}
+            </p>
+          )}
         </>
-      ) : null}
+      )}
+      {folders && folders.length > 0 && (
+        <div className="@container">
+          <NodeTable orgId={orgId} spaceId={spaceId} nodes={folders} />
+        </div>
+      )}
     </div>
   );
 }
@@ -105,11 +125,11 @@ function NodeTable({
   const { locale } = useI18n();
   const navigate = useNavigate();
   return (
-    <table className="w-full min-w-[640px] table-fixed border-collapse text-body">
+    <table className="w-full table-fixed border-collapse text-body">
       <colgroup>
         <col />
-        <col className="w-40" />
-        <col className="w-32" />
+        <col className="hidden w-40 @xl:table-column" />
+        <col className="hidden w-32 @xl:table-column" />
         <col className="w-10" />
       </colgroup>
       <thead>
@@ -117,10 +137,10 @@ function NodeTable({
           <th className="h-9 px-2 font-medium">
             {t("docs.itemCount", { count: nodes.length })}
           </th>
-          <th className="h-9 px-2 font-medium">
+          <th className="hidden h-9 px-2 font-medium @xl:table-cell">
             {t("docs.columns.updatedBy")}
           </th>
-          <th className="h-9 px-2 font-medium">
+          <th className="hidden h-9 px-2 font-medium @xl:table-cell">
             {t("docs.columns.updatedAt")}
           </th>
           <th />
@@ -143,14 +163,19 @@ function NodeTable({
                   {node.title || t("docs.untitled")}
                 </span>
               </button>
+              <span className="block truncate pb-1 pl-6 text-caption text-fg-muted @xl:hidden">
+                {[node.updated_by_name, formatDateTime(locale, node.updated_at)]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </span>
             </td>
-            <td className="truncate px-2 text-fg-secondary">
+            <td className="hidden truncate px-2 text-fg-secondary @xl:table-cell">
               {node.updated_by_name}
             </td>
-            <td className="truncate px-2 text-fg-secondary">
+            <td className="hidden truncate px-2 text-fg-secondary @xl:table-cell">
               {formatDateTime(locale, node.updated_at)}
             </td>
-            <td className="px-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+            <td className="px-1 @xl:of-row-actions">
               <DocRowMenu node={node} />
             </td>
           </tr>

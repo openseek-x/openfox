@@ -220,13 +220,14 @@ export const chatEn: Messages["chat"] = {
     agentSettings: "Agent settings",
   },
   newChatPopover: {
-    search: "Search agents or crews",
+    noComputer: "No computer linked",
+    search: "Search members, agents, or crews",
     assistant: "Assistant",
     crew: "Crew",
     noAgents: "No agents yet",
     noAgentsDesc: "Create an agent, then pick it here to start chatting.",
     createAgent: "Create agent",
-    noMatch: "No matching agents or crews",
+    noMatch: "No matching members, agents, or crews",
     directDisabled: "This agent can't be messaged directly",
   },
   header: {
@@ -252,7 +253,7 @@ export const chatEn: Messages["chat"] = {
   page: {
     readyEmpty: "Session ready: {title}",
     startWith: "Start chatting with {name}",
-    pick: "Pick a conversation on the left, or start a new one",
+    pick: "Choose a person, agent, or crew",
     crewStartWith: "Start a conversation with crew {name}",
     crewUnavailable:
       "This crew can't be found. It may be archived or you don't have access.",
@@ -269,6 +270,14 @@ export const chatEn: Messages["chat"] = {
     delegatedTo: "{leader} delegated to {member}",
   },
   messages: {
+    actions: "Message actions",
+    diagnostics: "Diagnostic details",
+    agentUnavailable: "The agent is unavailable for this request.",
+    noActor: "The requester could not be identified.",
+    conversationClosed: "This conversation is closed.",
+    grantUnavailable: "Computer access is unavailable.",
+    authorizationDenied: "Permission to run this request was denied.",
+    taskNotRunnable: "This task cannot run in its current state.",
     loadOlder: "Load earlier messages",
     loadingOlder: "Loading earlier messages",
     loadFailed: "Failed to load messages",
@@ -563,6 +572,7 @@ export const chatEn: Messages["chat"] = {
       "This agent isn't bound to a computer yet, so messages won't run.",
     unnamed: "The bound computer",
     viewComputer: "View computer",
+    bindComputer: "Bind computer",
     changeComputer: "Change computer",
   },
 };

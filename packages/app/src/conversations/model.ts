@@ -10,6 +10,24 @@ import type { BadgeTone, IconName } from "@openfox/ui";
 
 // 对话页签与对话页的纯函数：分组、排序、状态映射、消息分页合并、执行时间线锚点。
 
+const rejectionLabels = {
+  AGENT_UNAVAILABLE: "chat.messages.agentUnavailable",
+  NO_ACTOR: "chat.messages.noActor",
+  CONVERSATION_CLOSED: "chat.messages.conversationClosed",
+  DEVICE_GRANT_UNAVAILABLE: "chat.messages.grantUnavailable",
+  AUTHORIZATION_DENIED: "chat.messages.authorizationDenied",
+  TASK_NOT_RUNNABLE: "chat.messages.taskNotRunnable",
+} as const satisfies Record<string, MessageKey>;
+
+// Dispatch persists these reasons verbatim in system messages and their sidebar previews.
+export function dispatchRejection(author: string | undefined, body: string) {
+  const prefix = "The Agent could not start this request: ";
+  if (author !== "SYSTEM" || !body.startsWith(prefix)) return null;
+  const code = body.slice(prefix.length);
+  if (!Object.hasOwn(rejectionLabels, code)) return null;
+  return { code, label: rejectionLabels[code as keyof typeof rejectionLabels] };
+}
+
 export type ChatMode = "recents" | "organized" | "sessions";
 export const CHAT_MODES: readonly ChatMode[] = [
   "recents",

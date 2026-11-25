@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 
 import { type DocNodeDetail } from "@openfox/api";
 import { useT } from "@openfox/i18n";
 import {
   Badge,
+  Drawer,
   Icon,
   IconButton,
   Menu,
@@ -43,11 +44,14 @@ import { DocHistoryDialog } from "./DocHistoryDialog";
 // 阶段 5b · 文档库页面（Figma 3.1–3.8）：二级导航 + 内容区。
 // 地址 /docs 为我的文档根，/docs/:nodeId 打开文件夹、文档、表格或文件。
 
+const MIN_READER_WIDTH = 560;
+
 export function DocsPage() {
   const t = useT();
   const api = useApi();
   const me = useQuery({ queryKey: keys.me, queryFn: api.me.get });
   const [pageWidth, setPageWidth] = useDocPageWidth(me.data?.id ?? "");
+  const locationKey = useLocation().key;
   const { orgId = "", spaceId = "", nodeId } = useParams();
   const detail = useDocNode(orgId, spaceId, nodeId ?? "");
   const sets = useDocSets(orgId, spaceId);
@@ -82,7 +86,7 @@ export function DocsPage() {
     initial: DOC_NAV_WIDTH.default,
     min: DOC_NAV_WIDTH.min,
     max: DOC_NAV_WIDTH.max,
-    remaining: 320,
+    remaining: MIN_READER_WIDTH,
   });
   const [navCollapsed, setNavCollapsed] = useState(
     () => readLocal(localKeys.docsNavCollapsed) === "1",
@@ -90,6 +94,26 @@ export function DocsPage() {
   useEffect(() => {
     writeLocal(localKeys.docsNavCollapsed, navCollapsed ? "1" : null);
   }, [navCollapsed]);
+
+  // 连最小目录宽度都无法容纳时，优先保留正文。
+  const narrow =
+    nav.availableWidth > 0 &&
+    nav.availableWidth < DOC_NAV_WIDTH.min + MIN_READER_WIDTH;
+  const [treeOpen, setTreeOpen] = useState(false);
+  useEffect(() => setTreeOpen(false), [locationKey, narrow]);
+  const treeHidden = narrow || navCollapsed;
+  const tree = (
+    <DocsNav
+      orgId={orgId}
+      spaceId={spaceId}
+      selectedId={nodeId}
+      width={
+        narrow ? Math.min(DOC_NAV_WIDTH.default, nav.availableWidth) : nav.width
+      }
+      maxWidth={narrow ? DOC_NAV_WIDTH.min : nav.max}
+      onWidthChange={nav.onWidthChange}
+    />
+  );
 
   const current: DocNodeDetail | undefined = nodeId ? detail.data : undefined;
   const location = current ? locationOf(current) : rootLocation();
@@ -106,28 +130,33 @@ export function DocsPage() {
       beforeCurrentChange={() => flushCurrent()}
     >
       <div ref={nav.containerRef} className="flex h-full min-h-0">
-        {!navCollapsed && (
-          <DocsNav
-            orgId={orgId}
-            spaceId={spaceId}
-            selectedId={nodeId}
-            width={nav.width}
-            maxWidth={nav.max}
-            onWidthChange={nav.onWidthChange}
-          />
+        {narrow ? (
+          <Drawer
+            open={treeOpen}
+            onClose={() => setTreeOpen(false)}
+            title={t("docs.title")}
+            side="left"
+            width="min(302px, calc(100vw - 24px))"
+          >
+            <div className="h-full [&>aside]:max-w-full">{tree}</div>
+          </Drawer>
+        ) : (
+          !navCollapsed && tree
         )}
         <section className="flex min-w-0 flex-1 flex-col">
-          <header className="flex h-11 shrink-0 items-center gap-2 border-b border-line-default px-3">
+          <header className="flex h-11 shrink-0 items-center gap-2 border-b border-line-subtle px-3">
             <IconButton
-              label={
-                navCollapsed ? t("docs.nav.expand") : t("docs.nav.collapse")
-              }
+              label={treeHidden ? t("docs.nav.expand") : t("docs.nav.collapse")}
               icon={
-                <Icon name={navCollapsed ? "panel-left" : "panel-left-close"} />
+                <Icon name={treeHidden ? "panel-left" : "panel-left-close"} />
               }
               size="28"
               variant="ghost"
-              onClick={() => setNavCollapsed((value) => !value)}
+              aria-expanded={narrow ? treeOpen : !navCollapsed}
+              aria-haspopup={narrow ? "dialog" : undefined}
+              onClick={() =>
+                narrow ? setTreeOpen(true) : setNavCollapsed((value) => !value)
+              }
             />
             <div className="min-w-0 flex-1">
               {!nodeId ? (
@@ -163,6 +192,7 @@ export function DocsPage() {
                 spaceId={spaceId}
                 nodeId={nodeId}
                 current={current}
+                treeHidden={treeHidden}
                 pending={Boolean(nodeId) && detail.isPending}
                 failed={Boolean(nodeId) && detail.isError}
                 location={location}
@@ -191,6 +221,7 @@ function DocContent({
   nodeId,
   current,
   pending,
+  treeHidden,
   failed,
   location,
   onFlushReady,
@@ -201,6 +232,7 @@ function DocContent({
   nodeId: string | undefined;
   current: DocNodeDetail | undefined;
   pending: boolean;
+  treeHidden: boolean;
   failed: boolean;
   location: DocLocation;
   onFlushReady: (flush: () => Promise<boolean>) => void;
@@ -225,7 +257,14 @@ function DocContent({
       </div>
     );
   if (!nodeId || !current || current.kind === "folder")
-    return <FolderView orgId={orgId} spaceId={spaceId} location={location} />;
+    return (
+      <FolderView
+        orgId={orgId}
+        spaceId={spaceId}
+        location={location}
+        showPersonalList={treeHidden}
+      />
+    );
   if (current.kind === "doc")
     return (
       <DocEditor

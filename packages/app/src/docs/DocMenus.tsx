@@ -70,7 +70,7 @@ export function QuickAddMenu({
         aria-expanded={importOpen}
         disabled={actions.uploading}
         onClick={() => setImportOpen((value) => !value)}
-        className="flex min-h-[34px] w-full items-center gap-2.5 rounded-lg py-1.5 pr-2 pl-2.5 text-left text-body text-fg-default outline-none hover:bg-surface-active focus-visible:bg-surface-active disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex min-h-[34px] w-full items-center gap-2.5 rounded-lg py-1.5 pr-2 pl-2.5 text-left text-body text-fg-default outline-none enabled:hover:bg-surface-hover focus-visible:bg-surface-active disabled:cursor-not-allowed disabled:opacity-50"
       >
         <Icon name="upload" className="text-fg-secondary" />
         <span className="flex-1">{t("docs.create.uploadImport")}</span>
@@ -142,6 +142,8 @@ export function DocRowMenu({ node }: { node: DocNode }) {
           size="28"
           variant="ghost"
           active={props.open}
+          aria-haspopup="menu"
+          aria-expanded={props.open}
           onClick={props.toggle}
         />
       )}
@@ -226,6 +228,8 @@ export function DocSetMenu({ docSet }: { docSet: DocSet }) {
           size="28"
           variant="ghost"
           active={props.open}
+          aria-haspopup="menu"
+          aria-expanded={props.open}
           onClick={props.toggle}
         />
       )}

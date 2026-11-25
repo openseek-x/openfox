@@ -48,6 +48,7 @@ export function usePanelWidth({
   };
   return {
     width,
+    availableWidth: available ?? 0,
     min,
     max: limit,
     resizing: preview !== null,

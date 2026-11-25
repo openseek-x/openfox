@@ -88,11 +88,11 @@ export function OtpInput({
           onPaste={onPaste}
           onFocus={(event) => event.target.select()}
           className={cn(
-            "h-14 w-12 rounded-lg border bg-surface-card text-center font-[Inter,var(--font-sans)] text-2xl font-semibold outline-none",
+            "of-input-frame h-14 w-12 rounded-lg border bg-surface-card text-center font-[Inter,var(--font-sans)] text-2xl font-semibold outline-none",
             invalid
               ? "border-danger text-danger"
-              : "border-line-default text-fg-default",
-            "focus:border-line-focus focus:shadow-focus disabled:opacity-50",
+              : "border-line-default text-fg-default focus:border-line-focus",
+            "disabled:opacity-50",
           )}
         />
       ))}

@@ -169,7 +169,7 @@ export function SettingsNavigation({
                   end={item.path === "spaces"}
                   className={({ isActive }) =>
                     cn(
-                      "flex h-[var(--density-nav-row,30px)] items-center gap-2 rounded-lg px-2 text-body hover:bg-surface-hover",
+                      "flex h-[var(--density-nav-row,30px)] items-center gap-2 rounded-lg px-2 text-body transition-colors duration-100 not-aria-[current=page]:hover:bg-surface-hover motion-reduce:transition-none",
                       isActive
                         ? "bg-surface-active font-medium"
                         : "text-fg-default",
@@ -191,7 +191,7 @@ export function SettingsNavigation({
                   to={base + "/daemon"}
                   className={({ isActive }) =>
                     cn(
-                      "flex h-[var(--density-nav-row,30px)] items-center gap-2 rounded-lg px-2 text-body hover:bg-surface-hover",
+                      "flex h-[var(--density-nav-row,30px)] items-center gap-2 rounded-lg px-2 text-body transition-colors duration-100 not-aria-[current=page]:hover:bg-surface-hover motion-reduce:transition-none",
                       isActive && "bg-surface-active font-medium",
                     )
                   }
@@ -204,7 +204,7 @@ export function SettingsNavigation({
                     to={base + "/about"}
                     className={({ isActive }) =>
                       cn(
-                        "flex h-[var(--density-nav-row,30px)] items-center gap-2 rounded-lg px-2 text-body hover:bg-surface-hover",
+                        "flex h-[var(--density-nav-row,30px)] items-center gap-2 rounded-lg px-2 text-body transition-colors duration-100 not-aria-[current=page]:hover:bg-surface-hover motion-reduce:transition-none",
                         isActive && "bg-surface-active font-medium",
                       )
                     }

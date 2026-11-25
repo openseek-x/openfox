@@ -133,7 +133,7 @@ export function BrowserAnnotationEditor({
         ref={form}
         aria-label={t("artifacts.browser.annotationEditor")}
         aria-describedby={quoteId}
-        className={`${frozen ? "absolute w-75 max-w-[calc(100%-16px)]" : "mx-auto max-w-75"} rounded-[22px] border border-line-default bg-surface-card p-[7px] text-body-sm shadow-lg focus-within:border-line-strong`}
+        className={`${frozen ? "absolute w-75 max-w-[calc(100%-16px)]" : "mx-auto max-w-75"} of-input-frame rounded-[22px] border border-line-default bg-surface-card p-[7px] text-body-sm shadow-lg focus-within:border-line-strong`}
         style={
           frozen
             ? {

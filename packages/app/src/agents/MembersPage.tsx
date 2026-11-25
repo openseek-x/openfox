@@ -122,7 +122,7 @@ export function MembersNavigation({
           )}
         </Menu>
       </div>
-      <label className="mx-1 mb-2 flex h-8 items-center gap-2 rounded-lg bg-surface-muted px-2.5 text-body">
+      <label className="of-input-frame mx-1 mb-2 flex h-8 items-center gap-2 rounded-lg bg-surface-muted px-2.5 text-body focus-within:outline focus-within:outline-line-focus">
         <Icon name="search" className="text-fg-muted" />
         <input
           type="search"

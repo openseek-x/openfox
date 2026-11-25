@@ -1,3 +1,4 @@
+import { dispatchRejection } from "./model";
 import { ReferenceCard } from "./ReferenceCard";
 import { assistantActions } from "./assistantActions";
 import { useState, type ReactNode } from "react";
@@ -10,6 +11,8 @@ import {
   Message,
   MessageContent,
   MessageActions,
+  Menu,
+  MenuItem,
   cn,
 } from "@openfox/ui";
 
@@ -177,14 +180,15 @@ export function UserMessage({
         )
       )}
       <MessageAttachments message={message} />
-      <MessageActions className="opacity-70 transition-opacity group-hover/message:opacity-100 group-focus-within/message:opacity-100">
+      <MessageActions>
         <span>{timeOf(message.created_at, locale)}</span>
-        <CopyButton text={message.body} />
-        {message.kind === "TEXT" && message.body.trim() && (
-          <MessageShare message={message} />
-        )}
-        {onReply && <ReplyButton onReply={onReply} />}
-        {onFork && <ForkButton onFork={onFork} />}
+        <MessageTools
+          message={message}
+          copy
+          share={message.kind === "TEXT" && Boolean(message.body.trim())}
+          onReply={onReply}
+          onFork={onFork}
+        />
       </MessageActions>
     </Message>
   );
@@ -214,13 +218,6 @@ function AgentMeta({
   return <span className="tabular-nums">{parts.join(" · ")}</span>;
 }
 
-/**
- * 非最后一条回复的操作栏：只在支持悬停的设备上默认隐藏，悬停或键盘聚焦到这轮回复时显示；
- * 触屏设备不匹配 (hover:hover)，始终显示。
- */
-const REVEAL_ACTIONS =
-  "transition-opacity [@media(hover:hover)]:opacity-0 group-hover/turn:opacity-100 group-hover/message:opacity-100 group-focus-within/turn:opacity-100 group-focus-within/message:opacity-100";
-
 export function AgentMessage({
   orgId,
   message,
@@ -231,7 +228,6 @@ export function AgentMessage({
   onReply,
   onFork,
   hideBody = false,
-  pinActions = false,
 }: {
   orgId: string;
   message: ConversationMessage;
@@ -245,8 +241,6 @@ export function AgentMessage({
   onReply?: () => void;
   onFork?: () => void;
   hideBody?: boolean;
-  /** 操作栏常显（会话里最后一条回复）；否则在可悬停设备上悬停才显示 */
-  pinActions?: boolean;
 }) {
   const t = useT();
   const hasBody = !hideBody && Boolean(message.body.trim());
@@ -275,21 +269,17 @@ export function AgentMessage({
       )}
       {children}
       {/* 信息靠左、按钮靠右；作者名由外层 AgentTurn 的头部显示 */}
-      <MessageActions
-        data-pinned={pinActions || undefined}
-        className={cn("justify-between", !pinActions && REVEAL_ACTIONS)}
-      >
+      <MessageActions className="justify-between">
         <div className="min-w-0">
           <AgentMeta orgId={orgId} message={message} model={model} />
         </div>
-        <div className="flex items-center gap-0.5">
-          {hasBody && <CopyButton text={message.body} />}
-          {hasBody && message.kind === "TEXT" && (
-            <MessageShare message={message} />
-          )}
-          {onReply && <ReplyButton onReply={onReply} />}
-          {onFork && <ForkButton onFork={onFork} />}
-        </div>
+        <MessageTools
+          message={message}
+          copy={hasBody}
+          share={hasBody && message.kind === "TEXT"}
+          onReply={onReply}
+          onFork={onFork}
+        />
       </MessageActions>
     </Message>
   );
@@ -309,6 +299,23 @@ function ReplyButton({ onReply }: { onReply: () => void }) {
 }
 
 export function SystemMessage({ message }: { message: ConversationMessage }) {
+  const t = useT();
+  const failure = dispatchRejection(message.author_kind, message.body);
+  if (failure)
+    return (
+      <div
+        data-seq={message.seq}
+        className="self-center rounded-lg bg-surface-muted px-3 py-2 text-body-sm"
+      >
+        <p>{t(failure.label)}</p>
+        <details className="mt-1 text-caption text-fg-muted">
+          <summary className="cursor-pointer">
+            {t("chat.messages.diagnostics")}
+          </summary>
+          <code>{failure.code}</code>
+        </details>
+      </div>
+    );
   return (
     <p
       data-seq={message.seq}
@@ -321,19 +328,61 @@ export function SystemMessage({ message }: { message: ConversationMessage }) {
   );
 }
 
-function MessageShare({ message }: { message: ConversationMessage }) {
+function MessageTools({
+  message,
+  copy,
+  share,
+  onReply,
+  onFork,
+}: {
+  message: ConversationMessage;
+  copy: boolean;
+  share: boolean;
+  onReply?: () => void;
+  onFork?: () => void;
+}) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const [manage, setManage] = useState(false);
   return (
     <>
-      <IconButton
-        label={t("share.messageAction")}
-        icon={<Icon name="link" size={14} />}
-        size="28"
-        variant="ghost"
-        onClick={() => setOpen(true)}
-      />
+      <div className="flex items-center gap-0.5 transition-opacity pointer-fine:opacity-0 pointer-fine:group-hover/message:opacity-100 pointer-fine:group-focus-within/message:opacity-100 pointer-fine:has-[[aria-expanded=true]]:opacity-100">
+        {copy && <CopyButton text={message.body} />}
+        {onReply && <ReplyButton onReply={onReply} />}
+        {(share || onFork) && (
+          <Menu
+            focusFirstOnOpen
+            label={t("chat.messages.actions")}
+            placement="bottom-end"
+            trigger={({ ref, open, toggle }) => (
+              <IconButton
+                ref={ref}
+                size="28"
+                variant="ghost"
+                label={t("chat.messages.actions")}
+                icon={<Icon name="ellipsis" size={14} />}
+                aria-haspopup="menu"
+                aria-expanded={open}
+                onClick={toggle}
+              />
+            )}
+          >
+            {share && (
+              <MenuItem
+                icon={<Icon name="link" />}
+                onSelect={() => setOpen(true)}
+              >
+                {t("share.messageAction")}
+              </MenuItem>
+            )}
+            {onFork && (
+              <MenuItem icon={<Icon name="git-branch" />} onSelect={onFork}>
+                {t("chat.fork.action")}
+              </MenuItem>
+            )}
+          </Menu>
+        )}
+      </div>
       {open && (
         <ShareDialog
           orgId={message.organization_id}
@@ -358,18 +407,5 @@ function MessageShare({ message }: { message: ConversationMessage }) {
         />
       )}
     </>
-  );
-}
-
-function ForkButton({ onFork }: { onFork: () => void }) {
-  const t = useT();
-  return (
-    <IconButton
-      label={t("chat.fork.action")}
-      icon={<Icon name="git-branch" size={14} />}
-      size="28"
-      variant="ghost"
-      onClick={onFork}
-    />
   );
 }

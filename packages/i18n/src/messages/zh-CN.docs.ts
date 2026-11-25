@@ -30,6 +30,8 @@ export const docsZh = {
   quickAdd: "快速添加",
   moreActions: "更多操作",
   loadFailed: "加载失败，请刷新后重试",
+  recentlyModified: "最近修改",
+  noRecentFiles: "暂无最近修改的文件",
   endOfList: "已经到底了",
   itemCount: "名称（{count} 项）",
   columns: {

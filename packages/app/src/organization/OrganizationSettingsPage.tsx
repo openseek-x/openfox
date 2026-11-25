@@ -374,7 +374,7 @@ function SlugRow({
         </span>
       }
       control={
-        <div className="flex h-8 w-[276px] items-center overflow-hidden rounded-lg border border-line-default focus-within:border-line-focus">
+        <div className="of-input-frame flex h-8 w-[276px] items-center overflow-hidden rounded-lg border border-line-default focus-within:border-line-focus">
           <span className="shrink-0 pl-2.5 text-body-sm text-fg-muted select-none">
             {window.location.origin}/
           </span>

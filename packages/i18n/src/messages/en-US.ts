@@ -607,7 +607,8 @@ export const enUS: Messages = {
     favoriteFailed: "Couldn't update favorite",
     board: {
       label: "Task board",
-      collapsed: "Hidden columns",
+      jumpToColumn: "Jump to column",
+      findColumn: "Search columns",
       instructions:
         "Press space to pick up a card, use the arrow keys to move it, press space again to drop, or Escape to cancel. Press enter to open the task.",
       picked: "Picked up task {task}",
@@ -743,6 +744,7 @@ export const enUS: Messages = {
       backToInbox: "Back to inbox",
       goToSpace: "Go to space tasks",
       aiPanel: "AI panel",
+      taskView: "Task",
       aiPanelClose: "Close AI panel",
       aiPanelResize: "Resize task AI panel",
       aiPanelOpenInChat: "Open in chat",

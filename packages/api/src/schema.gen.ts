@@ -11299,7 +11299,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** 列出某个容器内某个父节点下的子节点（按 position、title；每次最多 500） */
+        /** 列出目录子节点，或列出个人文档中最近修改的文件 */
         get: operations["listDocNodes"];
         put?: never;
         /** 新建文件夹 / 文档 / 表格（文档集要求空间可写；我的文档只要空间可读）。每个容器最多 5000 个节点、树深最多 10 层 */
@@ -44419,6 +44419,8 @@ export interface operations {
     listDocNodes: {
         parameters: {
             query: {
+                /** @description recent 限个人根目录请求，跨子目录返回最近修改的 12 个非文件夹节点，按 updated_at 降序、id 升序排列。省略时列出指定目录的直接子节点，最多 500 条。 */
+                view?: "recent";
                 container: "personal" | "set";
                 set_id?: string;
                 /** @description 缺省 = 容器根 */

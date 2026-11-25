@@ -203,6 +203,7 @@ export const chatZh = {
     agentSettings: "Agent 设置",
   },
   newChatPopover: {
+    noComputer: "未绑定电脑",
     search: "搜索成员、Agent 或小队",
     assistant: "小助手",
     crew: "小队",
@@ -235,7 +236,7 @@ export const chatZh = {
   page: {
     readyEmpty: "会话已就绪：{title}",
     startWith: "开始和 {name} 对话",
-    pick: "从左侧选择一个对话，或新建对话",
+    pick: "选择成员、Agent 或小队",
     crewStartWith: "开始和小队 {name} 对话",
     crewUnavailable: "找不到这个小队，可能已归档或你没有访问权限",
     crewNoMembers: "这个小队里没有你可用的 Agent",
@@ -251,6 +252,14 @@ export const chatZh = {
     delegatedTo: "队长 {leader} 委派给 {member}",
   },
   messages: {
+    actions: "消息操作",
+    diagnostics: "诊断详情",
+    agentUnavailable: "Agent 暂时无法处理这个请求。",
+    noActor: "无法确认此次请求的发起人。",
+    conversationClosed: "对话已关闭，无法执行请求。",
+    grantUnavailable: "这台电脑的授权不可用。",
+    authorizationDenied: "没有执行此次请求的权限。",
+    taskNotRunnable: "任务当前状态不允许执行。",
     loadOlder: "加载更早的消息",
     loadingOlder: "正在加载更早的消息",
     loadFailed: "加载消息失败",
@@ -523,6 +532,7 @@ export const chatZh = {
     noComputer: "这个 Agent 还没有绑定电脑，消息不会运行。",
     unnamed: "绑定的电脑",
     viewComputer: "查看电脑",
+    bindComputer: "绑定电脑",
     changeComputer: "更换电脑",
   },
 };

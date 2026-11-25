@@ -39,7 +39,8 @@ export function TableRow({
       onClick={onClick}
       className={cn(
         "border-b border-line-soft",
-        onClick && "cursor-pointer hover:bg-surface-hover",
+        onClick && "cursor-pointer",
+        onClick && !selected && "hover:bg-surface-hover",
         selected && "bg-surface-selected",
         className,
       )}

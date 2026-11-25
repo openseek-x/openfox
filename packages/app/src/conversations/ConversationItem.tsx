@@ -8,6 +8,7 @@ import { Icon, IconButton, Menu, MenuItem, cn } from "@openfox/ui";
 import { AgentAvatar } from "../agents/AgentAvatar";
 import { formatRelativeTime } from "../tasks/primitives/dates";
 import {
+  dispatchRejection,
   conversationTitle,
   displayStatus,
   plainPreview,
@@ -143,16 +144,14 @@ export function RowMenu({
             icon={<Icon name="ellipsis" size={14} />}
             size="28"
             variant="ghost"
+            aria-haspopup="menu"
             aria-expanded={isOpen}
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
               toggle();
             }}
-            className={cn(
-              "size-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
-              isOpen && "opacity-100",
-            )}
+            className="size-6 of-row-actions"
           />
         );
       }}
@@ -198,14 +197,19 @@ export function ConversationItem({
   const { locale } = useI18n();
   const [menuRequest, setMenuRequest] = useState(false);
   const title = conversationTitle(conversation);
-  const preview = plainPreview(conversation.last_message?.preview ?? "");
+  const last = conversation.last_message;
+  const failure = dispatchRejection(last?.author_kind, last?.preview ?? "");
+  const preview = failure
+    ? t(failure.label)
+    : plainPreview(last?.preview ?? "");
   const time = conversation.last_message?.created_at ?? conversation.updated_at;
   const label = title ?? t("chat.untitled");
+  const hasActions = Boolean(onComplete || menuItems.length);
 
   return (
     <div
       className={cn(
-        "group relative rounded-lg",
+        "group relative rounded-lg transition-colors duration-100 motion-reduce:transition-none",
         selected ? "bg-surface-selected" : "hover:bg-surface-hover",
       )}
       onContextMenu={(event) => {
@@ -256,13 +260,22 @@ export function ConversationItem({
               size={20}
             />
           </span>
-          <span className="flex items-center gap-1.5 text-caption text-fg-muted">
+          <span
+            className={cn(
+              "flex items-center gap-1.5 text-caption text-fg-muted",
+              hasActions &&
+                (onComplete && menuItems.length
+                  ? "pointer-coarse:pr-14"
+                  : "pointer-coarse:pr-7"),
+            )}
+          >
             <StatusWord status={displayStatus(conversation)} />
             <span className="min-w-0 flex-1 truncate">{preview}</span>
             <span
               className={cn(
                 "shrink-0",
-                (onComplete || menuItems.length > 0) && "group-hover:invisible",
+                hasActions &&
+                  "pointer-fine:group-hover:invisible pointer-fine:group-focus-within:invisible pointer-fine:group-has-[[aria-expanded=true]]:invisible",
               )}
             >
               {formatRelativeTime(time, locale)}
@@ -270,8 +283,8 @@ export function ConversationItem({
           </span>
         </Link>
       )}
-      {!renaming && (onComplete || menuItems.length > 0) && (
-        <div className="absolute right-1.5 bottom-1 flex items-center gap-0.5">
+      {!renaming && hasActions && (
+        <div className="of-row-actions absolute right-1.5 bottom-1 flex items-center gap-0.5">
           {onComplete && (
             <IconButton
               label={t("chat.row.complete")}
@@ -279,7 +292,7 @@ export function ConversationItem({
               size="28"
               variant="ghost"
               onClick={onComplete}
-              className="size-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+              className="size-6"
             />
           )}
           <RowMenu

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useT } from "@openfox/i18n";
+import { useToast } from "@openfox/ui";
 import { useMe } from "../agents/queries";
 import { useConversations } from "../conversations/queries";
 
@@ -8,13 +9,17 @@ export function NativeReviewSetup({
   spaceId,
   busy,
   onStart,
+  onDismiss,
 }: {
   orgId: string;
   spaceId: string;
   busy: boolean;
   onStart: (id: string) => void;
+  onDismiss: () => void;
 }) {
   const t = useT();
+  const toast = useToast();
+  const notified = useRef(false);
   const me = useMe();
   const chats = useConversations(orgId);
   const [id, setID] = useState("");
@@ -28,6 +33,32 @@ export function NativeReviewSetup({
       c.lifecycle === "OPEN" &&
       c.effective?.runtime === "codex",
   );
+  const { hasNextPage, isFetching, fetchNextPage } = chats;
+  const loading = me.isPending || chats.isPending || isFetching;
+  const failed = me.isError || chats.isError;
+  useEffect(() => {
+    if (choices.length || loading || notified.current) return;
+    if (!failed && hasNextPage) {
+      void fetchNextPage({ cancelRefetch: false });
+      return;
+    }
+    notified.current = true;
+    toast(t(failed ? "chat.list.loadFailed" : "artifacts.review.nativeNone"), {
+      tone: failed ? "error" : "info",
+    });
+    onDismiss();
+  }, [
+    choices.length,
+    loading,
+    failed,
+    hasNextPage,
+    fetchNextPage,
+    toast,
+    t,
+    onDismiss,
+  ]);
+
+  if (!choices.length) return null;
   return (
     <div className="flex flex-col gap-2 rounded border border-line-default p-3">
       <p className="text-body-sm">{t("artifacts.review.nativeHint")}</p>
@@ -47,9 +78,6 @@ export function NativeReviewSetup({
           ))}
         </select>
       </label>
-      {!chats.isPending && choices.length === 0 && (
-        <p>{t("artifacts.review.nativeNone")}</p>
-      )}
       {chats.isError && (
         <button onClick={() => void chats.refetch()}>
           {t("artifacts.review.retry")}

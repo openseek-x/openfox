@@ -25,6 +25,7 @@ export interface SelectProps<T extends string> {
   leading?: ReactNode;
   disabled?: boolean;
   invalid?: boolean;
+  defaultOpen?: boolean;
   className?: string;
   role?: "combobox";
   "aria-label"?: string;
@@ -40,12 +41,13 @@ export function Select<T extends string>({
   leading,
   disabled,
   invalid,
+  defaultOpen = false,
   className,
   ...aria
 }: SelectProps<T>) {
   const t = useT();
   const field = useFieldContext();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen && !disabled);
   const anchor = useRef<HTMLButtonElement | null>(null);
   const listId = useId();
   const current = options.find((option) => option.value === value);
@@ -59,6 +61,9 @@ export function Select<T extends string>({
       const list = document.getElementById(listId);
       (
         list?.querySelector<HTMLElement>('[aria-selected="true"]') ??
+        list?.querySelector<HTMLElement>(
+          '[role="option"]:not([aria-disabled="true"])',
+        ) ??
         list?.querySelector<HTMLElement>('[role="option"]')
       )?.focus({ preventScroll: true });
     });
@@ -134,8 +139,10 @@ export function Select<T extends string>({
               }}
               className={cn(
                 "flex min-h-8 w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-body outline-none",
-                "hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:shadow-none",
-                option.disabled && "cursor-not-allowed opacity-50",
+                "focus-visible:bg-surface-active focus-visible:shadow-none",
+                option.disabled
+                  ? "cursor-not-allowed opacity-50"
+                  : "hover:bg-surface-hover",
               )}
             >
               {option.icon && (

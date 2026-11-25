@@ -437,10 +437,13 @@ describe("单条消息与链接恢复", () => {
       return undefined;
     });
     const actions = await screen.findAllByRole("button", {
-      name: "分享这条消息",
+      name: "消息操作",
     });
     expect(actions).toHaveLength(2);
     await user.click(actions[0]!);
+    await user.click(
+      await screen.findByRole("menuitem", { name: "分享这条消息" }),
+    );
     let dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText(/不含引用消息/)).toBeInTheDocument();
     await user.click(within(dialog).getByRole("button", { name: "取消" }));
@@ -448,6 +451,9 @@ describe("单条消息与链接恢复", () => {
       false,
     );
     await user.click(actions[1]!);
+    await user.click(
+      await screen.findByRole("menuitem", { name: "分享这条消息" }),
+    );
     dialog = await screen.findByRole("dialog");
     await user.click(within(dialog).getByRole("button", { name: "创建链接" }));
     await screen.findByRole("alert");

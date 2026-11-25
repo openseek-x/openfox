@@ -91,7 +91,7 @@ export function SearchSpaceScope({
             handleMenuKeyDown(event);
           }}
         >
-          <div className="flex h-9 items-center gap-2 border-b border-line-default px-3 text-fg-muted">
+          <div className="of-input-frame flex h-9 items-center gap-2 border-b border-line-default px-3 text-fg-muted focus-within:border-line-focus">
             <Icon name="search" size={14} />
             <input
               autoFocus

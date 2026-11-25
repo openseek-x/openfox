@@ -107,6 +107,12 @@ describe("显示设置的分组选项", () => {
     expect(
       within(menu).getByRole("switch", { name: "显示空行" }),
     ).toBeEnabled();
+    expect(
+      within(menu).queryByRole("switch", { name: "显示空白列" }),
+    ).toBeNull();
+    expect(
+      await screen.findByRole("heading", { name: "已完成" }),
+    ).toBeInTheDocument();
     // 列改成与行相同的字段：行回落不分组
     await user.selectOptions(columns, "assignee");
     expect(rows).toHaveValue("none");

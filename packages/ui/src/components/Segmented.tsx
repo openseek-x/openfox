@@ -15,19 +15,25 @@ export function Segmented<T extends string>({
   options,
   label,
   className,
+  equalWidth = false,
 }: {
   value: T;
   onChange: (value: T) => void;
   options: ReadonlyArray<SegmentedOption<T>>;
   label: string;
   className?: string;
+  /** 让各个选项保持相同宽度。 */
+  equalWidth?: boolean;
 }) {
   return (
     <div
       role="radiogroup"
       aria-label={label}
       className={cn(
-        "inline-flex h-9 items-center gap-0.5 rounded-full bg-surface-muted p-[3px]",
+        "h-9 items-center rounded-full bg-surface-muted p-[3px]",
+        equalWidth
+          ? "inline-grid auto-cols-fr grid-flow-col"
+          : "inline-flex gap-0.5",
         className,
       )}
     >
@@ -41,7 +47,7 @@ export function Segmented<T extends string>({
             aria-checked={selected}
             onClick={() => onChange(option.value)}
             className={cn(
-              "flex h-full flex-1 items-center justify-center gap-1.5 rounded-full px-3 text-body-sm font-medium whitespace-nowrap transition-colors",
+              "flex h-full flex-1 items-center justify-center gap-1.5 rounded-full px-3 text-body-sm font-medium whitespace-nowrap transition-colors motion-reduce:transition-none",
               selected
                 ? "bg-primary text-fg-inverse"
                 : "text-fg-secondary hover:text-fg-default",
