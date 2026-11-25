@@ -6,6 +6,6 @@
 
 Lucide 使用 ISC 许可证，其中源自 Feather 的图形适用 MIT 许可证。两份版权及许可声明随源码提供，Web 构建同时复制到 `static/licenses/lucide/LICENSE.txt`。[随附许可全文](../packages/ui/src/icons/LICENSE-lucide.txt) · [上游许可说明](https://lucide.dev/license)
 
-OpenFox 的橙色侧身卷尾狐采用原创矢量母版。侧栏用透明矢量图，浏览器标签页和桌面离线页用 PNG，Dock 和 Teams 彩色图标使用深色底，菜单栏与 Teams 轮廓图使用透明单色模板。在安装项目依赖和 Playwright Chromium 的 macOS 上运行 `node tools/brand/render-icons.mjs` 可重新生成所有平台资源。[卷尾狐母版](../packages/ui/src/icons/openfox.svg) · [导出脚本](../tools/brand/render-icons.mjs)
+OpenFox 的卷尾狐标志取自本项目生成并选定的设计。网页、macOS 应用及 Teams 安装包使用这张图的尺寸与配色变体。[网页标志](../packages/ui/src/icons/openfox.png)
 
 集成服务、运行时和操作系统标记使用系统字体渲染文字缩写。通用代码托管和分拣空状态使用 Lucide 图形。状态、优先级、进度、图表和加载动画由界面代码绘制，二维码和 PDF 选区几何由对应数据生成。测试 Office 文件及其中的图形来源见夹具说明。[Office 夹具](../tests/frontend/e2e/fixtures/office-preview/README.md)
