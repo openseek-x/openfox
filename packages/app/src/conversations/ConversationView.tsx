@@ -766,7 +766,7 @@ function ConversationViewContent({
           className={
             centeredComposer
               ? "relative mb-auto shrink-0 px-4 pb-4 @lg:px-6"
-              : "relative shrink-0 px-4 pt-3 pb-4 @lg:px-6"
+              : "relative shrink-0 px-4 pt-2 pb-5 @lg:px-6 @lg:pb-6"
           }
         >
           {(target || (!atBottom && !showEmpty)) && (
