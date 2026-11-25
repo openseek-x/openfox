@@ -87,6 +87,7 @@ export function AzureSections({
     setPending(null);
     void cache.invalidateQueries({ queryKey: keys.integrations(orgId) });
   }, [session.data?.status, cache, orgId]);
+  const refetchSession = session.refetch;
   useEffect(() => {
     if (!pending) return;
     const receive = (event: MessageEvent) => {
@@ -95,11 +96,11 @@ export function AzureSections({
         message?.provider === "azure_devops" &&
         message.session === pending.session
       )
-        void session.refetch();
+        void refetchSession();
     };
     window.addEventListener("message", receive);
     return () => window.removeEventListener("message", receive);
-  }, [pending, session.refetch]);
+  }, [pending, refetchSession]);
   const connections = detail.connections as (IntegrationConnection & {
     azure_delegating_user?: string;
     azure_delegating_user_id?: string;

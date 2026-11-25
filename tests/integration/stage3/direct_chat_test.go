@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -267,6 +268,28 @@ func TestDirectChatRLSAndPrivateEvents(t *testing.T) {
 	a := env.manager()
 	chat := dmChat(t, a, s3MemberID)
 	dmSend(t, a, chat.ID, 1, "private body")
+	// SSE 只发送早于全库活动事务水位的事件。等待该消息可投递后，再比较四种身份的可见性。
+	wait, cancel := context.WithTimeout(env.ctx, 30*time.Second)
+	defer cancel()
+	for {
+		var pending bool
+		err := env.superuser.QueryRow(wait, `SELECT EXISTS (
+			SELECT 1 FROM openfox.organization_events
+			WHERE organization_id = $1::uuid AND type = 'direct_chat.changed'
+			AND txid >= pg_snapshot_xmin(pg_current_snapshot()))`, env.org).Scan(&pending)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !pending {
+			break
+		}
+		select {
+		case <-wait.Done():
+			t.Fatal("等待私聊事件到达可投递水位超时")
+		case <-time.After(25 * time.Millisecond):
+		}
+	}
+
 	for _, user := range []string{s3ManagerID, s3MemberID, s3OwnerID, s3OtherID} {
 		selection := tenancy.OrganizationSelection{OrganizationID: env.org, ActorID: user, AuthorizationVersion: 1}
 		err := env.database.RunForOrganization(env.ctx, env.org, tenancy.SourceUserRequest, tenancy.OrganizationSelectorFunc(func(context.Context, string) (tenancy.OrganizationSelection, error) { return selection, nil }), func(ctx context.Context, tx pgx.Tx) error {

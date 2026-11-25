@@ -61,7 +61,7 @@ for attempt in $(seq 1 50); do
   sleep .2
 done
 curl -fsS http://127.0.0.1:$port/ready >/dev/null
-OPENFOX_WEB_PORT="${OPENFOX_WEB_PORT:-4173}" OPENFOX_WEB_API_TARGET=http://127.0.0.1:$port pnpm exec playwright test
+OPENFOX_WEB_PORT="${OPENFOX_WEB_PORT:-4173}" OPENFOX_WEB_API_TARGET=http://127.0.0.1:$port pnpm test:e2e
 # 先停掉服务端再跑 pgx 集成测试：服务端的调度与对账后台任务会并发改写测试造的 Run 与会话，
 # 导致 wp10 这类按版本断言的测试偶发冲突。
 kill "$server_pid" 2>/dev/null || true

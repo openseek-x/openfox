@@ -316,18 +316,17 @@ func TestBackupRestoreDrill(t *testing.T) {
 	if e.invocations() != calls {
 		t.Fatalf("the old-epoch daemon started new work after the restore (invocations %d → %d)", calls, e.invocations())
 	}
-	if queued.ID != run.ID && queued.State != "QUEUED" {
-		t.Fatalf("a run was dispatched to the old-epoch daemon: %+v", queued)
+	if queued.ID == run.ID || queued.State != "QUEUED" {
+		t.Fatalf("the new message should have its own queued run after restore: %+v", queued)
 	}
+	s.expect("0", `SELECT count(*)::text FROM openfox.capacity_reservations WHERE run_id = $1::uuid`, queued.ID)
 	if online != "false" {
 		t.Fatalf("the old-epoch device still heartbeats successfully (online=%s)", online)
 	}
 	if restoredInflight.State != "RUNNING" {
 		t.Fatalf("pre-restore in-flight run changed state without an explicit decision: %+v", restoredInflight)
 	}
-	// 已知缺口（见 docs/development-records/2026-11-12-stage12i-drills.md「发现但未修的缺陷」）：纪元只在心跳上校验，
-	// 设备侧的续租接口不校验，所以旧纪元 daemon 虽然被要求核对、领不到新任务、显示离线，却仍能为恢复前的在途 Run 续租。
-	// 这里如实记录观察到的状态而不把它当作通过条件；手册第 9 步要求管理员在放行设备前显式处理这些 Run，下面验证该步骤可行。
+	// 在途 Run 仍可续租并接收取消。恢复手册第 9 步要求管理员在放行设备前逐个处理。
 	leaseAlive := s.text(`SELECT (lease_expires_at > clock_timestamp())::text FROM openfox.runs WHERE id = $1::uuid`, inflight.ID)
 	t.Logf("已知缺口：恢复前的在途 Run 在旧纪元 daemon 上继续被续租（租约有效=%s、待核对=%v）", leaseAlive, restoredInflight.Reconcile)
 	// 手册第 9 步：管理员显式取消恢复前的在途 Run；daemon 在下一次续租时得知取消并停掉 Runtime。
@@ -341,7 +340,7 @@ func TestBackupRestoreDrill(t *testing.T) {
 		return settled.State == "CANCELED" || settled.State == "FAILED"
 	})
 	s.waitFor("runtime stopped", 30*time.Second, func() bool { return !e.ownedRuntimeAlive(runtimePID) })
-	// 只看这次 Run 自己的预留：恢复后那条新消息的 Run 可能在电脑被判定离线之前拿到过 offer 与预留，不计入这里。
+	// 核对恢复前这次 Run 的预留只释放一次。
 	s.expect("1", `SELECT count(*)::text FROM openfox.capacity_reservations WHERE run_id = $1::uuid AND status = 'RELEASED'`, inflight.ID)
 	s.expect("0", `SELECT count(*)::text FROM openfox.capacity_reservations WHERE run_id = $1::uuid AND status <> 'RELEASED'`, inflight.ID)
 	if after := e.latestRun(conversation); e.invocations() != calls || after.State == "RUNNING" || after.State == "SUCCEEDED" {

@@ -337,6 +337,7 @@ func runDaemonRun(args []string, manager daemon.Manager) error {
 		reporter.directoryRoots = executor.directoryRoots
 		reporter.gitRoots = probeGitRoots(ctx, executor.directoryRoots)
 		reporter.inventoryWake = make(chan struct{}, 1)
+		reporter.refreshWake = make(chan struct{}, 1)
 		// 阶段 12e：本机并发上限（中心取与中心上限的较小值，不反向覆盖本机配置）、命中受保护名单的已注册根（只告警）。
 		// 旧中心忽略未知键。
 		reporter.additional = map[string]any{
@@ -363,9 +364,17 @@ func runDaemonRun(args []string, manager daemon.Manager) error {
 		for _, other := range executor.others {
 			reporter.extras = append(reporter.extras, &namedProber{name: other.Name(), prober: other})
 		}
+		if executor.cursor != nil {
+			reporter.extras = append(reporter.extras, &namedProber{name: "cursor", prober: executor.cursor})
+		}
 		if executor.hermes != nil {
 			reporter.extras = append(reporter.extras, &namedProber{name: executor.hermes.Name(), prober: executor.hermes})
 		}
+		reporter.cachePath = filepath.Join(filepath.Dir(executor.journal.Path()), "runtime-discovery-cache.json")
+		reporter.cacheFingerprint = func() string {
+			return discoveryFingerprint(executor.adapter.Executable, executor.supervisor.DeviceSettings().Settings)
+		}
+		reporter.restoreDiscovery()
 		storageStats := &storageReporter{pathsFn: executor.storagePaths, reporter: reporter}
 		commandExecutor, err := newCommandExecutor(executor, reporter, storageStats, remote, organizations, rotator)
 		if err != nil {

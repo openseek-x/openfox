@@ -369,6 +369,10 @@ describe("导航记忆：主导航", () => {
       "/o/o1/spaces/s1/tasks?task=OPE-2",
     );
     await user.click(await screen.findByRole("button", { name: /组织o1/ }));
+    // 打开组织菜单的外部点击已关闭旧组织的任务抽屉，导航应保留其列表位置。
+    await waitFor(() =>
+      expect(readNavMemory("o1", "home")).toBe("/o/o1/spaces/s1/tasks"),
+    );
     await user.click(
       await screen.findByRole("menuitemradio", { name: /组织o2/ }),
     );
@@ -377,9 +381,7 @@ describe("导航记忆：主导航", () => {
     await user.click(await rail("首页"));
     expect(probe).toBe("/o/o2/inbox");
     expect(readNavMemory("o2", "home")).toBe("/o/o2/inbox");
-    expect(readNavMemory("o1", "home")).toBe(
-      "/o/o1/spaces/s1/tasks?task=OPE-2",
-    );
+    expect(readNavMemory("o1", "home")).toBe("/o/o1/spaces/s1/tasks");
   });
 
   it("退出登录后记录清空", async () => {

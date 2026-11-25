@@ -133,6 +133,7 @@ export function runtimeIcon(provider: string): IconName {
 }
 
 const runtimeNames: Record<string, string> = {
+  cursor: "Cursor",
   codex: "Codex",
   "claude-code": "Claude Code",
   "gemini-cli": "Gemini CLI",

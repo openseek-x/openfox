@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useMemo, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SpaceAgent } from "@openfox/api";
 import { useToast } from "@openfox/ui";
@@ -81,7 +81,10 @@ export function useAgentToolConnections(orgId: string, agent: SpaceAgent) {
   const user = useMe().data?.id,
     toast = useToast(),
     t = useT();
-  const key = ["agent-tools", orgId, user, agent.space_id, agent.id],
+  const key = useMemo(
+      () => ["agent-tools", orgId, user, agent.space_id, agent.id],
+      [orgId, user, agent.space_id, agent.id],
+    ),
     ik = [
       ...key,
       "inventory",
@@ -129,6 +132,7 @@ export function useAgentToolConnections(orgId: string, agent: SpaceAgent) {
       onError: () => setProbeFailed(true),
     },
   );
+  const startProbe = probe.start;
   const probed = useRef("");
   useEffect(() => {
     const id = inv.data?.device_id;
@@ -139,9 +143,9 @@ export function useAgentToolConnections(orgId: string, agent: SpaceAgent) {
       probed.current !== path + id
     ) {
       probed.current = path + id;
-      probe.start();
+      startProbe();
     }
-  }, [canUseDevice, inv.data?.device_id, inv.data?.online, path, probe.start]);
+  }, [canUseDevice, inv.data?.device_id, inv.data?.online, path, startProbe]);
   const [pending, setPending] = useState<{
     id: string;
     op: string;
@@ -187,7 +191,7 @@ export function useAgentToolConnections(orgId: string, agent: SpaceAgent) {
       stop = true;
       window.clearTimeout(timer);
     };
-  }, [pending, http, qc, path, user, toast, t]);
+  }, [pending, http, qc, path, user, toast, t, key]);
   const rows = list.data?.servers ?? [];
   const connections = rows.map((v) => ({
     id: v.id,
