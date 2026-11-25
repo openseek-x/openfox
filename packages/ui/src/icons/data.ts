@@ -1,12 +1,12 @@
 // Lucide 0.468.0. Both upstream notices are in LICENSE-lucide.txt.
 // Keys in this table match upstream SVG filenames; UI names are mapped below.
 function strokeIcon(paths: string) {
-  return { viewBox: "0 0 24 24", body: `<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths}</g>` };
+  return { viewBox: "0 0 24 24", body: `<g stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">${paths}</g>` };
 }
 
 // Plain system-font abbreviations distinguish integrations without vendor artwork.
 function letterIcon(label: string) {
-  return { viewBox: "0 0 24 24", body: `<rect x="1" y="2" width="22" height="20" rx="4" fill="currentColor" opacity=".1"/><text x="12" y="16" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="600" font-size="12" fill="currentColor">${label}</text>` };
+  return { viewBox: "0 0 24 24", body: `<rect x="1.5" y="1.5" width="21" height="21" rx="5.5" fill="currentColor" fill-opacity=".08" stroke="currentColor" stroke-opacity=".28" stroke-width="1"/><text x="12" y="16.6" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="600" font-size="13" fill="currentColor">${label}</text>` };
 }
 
 const lucide = {
@@ -247,7 +247,7 @@ export const iconData = {
   "bold": lucide["bold"],
   "book-open": lucide["book-open"],
   "bot": lucide["bot"],
-  "bot-face": lucide["bot"],
+  "bot-face": strokeIcon('<path d="M5.5 7.5 8 4l2.4 2h3.2L16 4l2.5 3.5A5.8 5.8 0 0 1 21 12.2V14a5 5 0 0 1-5 5H9l-4 2v-3.1a5 5 0 0 1-2-4v-1.7a5.8 5.8 0 0 1 2.5-4.7Z"/><path d="M8.5 11.5v1.5m7-1.5v1.5"/>'),
   "box": lucide["box"],
   "brand-asana": letterIcon("As"),
   "brand-bitbucket": letterIcon("BB"),
@@ -263,7 +263,7 @@ export const iconData = {
   "brand-jira": letterIcon("Ji"),
   "brand-lark": letterIcon("La"),
   "brand-linear": letterIcon("Li"),
-  "brand-logo": { viewBox: "0 0 24 24", body: `<image width="24" height="24" href="${new URL("./openfox.png", import.meta.url).href}"/>` },
+  "brand-logo": { viewBox: "0 0 24 24", body: `<image width="24" height="24" href="${new URL("./openfox.svg", import.meta.url).href}"/>` },
   "brand-ms_teams": letterIcon("MT"),
   "brand-ones": letterIcon("On"),
   "brand-pingcode": letterIcon("PC"),
