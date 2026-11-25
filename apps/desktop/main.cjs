@@ -31,7 +31,12 @@ const { createUpstreamDial } = require("./browser/upstream.cjs");
 const { addressKind } = require("./browser/policy.cjs");
 const browserHosts = new WeakMap();
 
-const { ensureOnPath, installBundledCli, installPaths } = require("./cli.cjs");
+const {
+  ensureOnPath,
+  installBundledCli,
+  installPaths,
+  linkBundledPi,
+} = require("./cli.cjs");
 const {
   activeRunCount,
   buildCsp,
@@ -99,6 +104,13 @@ async function bootstrapCli() {
   if (process.platform === "win32") {
     cli = { state: "missing", path: null };
     return;
+  }
+  if (app.isPackaged && process.platform === "darwin") {
+    try {
+      await linkBundledPi(path.join(process.resourcesPath, "pi"), os.homedir());
+    } catch (error) {
+      console.warn("OpenFox could not register bundled Pi:", error.message);
+    }
   }
   try {
     cli = await installBundledCli({ bundled: bundledCli, home: os.homedir() });

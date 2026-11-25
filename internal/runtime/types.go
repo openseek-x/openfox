@@ -93,6 +93,8 @@ type Capabilities struct {
 	Runtime                  string      `json:"runtime"`
 	Version                  string      `json:"version"`
 	Executable               string      `json:"executable"`
+	DiscoveryOnly            bool        `json:"discovery_only,omitempty"`
+	DiscoverySource          string      `json:"discovery_source,omitempty"`
 	Login                    LoginStatus `json:"login_status"`
 	Runnable                 bool        `json:"runnable"`
 	ProtocolReady            bool        `json:"protocol_ready,omitempty"`

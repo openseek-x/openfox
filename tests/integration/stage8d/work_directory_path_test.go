@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"openfox/internal/conversations"
 	"openfox/internal/daemon/supervisor"
+	"openfox/internal/daemon/workdir"
 	"openfox/internal/devices"
 	"openfox/internal/tenancy"
 	"openfox/internal/workdirpath"
@@ -161,7 +162,7 @@ func (h *harness) testWorkDirectoryPath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	actual, err := supervisor.ReadWorkDirectoryPath(h.ctx, database, request.Scope)
+	actual, err := supervisor.ReadWorkDirectoryPath(h.ctx, database, request.Scope, workdir.StoragePaths{})
 	if err != nil || actual != path {
 		t.Fatal("actual remote fact unavailable", err)
 	}

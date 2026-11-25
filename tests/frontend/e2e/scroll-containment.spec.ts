@@ -369,7 +369,10 @@ test("space navigation and Gantt controls fit as the content panel changes width
   await expectWindowFits(page);
   await page.goto("/o/o1/spaces/s1/docs");
   const nav = page.locator("main aside");
-  await expect(nav).toHaveCSS("width", "240px");
+  const expand = page.getByRole("button", { name: "展开文档导航" });
+  await expand.click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.keyboard.press("Escape");
   await expectWindowFits(page);
   await page.setViewportSize({ width: 1440, height: 900 });
   await expect(nav).toHaveCSS("width", "300px");

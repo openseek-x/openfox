@@ -10,6 +10,7 @@ const {
   ensureOnPath,
   installBundledCli,
   installPaths,
+  linkBundledPi,
   pathSnippet,
 } = require("./cli.cjs");
 
@@ -83,6 +84,33 @@ describe("安装自带 CLI", () => {
     } finally {
       await fs.rm(home, { recursive: true, force: true });
     }
+  });
+});
+
+describe("内置 Pi", () => {
+  it("登记包内入口，支持重复启动和应用移动", async (t) => {
+    const home = await tempHome();
+    t.after(() => fs.rm(home, { recursive: true, force: true }));
+    const original = path.join(home, "OpenFox App", "pi");
+    await fs.mkdir(original, { recursive: true });
+    await fs.writeFile(path.join(original, "pi"), "version", { mode: 0o755 });
+    const link = path.join(home, ".local/share/openfox/desktop-pi");
+    await Promise.all([
+      linkBundledPi(original, home),
+      linkBundledPi(original, home),
+    ]);
+    assert.equal(await fs.readlink(link), original);
+    const moved = path.join(home, "Moved App");
+    await fs.rename(original, moved);
+    await linkBundledPi(moved, home);
+    await linkBundledPi(moved, home);
+    assert.equal(await fs.readFile(path.join(link, "pi"), "utf8"), "version");
+    await assert.rejects(linkBundledPi(original, home), { code: "ENOENT" });
+    assert.equal(await fs.readlink(link), moved);
+    await fs.unlink(link);
+    await fs.writeFile(link, "user file");
+    await assert.rejects(linkBundledPi(moved, home));
+    assert.equal(await fs.readFile(link, "utf8"), "user file");
   });
 });
 

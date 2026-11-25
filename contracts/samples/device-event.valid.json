@@ -1,9 +1,9 @@
 {
-  "event_id": "00000000-0000-4000-8000-000000000001",
-  "computer_id": "00000000-0000-4000-8000-000000000002",
-  "run_id": "00000000-0000-4000-8000-000000000003",
+  "id": "00000000-0000-4000-8000-000000000001",
   "generation": 1,
-  "sequence": "7",
-  "type": "state",
-  "payload": {"state": "PREPARING"}
+  "sequence": 7,
+  "type": "started",
+  "safe_payload": {
+    "text": "Runtime started"
+  }
 }

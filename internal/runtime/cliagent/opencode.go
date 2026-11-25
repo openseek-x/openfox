@@ -28,11 +28,12 @@ func openCodeProtocol() protocol {
 	return protocol{
 		name: NameOpenCode, display: "OpenCode",
 		executables: []string{"opencode"}, envPath: "OPENFOX_OPENCODE_PATH",
-		wellKnown:   []string{".opencode/bin", ".local/bin", ".npm-global/bin", ".bun/bin", ".volta/bin"},
-		envPrefixes: []string{"OPENCODE_"},
-		envSuffixes: []string{"_API_KEY", "_BASE_URL", "_ACCESS_KEY_ID", "_SECRET_ACCESS_KEY", "_AUTH_TOKEN"},
-		versionArgs: []string{"--version"},
-		listModels:  openCodeModels,
+		wellKnown:     []string{".opencode/bin", ".local/bin", ".npm-global/bin", ".bun/bin", ".volta/bin"},
+		envPrefixes:   []string{"OPENCODE_"},
+		envSuffixes:   []string{"_API_KEY", "_BASE_URL", "_ACCESS_KEY_ID", "_SECRET_ACCESS_KEY", "_AUTH_TOKEN"},
+		versionArgs:   []string{"--version"},
+		helpSignature: [2]string{"opencode run", "opencode models"},
+		listModels:    openCodeModels,
 		defaultModels: []Model{
 			{ID: "default", DisplayName: "Default", IsDefault: true},
 		},
