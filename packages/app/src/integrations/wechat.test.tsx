@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -203,8 +203,12 @@ describe("微信 · 扫码弹窗", () => {
     expect(findCall(calls, "POST", `${qr}/q1/cancel`)).toBeUndefined();
   });
 
-  it("显示二维码，已扫码后确认成功并关闭", async () => {
-    const user = userEvent.setup();
+  it("显示二维码，已扫码后确认成功并关闭", async ({ onTestFinished }) => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     let polls = 0;
     renderSettings(
       page,
@@ -227,6 +231,10 @@ describe("微信 · 扫码弹窗", () => {
     expect(
       await screen.findByRole("img", { name: "微信绑定二维码" }),
     ).toBeVisible();
+    expect(
+      await screen.findByText("已扫码，请在微信里确认登录。"),
+    ).toBeVisible();
+    await act(() => vi.advanceTimersByTimeAsync(1000));
     expect(await screen.findByText("微信已绑定")).toBeVisible();
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
