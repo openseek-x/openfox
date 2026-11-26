@@ -35,6 +35,7 @@ import type { BoardProps, TaskViewProps } from "../views";
 import { CardBody, SortableCard, cardLabel as label } from "./Card";
 import { BoardColumnJump } from "./BoardColumnJump";
 import { GroupedBoard } from "./GroupedBoard";
+import { useBoardPosition } from "./useBoardPosition";
 
 const COLUMN_PREFIX = "column:";
 
@@ -44,7 +45,7 @@ const COLUMN_PREFIX = "column:";
  */
 export function Board(props: BoardProps) {
   return isStatusBoard(props.display) ? (
-    <StatusBoard {...props} />
+    <StatusBoard key={props.orgId + ":" + props.source.scope} {...props} />
   ) : (
     <GroupedBoard {...props} />
   );
@@ -74,6 +75,11 @@ function StatusBoard(props: BoardProps) {
   );
 
   const orderedColumns = applyGroupOrder(columns, display.groupOrder?.status);
+
+  const firstColumn = orderedColumns.find(
+    (column) => (counts.get(column.id) ?? 0) > 0,
+  );
+  const board = useBoardPosition(firstColumn && `${boardId}-${firstColumn.id}`);
 
   const columnTasks = (statusId: string): Task[] => {
     const data = queryClient.getQueryData<
@@ -187,6 +193,7 @@ function StatusBoard(props: BoardProps) {
         }))}
       />
       <div
+        ref={board}
         role="region"
         aria-label={t("tasks.board.label")}
         className="flex min-h-0 flex-1 gap-3 overflow-x-auto px-4 pb-4"
@@ -227,7 +234,7 @@ function Column({
   return (
     <section
       aria-label={`${column.name} ${count}`}
-      className="flex w-[280px] shrink-0 flex-col rounded-xl bg-surface-muted/60"
+      className="flex w-[280px] shrink-0 flex-col rounded-xl of-board-lane"
     >
       <header className="flex h-10 items-center gap-2 px-3">
         <StatusIcon category={column.category} color={column.color} />

@@ -23,6 +23,21 @@ describe("StatusIcon", () => {
     expect(STATUS_CATEGORIES).toHaveLength(7);
   });
 
+  it("默认待开始颜色随主题切换，保留自定义描边", () => {
+    const { container, rerender } = render(
+      <StatusIcon category="TODO" color="#E2E2E2" />,
+    );
+    expect(container.querySelector("circle")).toHaveAttribute(
+      "stroke",
+      "var(--color-fg-muted)",
+    );
+    rerender(<StatusIcon category="TODO" color="#123456" />);
+    expect(container.querySelector("circle")).toHaveAttribute(
+      "stroke",
+      "#123456",
+    );
+  });
+
   it("labelled 时暴露本地化类别名，并使用传入颜色", () => {
     const { container } = render(
       <StatusIcon category="DONE" labelled color="#123456" />,
