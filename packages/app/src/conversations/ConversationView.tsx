@@ -381,9 +381,13 @@ function ConversationViewContent({
     }
   };
 
-  // 一轮回复头部显示的作者：小队按成员 Agent 查找，找不到（如队长）或普通对话用当前 Agent。
-  const authorOf = (agentId?: string | null): ComposerAgent =>
-    (agentId && crew?.members.find((member) => member.id === agentId)) || agent;
+  // 只有普通单聊能在消息缺少作者 ID 时确定发言人。
+  const authorOf = (id?: string | null) => {
+    if (!id) return crew || conversation?.crew_id ? undefined : agent;
+    return id === agent.id
+      ? agent
+      : crew?.members.find((member) => member.id === id);
+  };
 
   const isAssistant =
     agentDetail?.builtin_kind === "ASSISTANT" ||
@@ -686,6 +690,7 @@ function ConversationViewContent({
                       key={`run:${item.runId}`}
                       orgId={orgId}
                       runId={item.runId}
+                      spaceId={spaceId}
                       authorOf={authorOf}
                     >
                       <div data-anchor-run={item.runId}>
@@ -938,7 +943,7 @@ function MessageBlock({
   focused: boolean;
   runBefore: string | null;
   /** 头部显示的作者（头像与名字） */
-  author: ComposerAgent;
+  author?: ComposerAgent;
   model?: string | null;
   /** 小队对话里 Agent 消息的作者名 */
   authorName?: string;
@@ -1014,7 +1019,12 @@ function MessageBlock({
   // 系统消息居中显示，不加 Agent 头部
   if (system) return <div className="flex flex-col gap-2">{content}</div>;
   return (
-    <AgentTurn name={author.name} avatar={author.avatar}>
+    <AgentTurn
+      orgId={orgId}
+      spaceId={spaceId}
+      agentId={message.author_agent_id ?? author?.id}
+      author={author}
+    >
       {content}
     </AgentTurn>
   );
@@ -1024,18 +1034,25 @@ function MessageBlock({
 function RunAgentTurn({
   orgId,
   runId,
+  spaceId,
   authorOf,
   children,
 }: {
   orgId: string;
   runId: string;
-  authorOf: (agentId?: string | null) => ComposerAgent;
+  spaceId: string;
+  authorOf: (agentId?: string | null) => ComposerAgent | undefined;
   children: ReactNode;
 }) {
   const run = useRun(orgId, runId);
   const author = authorOf(run.data?.agent_id);
   return (
-    <AgentTurn name={author.name} avatar={author.avatar}>
+    <AgentTurn
+      orgId={orgId}
+      spaceId={spaceId}
+      agentId={run.data?.agent_id ?? author?.id}
+      author={author}
+    >
       {children}
     </AgentTurn>
   );

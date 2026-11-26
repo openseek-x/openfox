@@ -1,10 +1,10 @@
+import { TaskAssigneeAvatar } from "../invitationAssignees";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useState, type ReactNode } from "react";
 
 import { isApiError, type Task } from "@openfox/api";
 import { useT } from "@openfox/i18n";
 import {
-  Avatar,
   Button,
   Dialog,
   Icon,
@@ -285,7 +285,13 @@ export function TaskSearchDialog({
                     />
                     {task.status_name}
                     {task.assignees.slice(0, 1).map((a) => (
-                      <Avatar key={a.id} name={a.name ?? a.id} size={16} />
+                      <TaskAssigneeAvatar
+                        key={a.id}
+                        id={a.id}
+                        kind={a.kind}
+                        name={a.name ?? a.id}
+                        size={16}
+                      />
                     ))}
                   </span>
                 )}

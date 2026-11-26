@@ -291,6 +291,7 @@ export function CreateCrewDialog({
                 : agent.name,
               icon: (
                 <AgentAvatar
+                  agentId={agent.id}
                   name={agent.name}
                   avatar={agent.avatar}
                   size={20}
@@ -347,6 +348,7 @@ export function CreateCrewDialog({
                   keywords: agent.title,
                   icon: (
                     <AgentAvatar
+                      agentId={agent.id}
                       name={agent.name}
                       avatar={agent.avatar}
                       size={20}

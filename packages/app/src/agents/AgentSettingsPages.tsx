@@ -166,6 +166,8 @@ export function AgentsSettingsPage() {
                 <TableCell>
                   <span className="flex items-center gap-3">
                     <AgentAvatar
+                      agentId={entry.id}
+                      spaceId={entry.space_id}
                       name={entry.name}
                       avatar={entry.avatar}
                       size={28}
@@ -298,7 +300,11 @@ export function CrewsSettingsPage() {
                 <TableCell className="text-body-sm">
                   {entry.leader ? (
                     <span className="flex items-center gap-1.5">
-                      <AgentAvatar name={entry.leader.name} size={20} />
+                      <AgentAvatar
+                        agentId={entry.leader.id}
+                        name={entry.leader.name}
+                        size={20}
+                      />
                       {entry.leader.name}
                       {entry.leader.title && (
                         <span className="text-fg-muted">

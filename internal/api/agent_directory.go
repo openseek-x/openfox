@@ -68,7 +68,7 @@ func (h *Handler) listAgentDirectory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	result, err := (agents.PostgresStore{Pool: h.pool}).Directory(r.Context(), auth.Selection, h.agentActor(auth, r),
-		agents.DirectoryOptions{Archived: archived})
+		agents.DirectoryOptions{Archived: archived, AgentID: r.URL.Query().Get("agent_id")})
 	if err != nil {
 		writeAgentError(w, r, err)
 		return

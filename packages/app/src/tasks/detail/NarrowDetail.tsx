@@ -67,6 +67,7 @@ function TabContent({ item }: { item: ConversationSummary }) {
   return (
     <>
       <AgentAvatar
+        agentId={item.agent.id}
         name={item.agent.name}
         avatar={item.agent.avatar}
         size={16}
@@ -166,6 +167,7 @@ export function ConversationTabs({
               key={item.id}
               icon={
                 <AgentAvatar
+                  agentId={item.agent.id}
                   name={item.agent.name}
                   avatar={item.agent.avatar}
                   size={20}

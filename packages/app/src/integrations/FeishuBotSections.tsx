@@ -1,3 +1,4 @@
+import { AgentAvatar } from "../agents/AgentAvatar";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
@@ -16,7 +17,6 @@ import {
 // useIMT 与 useT 用法相同，只是把文案里的品牌词换成当前服务商（飞书 / Lark）。
 import { useIMProvider, useIMT as useT } from "./im-provider";
 import {
-  Avatar,
   Badge,
   Button,
   Callout,
@@ -1310,7 +1310,7 @@ function AgentRowView({
   });
   return (
     <div className="flex min-h-[68px] items-center gap-3 p-4">
-      <Avatar name={bot.agent.name} kind="agent" size={32} />
+      <AgentAvatar agentId={bot.agent.id} name={bot.agent.name} size={32} />
       <span className="min-w-0 flex-1 truncate text-body font-medium">
         {bot.agent.name}
       </span>
@@ -1376,7 +1376,7 @@ function AgentCreateDialog({
       .map((entry) => ({
         value: entry.id,
         label: entry.name,
-        icon: <Avatar name={entry.name} kind="agent" size={20} />,
+        icon: <AgentAvatar agentId={entry.id} name={entry.name} size={20} />,
         description: isAdmin
           ? t(
               entry.mine

@@ -264,7 +264,7 @@ const Row = memo(function Row({
           )}
         />
       )}
-      <span className="pointer-events-none relative flex min-w-0 flex-1 items-center gap-2">
+      <span className="pointer-events-none relative flex min-w-0 flex-1 items-center gap-2 [&_[aria-haspopup=dialog]]:pointer-events-auto">
         {show("priority") && <PriorityIcon priority={task.priority} labelled />}
         {show("id") && (
           <span className="w-20 shrink-0 truncate whitespace-nowrap text-caption text-fg-muted">

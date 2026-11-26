@@ -391,6 +391,7 @@ function SkillCard({ skill, onOpen }: { skill: Skill; onOpen: () => void }) {
             {skill.used_by.slice(0, 3).map((agent) => (
               <span key={agent.id} className="-ml-1 first:ml-0">
                 <AgentAvatar
+                  agentId={agent.id}
                   name={agent.name}
                   avatar={agent.avatar as AgentAvatarValue}
                   size={20}

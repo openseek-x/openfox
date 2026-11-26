@@ -188,6 +188,7 @@ export function SkillDetailDialog({
                   {skill.agents.slice(0, 6).map((agent) => (
                     <span key={agent.id} className="-ml-1 first:ml-0">
                       <AgentAvatar
+                        agentId={agent.id}
                         name={agent.name}
                         avatar={agent.avatar as AgentAvatarValue}
                         size={20}

@@ -597,7 +597,7 @@ describe("Agent 内嵌自动化", () => {
     );
     const dialog = screen.getByRole("dialog", { name: "新建自动化" });
     expect(
-      within(dialog).getByRole("button", { name: /小助手/ }),
+      within(dialog).getByRole("button", { name: "小助手" }),
     ).toBeVisible();
     await user.type(
       within(dialog).getByLabelText(/标题/),
@@ -687,7 +687,7 @@ describe("Agent 内嵌自动化", () => {
     );
     expect(within(dialog).getByLabelText(/标题/)).toHaveValue("保存失败的草稿");
     expect(
-      within(dialog).getByRole("button", { name: /小助手/ }),
+      within(dialog).getByRole("button", { name: "小助手" }),
     ).toBeVisible();
     expect(
       within(drawer).queryByRole("button", { name: "保存失败的草稿" }),
