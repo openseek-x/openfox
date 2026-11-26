@@ -13,7 +13,13 @@ function creatorAvatar(entry: AgentDirectoryEntry) {
       size={28}
     />
   ) : (
-    <AgentAvatar name={entry.name} avatar={entry.avatar} size={20} />
+    <AgentAvatar
+      agentId={entry.id}
+      spaceId={entry.space_id}
+      name={entry.name}
+      avatar={entry.avatar}
+      size={20}
+    />
   );
 }
 
@@ -62,7 +68,7 @@ export function TaskCreatorPicker({
           <span className="shrink-0">{label}</span>
           {creator ? (
             <>
-              <span aria-hidden>{creatorAvatar(creator)}</span>
+              {creatorAvatar(creator)}
               <span className="truncate font-medium text-fg-default">
                 {creator.name}
               </span>

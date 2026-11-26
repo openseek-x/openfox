@@ -161,7 +161,7 @@ function AutomationEditorBody({
       options: (agents.data ?? []).map((agent) => ({
         value: `AGENT:${agent.id}`,
         label: agent.name,
-        icon: <AgentAvatar name={agent.name} size={16} />,
+        icon: <AgentAvatar agentId={agent.id} name={agent.name} size={16} />,
         // 不可指派的 Agent 禁用并说明原因（Figma 2.15）
         disabled: !agent.allow_assign || !agent.allow_direct_chat,
         description: !agent.allow_direct_chat
@@ -317,8 +317,13 @@ function AutomationEditorBody({
                       : crews.find((crew) => crew.id === id);
                   if (source) setAssignee({ kind, id, name: source.name });
                 }}
-                trigger={({ ref, toggle }) => (
+                trigger={({ ref, toggle, open }) => (
                   <button
+                    aria-expanded={open}
+                    aria-label={
+                      assignee?.name ??
+                      t("automations.form.assigneePlaceholder")
+                    }
                     ref={ref}
                     type="button"
                     onClick={toggle}
@@ -326,7 +331,13 @@ function AutomationEditorBody({
                   >
                     {assignee ? (
                       <>
-                        <AgentAvatar name={assignee.name} size={16} />
+                        <AgentAvatar
+                          agentId={
+                            assignee.kind === "AGENT" ? assignee.id : undefined
+                          }
+                          name={assignee.name}
+                          size={16}
+                        />
                         <span className="min-w-0 flex-1 truncate">
                           {assignee.name}
                         </span>

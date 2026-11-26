@@ -848,6 +848,7 @@ export function CommentBox({
                     />
                   ) : option.type === "agent" ? (
                     <AgentAvatar
+                      agentId={option.agent.id}
                       name={option.agent.name}
                       avatar={option.agent.avatar}
                       size={20}

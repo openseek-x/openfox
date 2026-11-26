@@ -1,3 +1,4 @@
+import { AgentAvatar } from "../agents/AgentAvatar";
 import { useQuery } from "@tanstack/react-query";
 import type { Invitation, SpaceDetail, TaskAssignee } from "@openfox/api";
 import { Avatar, cn, initialOf, type AvatarProps } from "@openfox/ui";
@@ -60,11 +61,21 @@ export function useInvitationAssignees(
 
 /** HiFox uses a dashed circle for a pending invite, with the email initial inside. */
 export function TaskAssigneeAvatar({
+  id,
   kind,
   name,
   size = 20,
   ...props
-}: Omit<AvatarProps, "kind"> & { kind: TaskAssignee["kind"] }) {
+}: Omit<AvatarProps, "kind"> & { kind: TaskAssignee["kind"]; id?: string }) {
+  if (kind === "AGENT")
+    return (
+      <AgentAvatar
+        agentId={id}
+        name={name}
+        size={size}
+        className={props.className}
+      />
+    );
   if (kind !== "INVITATION")
     return (
       <Avatar

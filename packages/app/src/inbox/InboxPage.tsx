@@ -1,3 +1,4 @@
+import { AgentAvatar } from "../agents/AgentAvatar";
 import { useQuery } from "@tanstack/react-query";
 import { memo, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -602,7 +603,7 @@ const Row = memo(function Row({
           group.unread && !cleared ? "bg-info" : "bg-info/10",
         )}
       />
-      <span className="pointer-events-none relative grid min-w-0 flex-1 grid-cols-1 items-center gap-1 @3xl:grid-cols-2 @3xl:gap-4">
+      <span className="pointer-events-none relative grid min-w-0 flex-1 grid-cols-1 items-center gap-1 @3xl:grid-cols-2 @3xl:gap-4 [&_[aria-haspopup=dialog]]:pointer-events-auto">
         <span className="flex min-w-0 items-center gap-2">
           {group.task_status_category && (
             <StatusIcon category={group.task_status_category} labelled />
@@ -637,14 +638,22 @@ const Row = memo(function Row({
             cleared && "opacity-60",
           )}
         >
-          {group.actor_name && group.task_title && (
-            <Avatar
-              name={group.actor_name}
-              kind={group.actor_kind === "AGENT" ? "agent" : "user"}
-              size={16}
-              className={cleared ? "grayscale" : undefined}
-            />
-          )}
+          {group.actor_name &&
+            group.task_title &&
+            (group.actor_kind === "AGENT" ? (
+              <AgentAvatar
+                agentId={group.actor_agent_id}
+                name={group.actor_name}
+                size={16}
+              />
+            ) : (
+              <Avatar
+                name={group.actor_name}
+                kind="user"
+                size={16}
+                className={cleared ? "grayscale" : undefined}
+              />
+            ))}
           <span
             title={[group.task_title && group.actor_name, event]
               .filter(Boolean)

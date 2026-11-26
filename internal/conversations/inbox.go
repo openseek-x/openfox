@@ -93,6 +93,7 @@ type InboxGroup struct {
 	SpaceID            string               `json:"space_id,omitempty"`
 	SpaceName          string               `json:"space_name,omitempty"`
 	AgentID            string               `json:"agent_id,omitempty"`
+	ActorAgentID       string               `json:"actor_agent_id,omitempty"`
 	ActorKind          string               `json:"actor_kind,omitempty"`
 	ActorName          string               `json:"actor_name,omitempty"`
 	SafeSummary        string               `json:"safe_summary"`
@@ -317,7 +318,7 @@ func inboxGroupsSQL(filter inboxFilter) string {
 		), matched AS (
 			SELECT g.*, t.title AS task_title, t.sequence AS task_sequence, ts.category AS task_category, tt.icon AS task_type_icon,
 			       c.agent_id, sp.id AS space_id, sp.name AS space_name, sp.prefix AS space_prefix,
-			       COALESCE(m.author_kind, CASE WHEN aa.id IS NOT NULL THEN 'AGENT' END) AS author_kind, COALESCE(ma.name,aa.name) AS message_agent_name, ca.name AS conversation_agent_name,
+			       COALESCE(m.author_kind, CASE WHEN aa.id IS NOT NULL THEN 'AGENT' END) AS author_kind, COALESCE(ma.id,aa.id) AS message_agent_id, COALESCE(ma.name,aa.name) AS message_agent_name, ca.name AS conversation_agent_name,
 			       mu.email AS message_user_email, au.email AS actor_user_email
 			  FROM grouped g
 			  LEFT JOIN openfox.tasks t
@@ -396,6 +397,7 @@ func (s Service) ListInbox(ctx context.Context, tx pgx.Tx, organizationID string
 		       COALESCE(g.space_id::text, ''), COALESCE(g.space_name, ''),
 		       COALESCE(g.agent_id::text, ''),
 		       -- 发起人：消息作者优先，其次记录的发起成员，最后是对话绑定的 Agent。
+		       COALESCE((CASE WHEN g.author_kind = 'AGENT' THEN g.message_agent_id WHEN g.author_kind IS DISTINCT FROM 'USER' AND g.actor_user_id IS NULL THEN g.agent_id END)::text,''),
 		       CASE WHEN g.author_kind = 'AGENT' THEN 'AGENT'
 		            WHEN g.author_kind = 'USER' OR g.actor_user_id IS NOT NULL THEN 'USER'
 		            WHEN g.agent_id IS NOT NULL THEN 'AGENT'
@@ -424,7 +426,7 @@ func (s Service) ListInbox(ctx context.Context, tx pgx.Tx, organizationID string
 		if err := rows.Scan(&group.ID, &group.NotificationID, &group.Kind, &group.InboxEvent, &group.DirectChatID, &group.DirectMessageID, &group.AutomationID,
 			&group.TaskID, &group.TaskDisplayID, &group.TaskTitle, &group.TaskStatusCategory, &group.TaskTypeIcon,
 			&group.ConversationID, &group.SpaceID, &group.SpaceName, &group.AgentID,
-			&group.ActorKind, &group.ActorName, &group.SafeSummary, &group.Count, &group.Unread,
+			&group.ActorAgentID, &group.ActorKind, &group.ActorName, &group.SafeSummary, &group.Count, &group.Unread,
 			&group.SnoozedUntil, &group.ClearedAt, &group.LatestAt, &group.TaskCreationDraft); err != nil {
 			return InboxPage{}, err
 		}

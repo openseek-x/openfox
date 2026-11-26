@@ -249,7 +249,7 @@ describe("普通 / 任务对话导航", () => {
     renderAt("/o/o1/chat");
     const nav = await screen.findByRole("navigation", { name: "对话" });
     const agent = await within(nav).findByRole("button", {
-      name: /熊猫/,
+      name: "熊猫",
     });
     await user.click(agent);
     await panel();

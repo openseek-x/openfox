@@ -464,6 +464,7 @@ export function ConversationHeader({
   return (
     <header className="flex h-11 shrink-0 items-center gap-1 border-b border-line-soft px-4">
       <AgentAvatar
+        agentId={agent.id}
         name={agent.name}
         avatar={agent.avatar}
         size={20}

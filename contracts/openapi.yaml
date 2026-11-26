@@ -11607,6 +11607,7 @@ paths:
       operationId: listAgentDirectory
       summary: 组织级 Agent 与小队目录；Agent 与小队各最多 500 条，超出 truncated=true；小队的专属 Agent 不单独出现
       parameters:
+        - { name: agent_id, in: query, description: 仅查询该 Agent 的独立目录条目，应用相同的可见性与专属规则, schema: { type: string, format: uuid } }
         - { name: archived, in: query, description: true 只看已归档, schema: { type: boolean, default: false } }
       responses:
         '200':
@@ -28339,6 +28340,7 @@ components:
         space_id: { type: string, format: uuid }
         space_name: { type: string }
         agent_id: { type: string, format: uuid }
+        actor_agent_id: { type: string, format: uuid, description: 当前显示的 Agent 发起人 }
         actor_kind: { type: string, enum: [USER, AGENT] }
         actor_name: { type: string }
         safe_summary: { type: string }

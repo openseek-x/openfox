@@ -718,6 +718,7 @@ export function CreateTaskDialog({
                     assigneeName ? (
                       <TaskAssigneeAvatar
                         name={assigneeName}
+                        id={refFromValue(assignees[0] ?? "")?.id}
                         kind={refFromValue(assignees[0] ?? "")?.kind ?? "HUMAN"}
                         size={16}
                       />

@@ -467,7 +467,13 @@ function SettingsTab({
           aria-label={t("agents.drawer.anchors")}
           className="sticky top-0 z-10 -mx-6 flex flex-wrap items-center gap-2 border-b border-line-default bg-surface-card px-6 py-2"
         >
-          <AgentAvatar name={agent.name} avatar={agent.avatar} size={28} />
+          <AgentAvatar
+            agentId={agent.id}
+            spaceId={agent.space_id}
+            name={agent.name}
+            avatar={agent.avatar}
+            size={28}
+          />
           {SECTIONS.map((section) => (
             <button
               key={section.id}

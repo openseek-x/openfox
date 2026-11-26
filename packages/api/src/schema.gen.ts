@@ -19506,6 +19506,11 @@ export interface components {
             space_name?: string;
             /** Format: uuid */
             agent_id?: string;
+            /**
+             * Format: uuid
+             * @description 当前显示的 Agent 发起人
+             */
+            actor_agent_id?: string;
             /** @enum {string} */
             actor_kind?: "USER" | "AGENT";
             actor_name?: string;
@@ -39348,6 +39353,8 @@ export interface operations {
     listAgentDirectory: {
         parameters: {
             query?: {
+                /** @description 仅查询该 Agent 的独立目录条目，应用相同的可见性与专属规则 */
+                agent_id?: string;
                 /** @description true 只看已归档 */
                 archived?: boolean;
             };
