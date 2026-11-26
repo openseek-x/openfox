@@ -52,7 +52,7 @@ export const settingsGroups: SettingsGroup[] = [
   {
     label: "settings.groups.agents",
     items: [
-      { path: "agents", icon: "briefcase", label: "settings.items.agents" },
+      { path: "agents", icon: "bot", label: "settings.items.agents" },
       { path: "crews", icon: "users-round", label: "settings.items.squads" },
       { path: "computers", icon: "monitor", label: "settings.items.computers" },
     ],

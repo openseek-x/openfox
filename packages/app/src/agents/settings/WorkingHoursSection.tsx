@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
 import type { AgentConfigInput } from "@openfox/api";
 import { useT } from "@openfox/i18n";
-import { Button, Callout, Checkbox, Switch, TextInput } from "@openfox/ui";
+import {
+  Button,
+  Callout,
+  Checkbox,
+  Icon,
+  Switch,
+  TextInput,
+} from "@openfox/ui";
 import type { SectionProps } from "./BasicSections";
 
 type Schedule = NonNullable<AgentConfigInput["working_hours"]>;
@@ -148,7 +155,7 @@ export function WorkingHoursSection({ agent, writes, setDirty }: SectionProps) {
                     )
                   }
                 >
-                  ×
+                  <Icon name="x" size={12} />
                 </Button>
               </div>
             ))}

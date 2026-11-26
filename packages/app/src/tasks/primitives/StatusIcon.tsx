@@ -59,7 +59,7 @@ function shape(category: StatusCategory, c: string) {
         <>
           <circle cx="8" cy="8" r="7" fill={c} />
           <path
-            d="M5.2 6.6h5.6M9.2 5l1.6 1.6-1.6 1.6M10.8 9.4H5.2M6.8 7.8 5.2 9.4l1.6 1.6"
+            d="M4.5 6h7m-2-2 2 2-2 2m2 2h-7m2-2-2 2 2 2"
             stroke="#fff"
             strokeWidth="1.2"
             strokeLinecap="round"
@@ -75,17 +75,18 @@ function shape(category: StatusCategory, c: string) {
           r="6.25"
           stroke={c}
           strokeWidth="1.5"
-          strokeDasharray="1.9 1.9"
+          strokeLinecap="round"
+          strokeDasharray="1.4 3.5"
         />
       );
     case "TODO":
-      return <circle cx="8" cy="8" r="6.25" stroke={c} strokeWidth="1.5" />;
+      return <circle cx="8" cy="8" r="6.15" stroke={c} strokeWidth="1.7" />;
     case "IN_PROGRESS":
       // 圆环 + 右半圆填充
       return (
         <>
-          <circle cx="8" cy="8" r="6.25" stroke={c} strokeWidth="1.5" />
-          <path d="M8 4.5a3.5 3.5 0 0 1 0 7z" fill={c} />
+          <circle cx="8" cy="8" r="6.15" stroke={c} strokeWidth="1.7" />
+          <path d="M8 3.6a4.4 4.4 0 0 1 0 8.8Z" fill={c} />
         </>
       );
     case "DONE":
@@ -93,7 +94,7 @@ function shape(category: StatusCategory, c: string) {
         <>
           <circle cx="8" cy="8" r="7" fill={c} />
           <path
-            d="m5 8.2 2 2L11 6"
+            d="m4.7 8 2.2 2.3 4.5-4.7"
             stroke="#fff"
             strokeWidth="1.5"
             strokeLinecap="round"
@@ -104,10 +105,18 @@ function shape(category: StatusCategory, c: string) {
     case "CANCELLED":
       return (
         <>
-          <circle cx="8" cy="8" r="7" fill={c} />
+          <circle
+            cx="8"
+            cy="8"
+            r="6.2"
+            fill={c}
+            fillOpacity=".12"
+            stroke={c}
+            strokeWidth="1.5"
+          />
           <path
             d="m5.6 5.6 4.8 4.8M10.4 5.6l-4.8 4.8"
-            stroke="#fff"
+            stroke={c}
             strokeWidth="1.5"
             strokeLinecap="round"
           />
@@ -116,20 +125,28 @@ function shape(category: StatusCategory, c: string) {
     case "DUPLICATE":
       return (
         <>
-          <circle cx="8" cy="8" r="7" fill={c} />
+          <circle
+            cx="8"
+            cy="8"
+            r="6.2"
+            fill={c}
+            fillOpacity=".12"
+            stroke={c}
+            strokeWidth="1.5"
+          />
           <rect
             x="5.2"
             y="5.2"
             width="4"
             height="4"
             rx="0.8"
-            stroke="#fff"
-            strokeWidth="1.2"
+            stroke={c}
+            strokeWidth="1.4"
           />
           <path
             d="M7.2 10.8h2.6a1 1 0 0 0 1-1V7.2"
-            stroke="#fff"
-            strokeWidth="1.2"
+            stroke={c}
+            strokeWidth="1.4"
             strokeLinecap="round"
           />
         </>
