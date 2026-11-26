@@ -936,6 +936,7 @@ export const zhCN = {
       linkRemoved: "{actor} 删除了链接",
       fieldChanged: "{actor} 修改了字段 {name}",
       deleted: "{actor} 删除了这个任务",
+      duplicateMarked: "{actor} 将 {task} 标记为本任务的重复",
       unknown: "{actor} 更新了这个任务",
       someone: "某人",
     },

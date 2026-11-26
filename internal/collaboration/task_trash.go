@@ -223,14 +223,21 @@ func (s Service) RestoreTask(ctx context.Context, tx pgx.Tx, organizationID, spa
 		newStatusID = types[0].mapStatus(statusID, category, true)
 	}
 
+	// 服务端不变量：按恢复后状态的类别决定重复目标，而不是比较新旧状态 ID。
+	// 类型已归档时状态会映射到默认类型里同类别的另一个状态（ID 不同），仍属重复类别就保留原目标；
+	// 映射后离开重复类别（默认类型没有重复状态，落到默认状态）才清空。
+	// 目标任务已删除或所在空间已不可读时同样保留目标 ID：与目标被删除时不改来源任务的既有规则一致，
+	// 读取详情时目标空间不可读则不返回目标标题（见 GetTask）。
 	result, err := tx.Exec(ctx, `
 		UPDATE openfox.tasks
 		   SET deleted_at = NULL, deleted_by = NULL, parent_task_id = NULLIF($4, '')::uuid,
 		       type_id = $5::uuid, status_id = $6::uuid, version = version + 1, updated_at = clock_timestamp(),
-		       duplicate_of_task_id = CASE WHEN $6::uuid = $7::uuid THEN duplicate_of_task_id ELSE NULL END
+		       duplicate_of_task_id = CASE WHEN (SELECT ns.category FROM openfox.task_statuses ns
+		                                          WHERE ns.organization_id = openfox_private.current_organization_id() AND ns.id = $6::uuid) = 'DUPLICATE'
+		                                   THEN duplicate_of_task_id ELSE NULL END
 		 WHERE organization_id = openfox_private.current_organization_id()
 		   AND space_id = $1::uuid AND id = $2::uuid AND version = $3 AND deleted_at IS NOT NULL`,
-		spaceID, taskID, int64(version), parentID, newTypeID, newStatusID, statusID)
+		spaceID, taskID, int64(version), parentID, newTypeID, newStatusID)
 	if err != nil {
 		return Task{}, mapDatabaseError(err)
 	}

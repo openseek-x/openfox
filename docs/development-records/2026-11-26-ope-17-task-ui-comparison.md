@@ -290,3 +290,56 @@
 - 首轮评审靠 grep 找写入点有盲区，R4、R5 是第二轮才发现的。
 - 未做真实页面验收（本期没有前端改动）；前端全量 `pnpm test` 受机器负载影响没有取得干净的全量通过，失败文件单独重跑全部通过；提交后的 `merge-tree` 已对最新 develop 重跑，无冲突。
 - 回滚：回退本期提交即可，没有迁移。回退后第一期接口与前端入口不受影响。
+
+## 十四、返工：三生三测退回（C-01、目标任务动态文案）
+
+来源：测试小队「不通过，退回修复」（消息 7d8889ea），基线提交 48ee5a3。本轮只修 C-01 与 P2，D13（导入允许重复但无目标）按要求保持现状，不改代码。
+
+### C-01：回收站恢复后重复目标丢失（P0）
+
+- 根因：第十三节引入的恢复 SQL 用「新旧状态 ID 是否相等」决定是否保留 `duplicate_of_task_id`。旧类型归档后，状态从旧类型的重复状态映射到默认类型里同类别的另一个重复状态，ID 不同，目标被清空，得到「重复但无目标」，违反第十三节的不变量。
+- 修复：`internal/collaboration/task_trash.go` 的恢复 UPDATE 改为按恢复后状态的类别判断：仍属 DUPLICATE 则保留原目标，离开重复类别才清空，并去掉不再使用的第 7 个参数。目标任务已删除或所在空间不可读时同样保留目标 ID，与「目标被删除不改来源任务」的既有规则一致，详情读取时目标空间不可读则不返回目标标题。
+- 测试：stage3 新增 `task_duplicate_invariant_restore_test.go` 的 `TestQARestoreDuplicateAcrossStatusIDs`，覆盖三种情况：映射到另一个重复状态保留目标、目标已在回收站时保留目标 ID、默认类型没有重复状态落到默认状态时清空目标。
+- 先红后绿：用 Go overlay 临时换回旧版 `task_trash.go`，同一用例在「restore into another duplicate status lost the target」处失败；新代码通过。工作区没有被改动。
+
+### P2：目标任务动态不显示来源
+
+- `task.duplicate_marked` 写在目标任务上，`safe_diff.display_id` 是来源任务编号（`triage.go` 唯一写入点）。前端原先没有专门文案，落到「更新了这个任务」。
+- 新增 `DuplicateMarkedActivity.tsx`：文案为「某人 将 <来源编号> 标记为本任务的重复」，编号是链接，语序由各语言文案决定；`Timeline.tsx` 在 `activityText` 与行渲染两处接入；zh-CN、en-US 各加一条 `tasks.activity.duplicateMarked`。编号缺失或不合规时不渲染链接，走通用兜底文案，避免把 `safe_diff` 的任意字符串拼成路径。
+- 测试：`DuplicateMarkedActivity.test.tsx` 共 5 项（中英文、链接位置、`activityText` 文案、含下划线编号、缺失或恶意编号兜底）。
+
+### 问题与根因
+
+| 编号 | 问题 | 根因与处理 |
+| --- | --- | --- |
+| B1 | 单元测试通过，真实页面仍显示「更新了这个任务」 | 来源编号正则初版不允许下划线，而空间前缀允许 `[a-z0-9_-]`，夹具里的编号是 `SP_7E0C31CB87FF-2`。单元测试只用了 `OPE-12`，没有覆盖；真实页面验收发现。正则放宽为 `^[A-Za-z][A-Za-z0-9_-]*-[0-9]+$`，与后端 `splitDisplayID` 的字符集一致，并补了含下划线编号的用例 |
+| B2 | 首次在 `packages/app` 下跑 vitest 全部报 `document is not defined` | vitest 配置在仓库根目录（jsdom 与 setup 文件），换到根目录运行后通过，与用例无关 |
+
+### 验证（全部实际运行，一次性 PostgreSQL，无 SIMULATED 项）
+
+| 项目 | 结果 |
+| --- | --- |
+| stage3 `TestQARestoreDuplicateAcrossStatusIDs`（新代码） | 通过 |
+| 同一用例对旧版 `task_trash.go` | 失败（预期） |
+| stage3 定向：完成窗口、`TestDuplicateInvariant*`、`TestMarkTaskDuplicate`、分拣相关 | 通过 |
+| stage10e 恢复相关（含 `TestRestoreArchivedType`） | 通过 |
+| stage1 `TestDuplicateInvariantConversationComplete`、stage9c `TestMoveTaskDuplicateTarget` | 通过 |
+| gofmt、go build、go vet（collaboration 与 stage3） | 无输出、无报错 |
+| 前端 `packages/app/src/tasks/detail` vitest | 6 个文件 44 项通过 |
+| prettier（改动文件）、`pnpm typecheck` | 通过 |
+| 真实页面：目标任务动态显示来源编号、点击跳转到来源任务 | 通过，截图见 `.hifox-task/evidence/p2/01-target-timeline-source-link.png`、`02-jumped-to-source.png` |
+
+未运行：`make check` 全量、`pnpm test` 全量、`pnpm test:e2e` 全量、stage3 全量（已知有依赖独占数据库的用例）。本轮按退回要求只跑定向测试。
+
+### 配置变更与 SQL 迁移
+
+- 配置：无。
+- SQL 与迁移：无新增迁移、表、列或约束。只改了恢复任务的一条 UPDATE 的 CASE 条件。
+
+### 剩余风险与回滚
+
+- 来源编号对能读目标任务的人可见，做法与 `task.moved` 的 `from_display_id` 一致。
+- 后端大写前缀允许以数字开头（如 `2AB`），前端要求首字符是字母，这类编号走兜底文案而不是链接，属于降级，不是错误。
+- 目标任务已删除时来源任务保留目标 ID，详情不返回目标标题，口径沿用既有规则。
+- D13 仍待人做产品确认。
+- 回滚：回退本轮提交即可，没有迁移。

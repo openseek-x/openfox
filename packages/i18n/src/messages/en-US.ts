@@ -958,6 +958,7 @@ export const enUS: Messages = {
       linkRemoved: "{actor} removed a link",
       fieldChanged: "{actor} changed field {name}",
       deleted: "{actor} deleted this task",
+      duplicateMarked: "{actor} marked {task} as a duplicate of this task",
       unknown: "{actor} updated this task",
       someone: "Someone",
     },
