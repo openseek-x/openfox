@@ -25,7 +25,6 @@ function setup() {
   };
   const api = {
     me: {
-      get: async () => ({ id: "u1" }),
       organizations: async () => [{ id: "o1" }],
     },
     spaces: { list: async () => [{ id: "s1" }, { id: "s2" }] },

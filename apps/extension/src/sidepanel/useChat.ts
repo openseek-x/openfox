@@ -4,7 +4,6 @@ import {
   type Api,
   type ConversationMessage,
   type ConversationSummary,
-  type Me,
   type Organization,
   type SpaceDetail,
 } from "@openfox/api";
@@ -19,7 +18,6 @@ import { usePolling } from "./usePolling";
 type AgentItem = Awaited<ReturnType<Api["spaceAgents"]["list"]>>[number];
 
 export function useChat(api: Api) {
-  const [me, setMe] = useState<Me | null>(null);
   const [orgs, setOrgs] = useState<Organization[]>([]);
   const [orgId, setOrgId] = useState<string | null>(null);
   const [spaces, setSpaces] = useState<SpaceDetail[]>([]);
@@ -49,10 +47,10 @@ export function useChat(api: Api) {
 
   useEffect(() => {
     let live = true;
-    Promise.all([api.me.get(), api.me.organizations()])
-      .then(([user, list]) => {
+    api.me
+      .organizations()
+      .then((list) => {
         if (!live) return;
-        setMe(user);
         setOrgs(list);
         setOrgId(list[0]?.id ?? null);
       })
@@ -260,7 +258,6 @@ export function useChat(api: Api) {
   }
 
   return {
-    me,
     orgs,
     orgId,
     spaces,

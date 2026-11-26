@@ -28,7 +28,6 @@
 .account,
 .new-chat,
 .accent-button,
-.connect-input,
 .compose-tools,
 .message-author,
 .active-agent,
@@ -159,7 +158,6 @@
   letter-spacing: -0.8px;
 }
 .connect-intro,
-.connect-form p,
 .privacy-note p,
 .empty-chat p {
   color: var(--panel-muted);
@@ -168,44 +166,12 @@
 .connect-intro {
   font-size: 14px;
 }
-.connect-form {
-  margin: 24px 0;
-  display: grid;
-  gap: 18px;
-}
-.connect-form label {
-  display: block;
-  font-size: 13px;
-  font-weight: 650;
-  margin-bottom: 7px;
-}
-.connect-input {
-  border: 1px solid #bfb6ad;
-  border-radius: 10px;
-  background: white;
-  gap: 10px;
-  padding-inline: 12px;
-  color: var(--panel-muted);
-}
-.connect-input input {
-  min-width: 0;
-  width: 100%;
-  height: 42px;
-  color: var(--panel-ink);
-  font-size: 14px;
-}
-.connect-input:focus-within,
 .composer:focus-within {
   border-color: var(--panel-accent);
   box-shadow: 0 0 0 2px #a73e1a20;
 }
-.connect-input input:focus-visible,
 .composer textarea:focus-visible {
   outline: none;
-}
-.connect-form p {
-  font-size: 12px;
-  margin-top: 6px;
 }
 .accent-button {
   justify-content: center;
@@ -223,6 +189,8 @@
   color: #736a61;
 }
 .connect-submit {
+  width: 100%;
+  margin: 22px 0;
   min-height: 43px;
 }
 .privacy-note {
@@ -317,8 +285,7 @@
   color: var(--panel-ink);
 }
 .tool-button:hover,
-.new-chat:hover,
-.account:hover {
+.new-chat:hover {
   background: #f5f1ed;
 }
 .history-menu {
@@ -554,4 +521,17 @@
   min-height: 32px;
   padding-inline: 11px;
   font-size: 13px;
+}
+
+.connected-indicator {
+  height: 7px;
+  width: 7px;
+  flex: none;
+  background: #38845f;
+  border-radius: 50%;
+}
+.retry-session {
+  display: block;
+  color: var(--panel-accent);
+  margin-bottom: 16px;
 }

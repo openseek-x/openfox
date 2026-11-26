@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "OpenFox 侧边栏",
+  "version": "0.2.0",
+  "description": "在 Chrome 侧边栏里与 OpenFox 的 Agent 对话，并可附带当前页面引用。",
+  "minimum_chrome_version": "116",
+  "permissions": ["sidePanel", "activeTab", "scripting", "cookies"],
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "icons": {
+    "96": "openfox.png"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+Shift+C"
+      }
+    }
+  },
+  "action": {
+    "default_title": "打开 OpenFox 侧边栏",
+    "default_icon": "openfox.png"
+  },
+  "incognito": "split"
+}

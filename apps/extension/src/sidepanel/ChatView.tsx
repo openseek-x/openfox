@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-import type { Api, ConversationMessage } from "@openfox/api";
+import type { Api, ConversationMessage, Me } from "@openfox/api";
 import {
   Button,
   Callout,
@@ -15,13 +15,7 @@ import { splitPageReference } from "../lib/pageRef";
 import { useChat } from "./useChat";
 
 /** 对话页：选空间与 Agent、历史会话、消息列表和输入框，可选附带当前页面引用。 */
-export function ChatView({
-  api,
-  onDisconnect,
-}: {
-  api: Api;
-  onDisconnect: () => void | Promise<void>;
-}) {
+export function ChatView({ api, me }: { api: Api; me: Me }) {
   const chat = useChat(api);
   const [text, setText] = useState("");
   const [withPage, setWithPage] = useState(false);
@@ -52,11 +46,7 @@ export function ChatView({
   }
 
   function isMine(message: ConversationMessage) {
-    return (
-      !!chat.me &&
-      message.author_kind === "USER" &&
-      message.author_user_id === chat.me.id
-    );
+    return message.author_kind === "USER" && message.author_user_id === me.id;
   }
 
   function authorLabel(message: ConversationMessage): string {
@@ -81,37 +71,19 @@ export function ChatView({
     <div className="chat-page">
       <header className="chat-head">
         <div className="chat-top">
-          <Menu
-            label="账号"
-            focusFirstOnOpen
-            trigger={({ ref, open, toggle }) => (
-              <button
-                type="button"
-                className="account"
-                ref={ref}
-                onClick={toggle}
-                disabled={chat.sending}
-                aria-label="账号设置"
-                aria-haspopup="menu"
-                aria-expanded={open}
-              >
-                <img src="./openfox.png" alt="" width="32" height="32" />
-                <span className="account-copy">
-                  <strong>OpenFox</strong>
-                  <small>{chat.me?.full_name || chat.me?.email}</small>
-                </span>
-                <Icon name="chevron-down" size={13} />
-              </button>
-            )}
-          >
-            <MenuLabel>{chat.me?.email}</MenuLabel>
-            <MenuItem
-              icon={<Icon name="log-out" />}
-              onSelect={() => void onDisconnect()}
-            >
-              断开连接
-            </MenuItem>
-          </Menu>
+          <div className="account" title={me.email}>
+            <img src="./openfox.png" alt="" width="32" height="32" />
+            <span className="account-copy">
+              <strong>OpenFox</strong>
+              <small>{me.full_name || me.email}</small>
+            </span>
+            <span
+              className="connected-indicator"
+              role="img"
+              aria-label="当前浏览器已连接"
+              title="当前浏览器已连接"
+            />
+          </div>
           <div className="chat-actions">
             <Menu
               label="历史会话"

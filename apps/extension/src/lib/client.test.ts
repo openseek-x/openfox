@@ -1,130 +1,105 @@
-import { describe, expect, it } from "vitest";
-import { ApiError, isApiError } from "@openfox/api";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiError } from "@openfox/api";
+import { createSessionApi, describeApiError } from "./client";
 
-import {
-  createExtensionApi,
-  createTokenTransport,
-  describeApiError,
-} from "./client";
+const origin = "https://work.example.com";
+const get = vi.fn();
+const request = vi.fn();
+const invalid = vi.fn();
 
-const settings = {
-  serverOrigin: "https://openfox.example.com",
-  token: "ofx_pat_TESTTOKEN0000000000000000000000000000000",
-};
+beforeEach(() => {
+  vi.resetAllMocks();
+  get.mockResolvedValue({ value: "fixture-csrf" });
+  request.mockResolvedValue(Response.json({ id: "me" }));
+  vi.stubGlobal("chrome", { cookies: { get } });
+  vi.stubGlobal("fetch", request);
+});
+afterEach(() => vi.unstubAllGlobals());
 
-interface Call {
-  url: string;
-  init?: RequestInit;
-}
-
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-function recordingTransport(response: () => Response) {
-  const calls: Call[] = [];
-  const transport: typeof fetch = async (input, init) => {
-    calls.push({ url: String(input), init });
-    return response();
-  };
-  return { calls, transport };
-}
-
-function firstCall(calls: Call[]): Call {
-  const call = calls[0];
-  if (!call) throw new Error("没有记录到请求");
-  return call;
-}
-
-describe("createTokenTransport", () => {
-  it("补全服务器地址并带上 Bearer 令牌，不携带 cookie", async () => {
-    const { calls, transport } = recordingTransport(() => jsonResponse({}));
-    await createTokenTransport(settings, transport)("/api/v1/me", {
-      method: "GET",
+describe("工作台会话传输", () => {
+  it("访问固定工作台并交给浏览器附带会话", async () => {
+    await createSessionApi(origin, "fixture-csrf", invalid).me.get();
+    const [url, init] = request.mock.calls[0]!;
+    expect(url).toBe(origin + "/api/v1/me");
+    expect(init.credentials).toBe("include");
+    expect(init.redirect).toBe("error");
+    expect(init.headers.has("Authorization")).toBe(false);
+    expect(init.headers.has("X-CSRF-Token")).toBe(false);
+    expect(get).toHaveBeenCalledWith({
+      url: origin + "/",
+      name: "openfox_csrf",
     });
-    expect(calls).toHaveLength(1);
-    expect(firstCall(calls).url).toBe("https://openfox.example.com/api/v1/me");
-    const headers = firstCall(calls).init?.headers as Headers;
-    expect(headers.get("Authorization")).toBe(`Bearer ${settings.token}`);
-    expect(firstCall(calls).init?.credentials).toBe("omit");
   });
-
-  it("令牌不会出现在请求地址里", async () => {
-    const { calls, transport } = recordingTransport(() => jsonResponse({}));
-    await createTokenTransport(settings, transport)("/api/v1/me?limit=5");
-    expect(firstCall(calls).url).not.toContain(settings.token);
-  });
-
-  it("拒绝 /api/v1/ 之外的路径与绝对地址，且不发出请求", async () => {
-    const { calls, transport } = recordingTransport(() => jsonResponse({}));
-    const guarded = createTokenTransport(settings, transport);
-    await expect(guarded("/other")).rejects.toThrow();
-    await expect(
-      guarded("https://evil.example.com/api/v1/me"),
-    ).rejects.toThrow();
-    expect(calls).toHaveLength(0);
-  });
-});
-
-describe("createExtensionApi", () => {
-  it("通过令牌传输层请求当前用户", async () => {
-    const me = { id: "u1", email: "a@example.com", full_name: "A" };
-    const { calls, transport } = recordingTransport(() => jsonResponse(me));
-    const api = createExtensionApi(settings, transport);
-    const result = await api.me.get();
-    expect(result).toMatchObject({ id: "u1" });
-    expect(firstCall(calls).url).toBe("https://openfox.example.com/api/v1/me");
-  });
-
-  it("令牌无效时抛出 401 错误，界面文案不含令牌", async () => {
-    const { transport } = recordingTransport(() =>
-      jsonResponse({ error: { code: "UNAUTHORIZED", message: "denied" } }, 401),
+  it("写请求带上已核验会话的 CSRF 标记", async () => {
+    await createSessionApi(
+      origin,
+      "fixture-csrf",
+      invalid,
+    ).conversations.postMessage("org", "chat", {
+      body: "你好",
+      client_message_id: "m1",
+    });
+    expect(request.mock.calls[0]![1].headers.get("X-CSRF-Token")).toBe(
+      "fixture-csrf",
     );
-    const api = createExtensionApi(settings, transport);
-    const error = await api.me.get().catch((e: unknown) => e);
-    expect(isApiError(error)).toBe(true);
-    expect((error as ApiError).status).toBe(401);
-    const text = describeApiError(error);
-    expect(text).toContain("令牌无效");
-    expect(text).not.toContain(settings.token);
   });
-
-  it("网络中断时错误文案不含令牌", async () => {
-    const transport: typeof fetch = async () => {
-      throw new Error(`连接失败 ${settings.token}`);
-    };
-    const api = createExtensionApi(settings, transport);
-    const error = await api.me.get().catch((e: unknown) => e);
-    expect(isApiError(error)).toBe(true);
-    expect((error as ApiError).uncertain).toBe(true);
-    expect(describeApiError(error)).not.toContain(settings.token);
-    expect((error as ApiError).message).not.toContain(settings.token);
+  it.each([null, { value: "other" }])(
+    "注销或切换账号时拒绝旧草稿",
+    async (cookie) => {
+      get.mockResolvedValue(cookie);
+      await expect(
+        createSessionApi(
+          origin,
+          "fixture-csrf",
+          invalid,
+        ).conversations.postMessage("org", "chat", {
+          body: "旧草稿",
+          client_message_id: "m1",
+        }),
+      ).rejects.toMatchObject({ status: 401 });
+      expect(request).not.toHaveBeenCalled();
+      expect(invalid).toHaveBeenCalledOnce();
+    },
+  );
+  it("在途响应返回前换号时，丢弃旧视图的数据", async () => {
+    get
+      .mockResolvedValueOnce({ value: "fixture-csrf" })
+      .mockResolvedValueOnce({ value: "other" });
+    await expect(
+      createSessionApi(origin, "fixture-csrf", invalid).me.get(),
+    ).rejects.toMatchObject({ status: 401 });
+    expect(request).toHaveBeenCalledOnce();
+    expect(invalid).toHaveBeenCalledOnce();
+  });
+  it("服务端注销后清除面板身份", async () => {
+    request.mockResolvedValue(Response.json({}, { status: 401 }));
+    await expect(
+      createSessionApi(origin, "fixture-csrf", invalid).me.get(),
+    ).rejects.toMatchObject({ status: 401 });
+    expect(invalid).toHaveBeenCalledOnce();
+  });
+  it("拒绝越出 API 的路径", async () => {
+    await expect(
+      createSessionApi(origin, "fixture-csrf", invalid).http.request(
+        "/v1/../../other",
+      ),
+    ).rejects.toThrow();
+    expect(request).not.toHaveBeenCalled();
   });
 });
 
-describe("describeApiError", () => {
-  const make = (status: number, retryAfter?: number, message = "服务端信息") =>
-    new ApiError({ status, code: "X", message, retryAfter });
-
-  it("403 提示没有权限", () => {
-    expect(describeApiError(make(403))).toBe("没有权限执行该操作");
+describe("本地错误提示", () => {
+  const err = (status: number, retryAfter?: number) =>
+    new ApiError({ status, code: "X", message: "fixture-private", retryAfter });
+  it("失效与权限问题提供不同提示", () => {
+    expect(describeApiError(err(401))).toContain("重新登录");
+    expect(describeApiError(err(403))).toContain("没有权限");
   });
-
-  it("429 带等待秒数时写出秒数", () => {
-    expect(describeApiError(make(429, 7))).toContain("7 秒");
-    expect(describeApiError(make(429))).toContain("稍后再试");
-  });
-
-  it("其他状态使用本地文案，服务端回显的凭据不会显示", () => {
-    expect(
-      describeApiError(make(400, undefined, settings.token)),
-    ).not.toContain(settings.token);
-  });
-
-  it("非接口错误返回通用文案，不透传原始内容", () => {
-    expect(describeApiError(new Error(settings.token))).toBe("出现未知错误");
+  it("限流展示等待时间，未知错误不回显服务端原文", () => {
+    expect(describeApiError(err(429, 7))).toContain("7 秒");
+    expect(describeApiError(err(400))).not.toContain("fixture-private");
+    expect(describeApiError(new Error("fixture-private"))).not.toContain(
+      "fixture-private",
+    );
   });
 });
