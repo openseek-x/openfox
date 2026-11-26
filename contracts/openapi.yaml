@@ -9182,6 +9182,34 @@ paths:
           $ref: "#/components/responses/Error"
         "409":
           $ref: "#/components/responses/Error"
+  /v1/organizations/{organizationID}/spaces/{spaceID}/tasks/{taskID}/duplicate:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - $ref: '#/components/parameters/SpaceID'
+      - $ref: '#/components/parameters/TaskID'
+    post:
+      operationId: markTaskDuplicate
+      summary: 标记为重复任务
+      description: >-
+        把任务改到「重复」类别的状态并记录重复目标，目标任务记一条 task.duplicate_marked 动态。
+        不要求任务在分拣台中（分拣台内的处理见 /triage/duplicate）。权限同更新任务；停用空间只读。
+        status_id 省略时取工作流里排序最前的重复类别状态；指定时须属于该任务的工作流且类别为 DUPLICATE，否则 400 INVALID_DUPLICATE_STATUS。
+        目标为自己、不存在、已删除或不可读时 400 INVALID_DUPLICATE；工作流没有重复类别状态时 409 STATUS_CATEGORY_MISSING；版本不符时 409 VERSION_CONFLICT。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TaskDuplicateRequest' }
+      responses:
+        '200':
+          description: 任务
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaskDetail' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
   /v1/organizations/{organizationID}/spaces/{spaceID}/tasks/{taskID}/restore:
     parameters:
       - $ref: "#/components/parameters/OrganizationID"
@@ -31935,6 +31963,14 @@ components:
         subscribe: { type: boolean, description: true 时关注；false 不因本次处理或评论新增关注，已有关注不变；未传时保留评论自动关注 }
         comment: { type: string, maxLength: 10000 }
     # ===== /分拣台 schemas =====
+    TaskDuplicateRequest:
+      type: object
+      required: [version, duplicate_of_task_id]
+      additionalProperties: false
+      properties:
+        version: { type: integer, minimum: 1 }
+        duplicate_of_task_id: { type: string, format: uuid }
+        status_id: { type: string, format: uuid, description: 省略时取工作流里排序最前的重复类别状态 }
 
     AgentVariantGroup:
       type: string

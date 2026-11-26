@@ -1153,6 +1153,14 @@ func (s Service) leaveTriage(ctx context.Context, tx pgx.Tx, organizationID, spa
 	if err != nil {
 		return Task{}, err
 	}
+	return s.closeInCategory(ctx, tx, organizationID, spaceID, task, actor, version, requestID, category, "", duplicateOf)
+}
+
+// closeInCategory 把任务改到 category 类别的状态；duplicateOf 非空时同时写重复目标，并给目标任务记一条动态。
+// statusID 为空时取工作流里排序最前的该类别状态；非空时必须属于任务的工作流且类别一致。
+// 分拣台的拒绝 / 标记重复与通用的「标记为重复」共用这段逻辑。
+func (s Service) closeInCategory(ctx context.Context, tx pgx.Tx, organizationID, spaceID string, task Task, actor Actor, version uint64, requestID, category, statusID, duplicateOf string) (Task, error) {
+	taskID := task.ID
 	var targetSpace string
 	if duplicateOf != "" {
 		err := tx.QueryRow(ctx, `
@@ -1170,12 +1178,15 @@ func (s Service) leaveTriage(ctx context.Context, tx pgx.Tx, organizationID, spa
 	if err != nil {
 		return Task{}, err
 	}
-	statusID, err := categoryStatusID(ctx, tx, category, flow.statusIDs)
-	if err != nil {
-		return Task{}, err
-	}
 	if statusID == "" {
-		return Task{}, errStatusCategoryMissing
+		if statusID, err = categoryStatusID(ctx, tx, category, flow.statusIDs); err != nil {
+			return Task{}, err
+		}
+		if statusID == "" {
+			return Task{}, errStatusCategoryMissing
+		}
+	} else if err := requireStatusCategory(ctx, tx, flow, statusID, category); err != nil {
+		return Task{}, err
 	}
 	updated, err := s.UpdateTask(ctx, tx, organizationID, spaceID, taskID, actor, TaskUpdateInput{StatusID: &statusID, Version: version, RequestID: requestID})
 	if err != nil || duplicateOf == "" {

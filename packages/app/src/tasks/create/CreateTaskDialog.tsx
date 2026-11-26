@@ -43,6 +43,7 @@ import {
 } from "../pickers";
 import { formatMonthDay } from "../primitives/dates";
 import { PriorityIcon, type Priority } from "../primitives/PriorityIcon";
+import { withoutDuplicateStatuses } from "../detail/MarkDuplicateDialog";
 import { StatusIcon } from "../primitives/StatusIcon";
 import { TaskTypeIcon } from "../primitives/TaskTypeIcon";
 import {
@@ -220,9 +221,11 @@ export function CreateTaskDialog({
   const fromTriage =
     init.submitToTriage && init.spaceId === spaceId && triageEnabled !== false;
   const triageStatus = workflow.find((item) => item.category === "TRIAGE");
+  // OPE-17 · 新任务还没有可选的重复目标，候选里不提供重复类别
+  const creatable = withoutDuplicateStatuses(workflow);
   const choices = triageEnabled
-    ? workflow
-    : workflow.filter((item) => item.category !== "TRIAGE");
+    ? creatable
+    : creatable.filter((item) => item.category !== "TRIAGE");
   const selectedStatus = choices.find((item) => item.id === statusId);
   const submitToTriage =
     guestTriage ||

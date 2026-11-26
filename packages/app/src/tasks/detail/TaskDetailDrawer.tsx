@@ -68,6 +68,12 @@ import {
   useUpdateTask,
 } from "../queries";
 import { statusFields } from "../TaskMenu";
+import {
+  MarkDuplicateDialog,
+  firstDuplicateStatus,
+  isDuplicateStatus,
+  type DuplicateTarget,
+} from "./MarkDuplicateDialog";
 import { AttachmentsSection } from "./AttachmentsSection";
 import { ExecutionSection } from "./ExecutionSection";
 import { ConversationTabs, PropertyBar } from "./NarrowDetail";
@@ -77,6 +83,7 @@ import {
   useTaskConversations,
 } from "./TaskConversations";
 import { useIsNarrow } from "./useIsNarrow";
+import { localKeys, readLocal, writeLocal } from "../../storage";
 import { GitLinksSection } from "./GitLinksSection";
 import { WideProperties } from "./WideProperties";
 import { Followers } from "./Followers";
@@ -382,8 +389,11 @@ function HeaderActions({
   const moveEntry = useMoveTaskEntry(orgId, task, () => setLevel("move"));
   const [confirm, setConfirm] = useState(false);
   const [forward, setForward] = useState(false);
+  const [duplicate, setDuplicate] = useState<DuplicateTarget | null>(null);
   const bus = useDetailBus();
   const workflow = workflowOf(task, types.data, statuses.data);
+  // OPE-17 · 工作流里有重复类别的状态时才能标记为重复
+  const duplicateStatus = firstDuplicateStatus(workflow);
   const readOnly = useReadOnly();
   const retiredReason = useReadOnlyReason();
 
@@ -526,6 +536,21 @@ function HeaderActions({
             >
               {t("tasks.detail.linkExisting")}
             </MenuItem>
+            {duplicateStatus && (
+              <MenuItem
+                icon={
+                  <StatusIcon
+                    category={duplicateStatus.category}
+                    color={duplicateStatus.color}
+                  />
+                }
+                disabled={readOnly}
+                disabledReason={retiredReason}
+                onSelect={() => setDuplicate({ task })}
+              >
+                {t("tasks.detail.markDuplicate")}
+              </MenuItem>
+            )}
             <MenuSeparator />
             <MenuItem
               icon={<Icon name="link" />}
@@ -611,7 +636,11 @@ function HeaderActions({
               }
               selected={status.id === task.status_id}
               onSelect={() => {
-                if (status.id !== task.status_id)
+                if (status.id === task.status_id) return;
+                // OPE-17 · 重复状态必须带目标任务：改走目标选择器
+                if (isDuplicateStatus(status))
+                  setDuplicate({ task, statusId: status.id });
+                else
                   update.mutate({
                     task,
                     patch: { status_id: status.id },
@@ -654,6 +683,13 @@ function HeaderActions({
         />
       )}
       {moveEntry.dialog}
+      {duplicate && (
+        <MarkDuplicateDialog
+          orgId={orgId}
+          target={duplicate}
+          onClose={() => setDuplicate(null)}
+        />
+      )}
       <ConfirmDialog
         open={confirm}
         title={t("tasks.detail.deleteTitle")}
@@ -688,6 +724,18 @@ function useDetailBus(): DetailUi {
   const value = useContext(DetailUiContext);
   if (!value) throw new Error("useDetailBus 必须在 TaskDetailDrawer 内使用");
   return value;
+}
+
+/** 属性侧栏收起偏好：只属于本机，读写失败时按展开处理。 */
+function usePropertiesCollapsed() {
+  const [collapsed, setCollapsed] = useState(
+    () => readLocal(localKeys.taskPropertiesCollapsed) === "1",
+  );
+  const update = (next: boolean) => {
+    setCollapsed(next);
+    writeLocal(localKeys.taskPropertiesCollapsed, next ? "1" : null);
+  };
+  return [collapsed, update] as const;
 }
 
 function workflowOf(
@@ -792,11 +840,19 @@ function DetailBody({
   // 阶段 9g · 量到容器窄于 720px 时走窄布局（不渲染右栏）；量不到时按宽，宽布局保持原样
   const container = useRef<HTMLDivElement | null>(null);
   const narrow = useIsNarrow(container, 720);
+  // OPE-17 · 宽布局可收起属性侧栏，收起后与窄布局一样把属性放到标题下方（胶囊）
+  const [collapsed, setCollapsed] = usePropertiesCollapsed();
+  const compact = narrow || collapsed;
 
   return (
     // 容器查询保留：ResizeObserver 首次回调前（或环境不支持时）窄容器仍把属性栏移到正文下方，避免正文挤出左栏
     <div ref={container} className="@container h-full">
-      <div className="grid h-full grid-cols-1 grid-rows-[minmax(0,1fr)_auto] @[720px]:grid-cols-[minmax(0,1fr)_300px]">
+      <div
+        className={cn(
+          "grid h-full grid-cols-1 grid-rows-[minmax(0,1fr)_auto]",
+          !collapsed && "@[720px]:grid-cols-[minmax(0,1fr)_300px]",
+        )}
+      >
         <div className="flex min-w-0 flex-col gap-5 overflow-y-auto px-6 py-5 *:shrink-0">
           {readOnly && (
             <RetiredBanner
@@ -810,16 +866,31 @@ function DetailBody({
           {task.triage && !triageInHeader && (
             <TaskTriageActions orgId={orgId} task={task} />
           )}
-          {narrow && (!readOnly || conversations.list.length > 0) && (
-            <div className="sticky top-0 z-10 -my-1 flex min-w-0 items-center gap-2 bg-surface-card py-1">
-              <InvokeAgentButton
-                orgId={orgId}
-                task={task}
-                className="shrink-0"
-              />
-              <ConversationTabs orgId={orgId} task={task} />
-            </div>
-          )}
+          {compact &&
+            (!readOnly || conversations.list.length > 0 || !narrow) && (
+              <div className="sticky top-0 z-10 -my-1 flex min-w-0 items-center gap-2 bg-surface-card py-1">
+                {(!readOnly || conversations.list.length > 0) && (
+                  <>
+                    <InvokeAgentButton
+                      orgId={orgId}
+                      task={task}
+                      className="shrink-0"
+                    />
+                    <ConversationTabs orgId={orgId} task={task} />
+                  </>
+                )}
+                {!narrow && (
+                  <IconButton
+                    label={t("tasks.detail.expandProperties")}
+                    icon={<Icon name="panel-left" className="-scale-x-100" />}
+                    size="28"
+                    aria-expanded={false}
+                    className="ml-auto shrink-0"
+                    onClick={() => setCollapsed(false)}
+                  />
+                )}
+              </div>
+            )}
           <div className="flex min-w-0 flex-col items-start gap-2">
             <ReadOnlyTip>
               <Menu
@@ -894,7 +965,7 @@ function DetailBody({
               </ReadOnlyTip>
             </div>
           </div>
-          {narrow && (
+          {compact && (
             <PropertyBar
               orgId={orgId}
               task={task}
@@ -985,11 +1056,23 @@ function DetailBody({
             <CommentBox orgId={orgId} task={task} people={people} />
           </div>
         )}
-        {!narrow && (
+        {!compact && (
           <aside
             aria-label={t("tasks.detail.properties")}
             className="min-h-0 overflow-y-auto border-t border-line-default px-3 py-5 @[720px]:col-start-2 @[720px]:row-span-2 @[720px]:row-start-1 @[720px]:border-t-0 @[720px]:border-l"
           >
+            <div className="-mt-1 mb-2 flex h-7 items-center justify-between pl-1">
+              <span className="text-body-sm font-medium text-fg-muted">
+                {t("tasks.detail.properties")}
+              </span>
+              <IconButton
+                label={t("tasks.detail.collapseProperties")}
+                icon={<Icon name="panel-left-close" className="-scale-x-100" />}
+                size="28"
+                aria-expanded
+                onClick={() => setCollapsed(true)}
+              />
+            </div>
             <ExecutionSection orgId={orgId} task={task} people={people} />
             <WideProperties
               stats={taskStats}

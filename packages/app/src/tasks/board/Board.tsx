@@ -25,6 +25,11 @@ import { Icon, IconButton, Spinner, cn } from "@openfox/ui";
 
 import { keys } from "../../context";
 import { pointerFirstCollision } from "../../dnd/collision";
+import {
+  MarkDuplicateDialog,
+  isDuplicateStatus,
+  type DuplicateTarget,
+} from "../detail/MarkDuplicateDialog";
 import { applyGroupOrder, isStatusBoard } from "../grouping";
 import { planBoardMove } from "../model";
 import { LoadMore } from "../parts";
@@ -58,6 +63,7 @@ function StatusBoard(props: BoardProps) {
   const queryClient = useQueryClient();
   const update = useUpdateTask(orgId);
   const [dragging, setDragging] = useState<Task | null>(null);
+  const [duplicate, setDuplicate] = useState<DuplicateTarget | null>(null);
   const allowReorder = source.manualSort && display.sort === "manual";
 
   const sensors = useSensors(
@@ -131,6 +137,11 @@ function StatusBoard(props: BoardProps) {
     );
     if (!patch) return;
     const status = columns.find((c) => c.id === target.statusId);
+    // OPE-17 · 拖进重复列：先选目标任务；取消时卡片留在原列。目标列里的落点不保留。
+    if (target.statusId !== task.status_id && isDuplicateStatus(status)) {
+      setDuplicate({ task, statusId: target.statusId });
+      return;
+    }
     update.mutate({
       task,
       patch,
@@ -204,6 +215,13 @@ function StatusBoard(props: BoardProps) {
       <DragOverlay>
         {dragging && <CardBody task={dragging} display={display} overlay />}
       </DragOverlay>
+      {duplicate && (
+        <MarkDuplicateDialog
+          orgId={orgId}
+          target={duplicate}
+          onClose={() => setDuplicate(null)}
+        />
+      )}
     </DndContext>
   );
 }

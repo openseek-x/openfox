@@ -501,6 +501,13 @@ export function taskErrorMessage(t: Translate, error: unknown): string {
       return t("tasks.errors.relationExists");
     case "LINK_EXISTS":
       return t("tasks.errors.linkExists");
+    // OPE-17 · 标记为重复
+    case "INVALID_DUPLICATE":
+      return t("spaces.triage.errors.invalidDuplicate");
+    case "INVALID_DUPLICATE_STATUS":
+      return t("tasks.errors.invalidDuplicateStatus");
+    case "STATUS_CATEGORY_MISSING":
+      return t("spaces.triage.errors.categoryMissing");
     // 阶段 3a · 停用空间只读、估时校验
     case "SPACE_RETIRED":
       return t("spaces.errors.retired");
@@ -589,6 +596,53 @@ export function useUpdateTask(orgId: string) {
       void queryClient.invalidateQueries({
         queryKey: [...keys.tasks(orgId), "sub", saved.id, "timeline"],
       });
+    },
+  });
+}
+
+export interface MarkDuplicateVars {
+  task: Task;
+  /** 重复的目标任务 */
+  targetId: string;
+  /** 选中的重复类别状态；省略时由服务端取工作流里排序最前的那个 */
+  statusId?: string;
+}
+
+/**
+ * OPE-17 · 标记为重复：不做乐观更新（要等目标选定且服务端确认），成功后写缓存并刷新两边的动态。
+ * 与 useUpdateTask 共用串行队列，发送时取缓存里的最新 version。
+ */
+export function useMarkDuplicate(orgId: string) {
+  const api = useApi();
+  const t = useT();
+  const toast = useToast();
+  const queryClient = useQueryClient();
+  return useMutation({
+    scope: { id: `task-write:${orgId}` },
+    mutationFn: ({ task, targetId, statusId }: MarkDuplicateVars) => {
+      const version =
+        latestTask(queryClient, orgId, task.id)?.version ?? task.version;
+      return api.tasks.markDuplicate(orgId, task.space_id, task.id, {
+        version,
+        duplicate_of_task_id: targetId,
+        ...(statusId ? { status_id: statusId } : {}),
+      });
+    },
+    onError: (error) => {
+      toast(taskErrorMessage(t, error), { tone: "error" });
+      if (isApiError(error))
+        void queryClient.invalidateQueries({ queryKey: keys.tasks(orgId) });
+    },
+    onSuccess: (saved, { targetId }) => {
+      applyTaskToCache(queryClient, orgId, saved);
+      toast(t("spaces.triage.duplicated"));
+      void queryClient.invalidateQueries({
+        queryKey: [...keys.tasks(orgId), "counts"],
+      });
+      for (const id of [saved.id, targetId])
+        void queryClient.invalidateQueries({
+          queryKey: [...keys.tasks(orgId), "sub", id, "timeline"],
+        });
     },
   });
 }

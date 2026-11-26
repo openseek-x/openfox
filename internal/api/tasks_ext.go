@@ -34,6 +34,7 @@ func (h *Handler) registerTaskRoutes(mux *http.ServeMux) {
 	h.registerTaskStatsFavoriteRoutes(mux)
 	mux.HandleFunc("GET "+taskBase+"/{taskID}", h.getTask)
 	mux.HandleFunc("PATCH "+taskBase+"/{taskID}", h.updateTask)
+	mux.HandleFunc("POST "+taskBase+"/{taskID}/duplicate", h.markTaskDuplicate)
 	mux.HandleFunc("DELETE "+taskBase+"/{taskID}", h.deleteTask)
 	mux.HandleFunc("GET "+taskBase+"/{taskID}/activities", h.listTaskActivities)
 	mux.HandleFunc("POST "+taskBase+"/{taskID}/move-preview", h.previewTaskMove)
@@ -537,6 +538,41 @@ func (h *Handler) updateTask(w http.ResponseWriter, r *http.Request) {
 		}
 		var err error
 		task, err = service.UpdateTask(ctx, tx, call.organizationID, spaceID, taskID, call.selected.Actor, update)
+		return err
+	})
+	if err != nil {
+		writeCollaborationError(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, toTaskResponse(task))
+}
+
+// markTaskDuplicate：OPE-17 · 在任务详情、表格、看板等处把任务标记为另一任务的重复（不要求在分拣台中）。
+func (h *Handler) markTaskDuplicate(w http.ResponseWriter, r *http.Request) {
+	call, ok := h.beginTaskCall(w, r, true)
+	if !ok {
+		return
+	}
+	var input struct {
+		Version           uint64 `json:"version"`
+		DuplicateOfTaskID string `json:"duplicate_of_task_id"`
+		StatusID          string `json:"status_id"`
+	}
+	if err := decodeJSON(w, r, &input); err != nil {
+		writeError(w, r, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
+		return
+	}
+	spaceID, taskID := r.PathValue("spaceID"), r.PathValue("taskID")
+	requestID := collaborationRequestID(w, r)
+	var task collaboration.Task
+	err := call.run(h, r, func(ctx context.Context, tx pgx.Tx, service collaboration.Service) error {
+		if err := call.authorizeSpace(ctx, tx, service, spaceID, policy.ActionUpdateObject, taskID); err != nil {
+			return err
+		}
+		var err error
+		task, err = service.MarkTaskDuplicate(ctx, tx, call.organizationID, spaceID, taskID, call.selected.Actor, collaboration.TaskDuplicateInput{
+			Version: input.Version, DuplicateOfTaskID: input.DuplicateOfTaskID, StatusID: input.StatusID, RequestID: requestID,
+		})
 		return err
 	})
 	if err != nil {
