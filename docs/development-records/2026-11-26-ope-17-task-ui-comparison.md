@@ -3,7 +3,7 @@
 - 日期：2026-11-26
 - 任务：OPE-17「对比我们与 HiFox 的任务界面及交互差异，并提出优化方案」
 - 分支：`docs/ope-17-task-ui-comparison`（从本地 `master@1f4d3db` 切出）
-- 交付形态：分析文档 + 实现 D1 第一期（通用「标记为重复任务」）与 D2（属性侧栏整栏收起）。第一版只交文档，人工在 2026-11-26 选择 Q1=D 后补做实现
+- 交付形态：分析文档 + 实现 D1 第一期（通用「标记为重复任务」）与 D2（属性侧栏整栏收起）+ D1 第二期（服务端不变量，第十三节）。第一版只交文档，人工在 2026-11-26 选择 Q1=D 后补做第一期实现，随后又指示追加第二期
 
 ## 一、任务摘要与范围
 
@@ -11,7 +11,7 @@
 
 非目标：
 - 不新增迁移，不改表结构。
-- 不做 D1 第二期（服务端不变量，方案 Q）：PATCH、批量接口、Agent 工具、外部同步写入 Duplicate 的行为不变。
+- 第一期不做 D1 第二期（服务端不变量）；人工随后指示追加，见第十三节。
 - 不做 D3、D4。
 - 不另建任务；不重做已经定过的决策（见「排除项」）。
 
@@ -216,8 +216,74 @@
 
 ## 十二、剩余风险与回滚
 
-- D1 第二期没做：PATCH、批量接口、Agent 工具、外部同步仍能把任务改成 Duplicate 而不带目标；离开 Duplicate 时不清空 `duplicate_of_task_id`。
+- D1 第二期已在第十三节补做：PATCH、批量接口、Agent 工具、外部同步改到 Duplicate 且无目标会被拒绝，离开 Duplicate 时清空 `duplicate_of_task_id`；本期结束时仍未覆盖的写入点和风险见第十三节。
 - 服务端不阻止「目标本身也是重复任务」或互相指向，只在前端选择器里过滤；与分拣台现有行为一致。
 - 表格状态单元格和看板卡片菜单有前端测试；看板拖进重复列既没有测试，也没有在真实页面上验证，只做了代码审阅。真实页面截图覆盖了详情更多菜单、属性栏状态选择器、批量栏和属性侧栏。
 - HiFox 一侧证据截至 2026-11-13，当前版本可能已经变化。
 - 回滚：回退提交即可。没有迁移，新接口没有其他调用方；本机偏好键残留不影响旧版本。
+
+## 十三、第二期：D1 服务端不变量
+
+人工于 2026-11-26 指示追加。目标：服务端守住不变量「duplicate_of_task_id 非空，当且仅当状态类别为 DUPLICATE」。不改公共 API，不改表结构，不加数据库触发器。
+
+### 方案与自主决策（待追认，详见 state.json 的 D9–D15）
+
+- D9：`TaskUpdateInput` 增加内部字段 `DuplicateOfTaskID`，API 层不暴露，不改 OpenAPI。
+- D10：PATCH、批量、Agent 工具、外部同步把任务改到重复类别且没有目标时，返回 400 `INVALID_DUPLICATE`；要标记重复，走第一期的 `POST .../duplicate`。
+- D11：绕过 `UpdateTask` 的原生 SQL 写入点，只处理会让任务离开重复类别的那几处，在同一条 UPDATE 里清目标。
+- D12：删除状态时，替换状态属于重复类别而被删状态不是，拒绝；重复类别换到别的类别清目标；换到另一个重复状态保留目标。
+- D13：导入路径（`ImportCreateTask`、`ImportUpdateTask`）允许进入重复类别且无目标，因为 Jira 等来源的重复状态本身没有目标；只在离开重复类别时清目标。
+- D14：跨空间移动任务时，目标空间映射后的状态不是重复类别，就在同一条 UPDATE 里清目标。
+- D15：状态跨类别移动（`MoveStatus`）：离开重复类别清目标；有任务的状态不允许移进重复类别。
+
+### 实际改动
+
+- `internal/collaboration/tasks_write.go`：`UpdateTask` 进入重复类别且无目标返回 `INVALID_DUPLICATE`，离开时清目标；`CreateTask` 直接选重复状态同样返回 400。
+- `internal/collaboration/triage.go`：`closeInCategory` 把目标经内部字段传入 `UpdateTask`，分拣台标重复与第一期接口行为不变。
+- `internal/collaboration/git_links.go`：Git 事件重开任务时清目标。
+- `internal/collaboration/task_trash.go`：回收站恢复保留目标，并修正恢复 SQL 的占位符。
+- `internal/collaboration/statuses_ext.go`：删除状态的替换规则、`MoveStatus` 的跨类别处理。
+- `internal/collaboration/task_move.go`：跨空间移动按映射后类别清目标。
+- `internal/collaboration/import_write.go`：导入更新离开重复类别时清目标。
+- 批量接口、Agent 工具、外部项目同步没有改文件，都经 `UpdateTask` 继承新规则。
+- 测试：stage3 新增 4 个文件，stage9c 新增 1 个文件，修改 `task_completion_window_test.go` 1 处。
+
+### 验证（全部实际运行，一次性 PostgreSQL，无 SIMULATED 项）
+
+| 项目 | 结果 |
+| --- | --- |
+| stage3 `TestDuplicateInvariant`、`...RawPaths`、`...DeleteStatus`、`...StatusCategoryMove` | 通过 |
+| stage9c `TestMoveTaskDuplicateTarget` | 通过 |
+| stage3 全量 | 3 项失败，均为「需要独占数据库」前置条件，与本改动无关 |
+| stage9c、stage1、stage10c、stage2 | 全部通过 |
+| Go 单元测试：collaboration、spacetools、imports、conversations、dispatch | 通过 |
+| gofmt、go vet、go build | 无输出、无报错 |
+| `pnpm lint`、`pnpm gen:api` | 通过、无差异 |
+| 前端任务与分拣目录 vitest | 369 项通过；本期未改前端 |
+
+其余：wp16 的 `TestReleaseFixtureHasMultipleOrganizationsRolesAndDevices` 在一次性库上失败，它要求完整发布夹具，与重复任务无关，没有在 master 上对照跑。
+
+### 评审发现并修复的问题
+
+| 编号 | 问题 | 根因与处理 |
+| --- | --- | --- |
+| R1 | 创建任务直接选重复状态得到无目标的重复任务 | `CreateTask` 没有校验；补校验并新增先红后绿的测试 |
+| R2 | 完成时间窗口测试被 R1 拦下 | 测试夹具直接建重复任务；改为先建任务再调 `POST /duplicate` |
+| R3 | 恢复任务 SQL 多传一个参数 | 占位符没跟上；补第 7 个占位符 |
+| R4 | 跨空间移动漏处理 | 首轮 grep 只匹配 `SET status_id` 开头，漏掉 `m.status_id` 写法；`moveTasks` 同条 UPDATE 清目标并加测试 |
+| R5 | 状态跨类别移动不处理目标 | `MoveStatus` 只靠 `status_id = status_id` 触发投影；补清目标和移进拒绝 |
+
+### 配置变更与 SQL 迁移
+
+- 配置：无。
+- SQL 与迁移：无。没有新增表、列、约束或触发器，只改应用层写入逻辑。
+
+### 剩余风险与回滚
+
+- 未覆盖：Agent 工具改到重复状态被拒时的提示文本（只读代码确认 `spaceToolErrorText` 会翻成「操作被拒绝」）；导入更新离开重复类别清目标；会话完成回调（只读代码确认只写 DONE）。
+- 导入路径允许进入重复类别且无目标（D13），这类任务只在离开时被清目标。
+- 没有数据库层约束，后续新增的原生 SQL 写入点仍可能绕过不变量（`ARCHITECTURE_FOLLOW_UP`）。
+- 历史数据里已有的「重复但无目标」任务不会被修复，只在下次状态变化时受检查。
+- 首轮评审靠 grep 找写入点有盲区，R4、R5 是第二轮才发现的。
+- 未做真实页面验收和前端全量 `pnpm test`；提交后的 `merge-tree` 需要重跑。
+- 回滚：回退本期提交即可，没有迁移。回退后第一期接口与前端入口不受影响。

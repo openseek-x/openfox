@@ -226,10 +226,11 @@ func (s Service) RestoreTask(ctx context.Context, tx pgx.Tx, organizationID, spa
 	result, err := tx.Exec(ctx, `
 		UPDATE openfox.tasks
 		   SET deleted_at = NULL, deleted_by = NULL, parent_task_id = NULLIF($4, '')::uuid,
-		       type_id = $5::uuid, status_id = $6::uuid, version = version + 1, updated_at = clock_timestamp()
+		       type_id = $5::uuid, status_id = $6::uuid, version = version + 1, updated_at = clock_timestamp(),
+		       duplicate_of_task_id = CASE WHEN $6::uuid = $7::uuid THEN duplicate_of_task_id ELSE NULL END
 		 WHERE organization_id = openfox_private.current_organization_id()
 		   AND space_id = $1::uuid AND id = $2::uuid AND version = $3 AND deleted_at IS NOT NULL`,
-		spaceID, taskID, int64(version), parentID, newTypeID, newStatusID)
+		spaceID, taskID, int64(version), parentID, newTypeID, newStatusID, statusID)
 	if err != nil {
 		return Task{}, mapDatabaseError(err)
 	}

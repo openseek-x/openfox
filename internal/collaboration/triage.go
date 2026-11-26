@@ -1188,13 +1188,10 @@ func (s Service) closeInCategory(ctx context.Context, tx pgx.Tx, organizationID,
 	} else if err := requireStatusCategory(ctx, tx, flow, statusID, category); err != nil {
 		return Task{}, err
 	}
-	updated, err := s.UpdateTask(ctx, tx, organizationID, spaceID, taskID, actor, TaskUpdateInput{StatusID: &statusID, Version: version, RequestID: requestID})
+	// 重复目标交给 UpdateTask，与状态在同一条 UPDATE 里写入（服务端不变量见 resolveDuplicateTarget）。
+	updated, err := s.UpdateTask(ctx, tx, organizationID, spaceID, taskID, actor, TaskUpdateInput{StatusID: &statusID, Version: version, RequestID: requestID, DuplicateOfTaskID: duplicateOf})
 	if err != nil || duplicateOf == "" {
 		return updated, err
-	}
-	if _, err := tx.Exec(ctx, `UPDATE openfox.tasks SET duplicate_of_task_id = $2::uuid
-		WHERE organization_id = openfox_private.current_organization_id() AND id = $1::uuid`, taskID, duplicateOf); err != nil {
-		return Task{}, mapDatabaseError(err)
 	}
 	// 同一请求已经给本任务写过动态（<requestID>:<序号>），目标任务的动态用独立前缀避免 source_id 冲突。
 	if err := newActivityWriter(tx, targetSpace, duplicateOf, actor.UserID, requestID+":duplicate").add(ctx, "task.duplicate_marked",
