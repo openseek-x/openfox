@@ -247,6 +247,7 @@
 - `internal/collaboration/import_write.go`：导入更新离开重复类别时清目标。
 - 批量接口、Agent 工具、外部项目同步没有改文件，都经 `UpdateTask` 继承新规则。
 - 测试：stage3 新增 4 个文件，stage9c 新增 1 个文件，修改 `task_completion_window_test.go` 1 处。
+- 补充测试（原先未覆盖的三项）：`internal/spacetools/duplicate_error_test.go`（Agent 工具把 INVALID_DUPLICATE 译成「操作被拒绝：…」，直接与包装两种形态）；stage3 `task_duplicate_invariant_import_test.go`（导入更新：不带状态、写同一重复状态时保留目标，改到 TODO 清目标）；stage1 `task_duplicate_invariant_complete_test.go`（结束会话并完成任务 complete_task=true 后进入 DONE 且目标清空）。
 
 ### 验证（全部实际运行，一次性 PostgreSQL，无 SIMULATED 项）
 
@@ -260,6 +261,8 @@
 | gofmt、go vet、go build | 无输出、无报错 |
 | `pnpm lint`、`pnpm gen:api` | 通过、无差异 |
 | 前端任务与分拣目录 vitest | 369 项通过；本期未改前端 |
+| 补充测试：导入更新、会话完成、Agent 工具文本 | 通过。把 `internal/collaboration` 临时还原到第二期之前（HEAD~1）后，导入更新测试报「目标仍在」、会话完成测试报 `targets=1`，两项变红；恢复后重新变绿，工作区核对干净。Agent 工具文本测试是对现有错误映射的回归保护，不依赖不变量代码，还原后不会变红 |
+| 前端全量 `pnpm test`（本期未改前端） | 机器负载 40 到 60，且另有其他任务的 vitest 同时在跑：第一次 8 项失败、第二次 68 项失败，两次失败文件几乎不重叠，错误全是 5000ms 超时。限 4 个 worker 重跑失败文件剩 5 项失败；单 worker、30 秒超时重跑这 5 个文件，55 项全部通过。解释为负载导致的超时，没有逐项在 master 上对照；未取得一次干净的全量通过 |
 
 其余：wp16 的 `TestReleaseFixtureHasMultipleOrganizationsRolesAndDevices` 在一次性库上失败，它要求完整发布夹具，与重复任务无关，没有在 master 上对照跑。
 
@@ -280,10 +283,10 @@
 
 ### 剩余风险与回滚
 
-- 未覆盖：Agent 工具改到重复状态被拒时的提示文本（只读代码确认 `spaceToolErrorText` 会翻成「操作被拒绝」）；导入更新离开重复类别清目标；会话完成回调（只读代码确认只写 DONE）。
+- 原先未覆盖的三项（Agent 工具被拒文本、导入更新离开重复类别清目标、会话完成回调）已补测试并通过，见上表；Agent 工具那项只验证错误翻译，没有端到端跑一次 Agent 工具调用。
 - 导入路径允许进入重复类别且无目标（D13），这类任务只在离开时被清目标。
 - 没有数据库层约束，后续新增的原生 SQL 写入点仍可能绕过不变量（`ARCHITECTURE_FOLLOW_UP`）。
 - 历史数据里已有的「重复但无目标」任务不会被修复，只在下次状态变化时受检查。
 - 首轮评审靠 grep 找写入点有盲区，R4、R5 是第二轮才发现的。
-- 未做真实页面验收和前端全量 `pnpm test`；提交后的 `merge-tree` 需要重跑。
+- 未做真实页面验收（本期没有前端改动）；前端全量 `pnpm test` 受机器负载影响没有取得干净的全量通过，失败文件单独重跑全部通过；提交后的 `merge-tree` 已对最新 develop 重跑，无冲突。
 - 回滚：回退本期提交即可，没有迁移。回退后第一期接口与前端入口不受影响。
