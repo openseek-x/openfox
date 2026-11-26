@@ -223,7 +223,7 @@ export function useChat(api: Api) {
       const message = await submitPending(
         api,
         orgId,
-        conversation.id,
+        conversation,
         pendingRef.current,
       );
       pendingRef.current = null;

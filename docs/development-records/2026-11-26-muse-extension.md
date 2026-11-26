@@ -35,3 +35,30 @@
 核对的是 Meta 帮助中心的 Chrome 扩展使用流程。其官方资料说明安装后登录 Muse 账号，未公开认证实现。[Meta 官方说明](https://www.meta.com/en-gb/help/superintelligence/2124746764949121/)
 
 在 Chrome 156 原生侧栏和隔离的 OpenFox 服务上，用户在工作台页面完成邮箱验证码登录后，侧栏直接显示本人、空间与 Agent；第二个 Chrome 配置仍停留在登录页。消息经已认证用户会话落库，历史重开与 409 禁发通过。工作台注销后输入区消失，换号后未携带旧对话或草稿。扩展专项 48 项全过。浏览器测试账号只存在于隔离环境，回复文本由测试夹具给出。
+
+## 修复：侧栏发出的消息不触发 Agent 运行（2026-11-27，测试 C-03 / C-13）
+
+**现象**：测试在部署环境（Chrome 156、116）从侧栏发消息，消息落库、网页端可见，但 Agent 一直不回复；同一会话在网页端发消息约 25 秒有回复。
+
+**根因**：服务端 `internal/conversations/service.go` 的 `enqueueAgentMention` 只在消息 `mentions` 含会话绑定 Agent 时写执行输入（小助手 1:1 会话除外）。网页端输入框通过 `buildMentions(..., autoMentionAgent)` 自动补 @；扩展 `submitPending` 只提交正文与 `client_message_id`，服务端认为没人叫 Agent。此前自测的回复是夹具直接插库（SIMULATED），没有覆盖调度链路，所以没发现。
+
+**修复**（仅扩展，服务端零改动）：
+- `apps/extension/src/lib/send.ts` 新增 `runMentions`：普通会话固定 `[{ agent_id: 会话绑定 Agent }]`；小队会话（有 `crew_id`）不带 @，由服务端 `crewTargets` 默认派给队长。`submitPending` 改为接收会话对象，按会话计算 mentions；重试时会话不变，mentions 不变，服务端幂等比较（`sameMentions`）仍成立。
+- `apps/extension/src/sidepanel/useChat.ts` 传入会话对象。
+- 版本号 0.2.0 → 0.2.1（`manifest.json`、`package.json`）。
+
+**决策**：侧栏没有 @ 选择器，侧栏里的每条消息都视为向当前 Agent 提问，所以非本人所有的共享会话也自动 @（网页端仅所有者自动 @，非所有者需手动 @）。服务端 `validateMentions` 允许会话成员 @ 绑定 Agent，不越权。若希望与网页端完全一致（仅所有者自动 @），只需在 `runMentions` 加所有者判断。
+
+**验证**：
+| 命令 / 场景 | 结果 |
+| --- | --- |
+| `pnpm exec vitest run apps/extension --maxWorkers=2` | 8 个文件 51/51 通过（新增：普通会话带 @、小队不带 @、重试 mentions 一致、新建会话首条消息带 @） |
+| `pnpm lint`（含全仓类型检查） | 通过 |
+| `OPENFOX_PUBLIC_URL=https://43.142.72.225 pnpm --filter @openfox/extension build` | 通过，产物含 mentions |
+| 原生侧栏烟测（Chrome for Testing 156 + 本地服务 + 隔离 PostgreSQL 17） | 两条侧栏消息各有 1 行 `message_mentions`（绑定 Agent）、1 行 `conversation_inputs`、1 行 `execution_triggers(message.mention)`；调度器消费了输入。夹具 Agent 无配置版本，被以 `AGENT_UNAVAILABLE` 拒绝并在侧栏显示系统消息（隔离环境预期）。其余登录、引用、关闭会话、换号断言全部通过 |
+
+真实模型回复需在部署环境复测（测试已确认网页端同会话约 25 秒回复，说明部署端执行链路可用）。
+
+**配置 / SQL**：无配置变更；无 SQL、迁移或数据变更。
+
+**剩余风险**：会话绑定 Agent 被归档或停用后，侧栏发消息会被服务端以无效提及拒绝（与网页端所有者行为一致），侧栏提示为通用的「请求失败（400），请重试」。测试报告中的 C-12 提示措辞、C-08/C-11 体验项未在本次处理，待产品确认后另做。

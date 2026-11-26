@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { ApiError, type Api, type ConversationMessage } from "@openfox/api";
 
-import { newPendingSend, submitPending } from "./send";
+import {
+  newPendingSend,
+  runMentions,
+  submitPending,
+  type SendTarget,
+} from "./send";
+
+const target: SendTarget = { id: "c1", agent_id: "a1" };
+const crewTarget: SendTarget = { id: "c1", agent_id: "a1", crew_id: "crew1" };
 
 const saved = {
   id: "m1",
@@ -18,7 +26,11 @@ function at<T>(items: T[], index: number): T {
 interface PostCall {
   orgId: string;
   conversationId: string;
-  input: { body: string; client_message_id: string };
+  input: {
+    body: string;
+    client_message_id: string;
+    mentions?: Array<{ agent_id?: string; user_id?: string }>;
+  };
 }
 
 function fakeApi(options: {
@@ -60,14 +72,35 @@ describe("newPendingSend", () => {
   });
 });
 
+describe("runMentions", () => {
+  it("普通会话固定 @ 会话绑定的 Agent，服务端才会安排运行", () => {
+    expect(runMentions(target)).toEqual([{ agent_id: "a1" }]);
+  });
+
+  it("小队会话不带 @", () => {
+    expect(runMentions(crewTarget)).toEqual([]);
+  });
+});
+
 describe("submitPending", () => {
   it("成功时返回服务端消息，并带上 client_message_id 与正文", async () => {
     const { api, posts } = fakeApi({ post: async () => saved });
     const pending = newPendingSend("你好");
-    const result = await submitPending(api, "o1", "c1", pending);
+    const result = await submitPending(api, "o1", target, pending);
     expect(result).toBe(saved);
     expect(at(posts, 0).orgId).toBe("o1");
     expect(at(posts, 0).conversationId).toBe("c1");
+    expect(at(posts, 0).input).toEqual({
+      body: "你好",
+      client_message_id: pending.clientMessageId,
+      mentions: [{ agent_id: "a1" }],
+    });
+  });
+
+  it("小队会话不带 @，由服务端派给队长", async () => {
+    const { api, posts } = fakeApi({ post: async () => saved });
+    const pending = newPendingSend("你好");
+    await submitPending(api, "o1", crewTarget, pending);
     expect(at(posts, 0).input).toEqual({
       body: "你好",
       client_message_id: pending.clientMessageId,
@@ -81,7 +114,12 @@ describe("submitPending", () => {
       },
       receipt: async () => ({ message: saved }),
     });
-    const result = await submitPending(api, "o1", "c1", newPendingSend("你好"));
+    const result = await submitPending(
+      api,
+      "o1",
+      target,
+      newPendingSend("你好"),
+    );
     expect(result).toBe(saved);
     expect(receiptCalls()).toBe(1);
   });
@@ -94,7 +132,7 @@ describe("submitPending", () => {
       receipt: async () => ({ message: null }),
     });
     await expect(
-      submitPending(api, "o1", "c1", newPendingSend("你好")),
+      submitPending(api, "o1", target, newPendingSend("你好")),
     ).rejects.toMatchObject({ code: "TIMEOUT" });
   });
 
@@ -108,7 +146,7 @@ describe("submitPending", () => {
       },
     });
     await expect(
-      submitPending(api, "o1", "c1", newPendingSend("你好")),
+      submitPending(api, "o1", target, newPendingSend("你好")),
     ).rejects.toMatchObject({ code: "TIMEOUT" });
   });
 
@@ -123,7 +161,7 @@ describe("submitPending", () => {
       },
     });
     await expect(
-      submitPending(api, "o1", "c1", newPendingSend("你好")),
+      submitPending(api, "o1", target, newPendingSend("你好")),
     ).rejects.toMatchObject({ code: "CONVERSATION_CLOSED" });
     expect(receiptCalls()).toBe(0);
   });
@@ -139,9 +177,12 @@ describe("submitPending", () => {
       receipt: async () => ({ message: null }),
     });
     const pending = newPendingSend("同一条消息");
-    await expect(submitPending(api, "o1", "c1", pending)).rejects.toBeDefined();
-    await submitPending(api, "o1", "c1", pending);
+    await expect(
+      submitPending(api, "o1", target, pending),
+    ).rejects.toBeDefined();
+    await submitPending(api, "o1", target, pending);
     expect(posts).toHaveLength(2);
     expect(at(posts, 1).input).toEqual(at(posts, 0).input);
+    expect(at(posts, 1).input.mentions).toEqual([{ agent_id: "a1" }]);
   });
 });

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "OpenFox 侧边栏",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "在 Chrome 侧边栏里与 OpenFox 的 Agent 对话，并可附带当前页面引用。",
   "minimum_chrome_version": "116",
   "permissions": ["sidePanel", "activeTab", "scripting", "cookies"],

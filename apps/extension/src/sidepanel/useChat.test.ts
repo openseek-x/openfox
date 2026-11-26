@@ -6,6 +6,7 @@ import { useChat } from "./useChat";
 const first = {
   id: "c1",
   space_id: "s1",
+  agent_id: "a",
   lifecycle: "OPEN",
 } as ConversationSummary;
 const second = { ...first, id: "c2", space_id: "s2" };
@@ -108,6 +109,9 @@ describe("侧边栏会话边界", () => {
     expect(a).toEqual(b);
     expect(a?.[2].body).toContain("原始选区");
     expect(a?.[2].body).not.toContain("private=yes");
+    // 新建会话后的消息 @ 绑定 Agent，服务端才会安排运行（C-03）
+    expect(a?.[1]).toBe("c1");
+    expect(a?.[2].mentions).toEqual([{ agent_id: "a" }]);
   });
 
   it("无法读取显式引用时保留草稿，关闭的会话拒绝继续发送", async () => {
