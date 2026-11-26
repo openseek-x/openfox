@@ -189,6 +189,52 @@ describe("OPE-17 · D1 标记为重复任务", () => {
     ).toHaveLength(0);
   });
 
+  it("表格状态单元格选「重复」：走目标选择器，请求带 status_id", async () => {
+    localStorage.setItem(
+      `openfox:tasks-display:${ORG}:space:${SPACE}`,
+      JSON.stringify({ layout: "table" }),
+    );
+    const user = userEvent.setup();
+    const server = renderAt(`/o/${ORG}/spaces/${SPACE}/tasks`, withDuplicate);
+    const table = await screen.findByRole("table", { name: "任务表格" });
+    const cells = await within(table).findAllByRole("button", {
+      name: "状态: 待处理",
+    });
+    await user.click(cells[0]!);
+    await user.click(await screen.findByRole("option", { name: "重复" }));
+    await pickOpen3(user);
+    await waitFor(() =>
+      expect(server.find("POST", "/duplicate")).toHaveLength(1),
+    );
+    expect(server.find("POST", "/duplicate")[0]!.body).toMatchObject({
+      duplicate_of_task_id: "task-3",
+      status_id: "st4",
+    });
+    expect(server.calls.filter((c) => c.method === "PATCH")).toHaveLength(0);
+  });
+
+  it("看板卡片菜单「移动到」重复：走目标选择器，不发 PATCH", async () => {
+    const user = userEvent.setup();
+    const server = renderAt(`/o/${ORG}/spaces/${SPACE}/tasks`, withDuplicate);
+    const todo = await screen.findByRole("region", { name: "待处理 2" });
+    const card = await within(todo).findByRole("button", {
+      name: /OPEN-1 任务标题 1/,
+    });
+    await user.click(within(card).getByRole("button", { name: "任务操作" }));
+    await user.click(await screen.findByRole("menuitem", { name: "移动到" }));
+    await user.click(
+      await screen.findByRole("menuitemradio", { name: "重复" }),
+    );
+    await pickOpen3(user);
+    await waitFor(() =>
+      expect(server.find("POST", "/tasks/task-1/duplicate")).toHaveLength(1),
+    );
+    expect(
+      server.find("POST", "/tasks/task-1/duplicate")[0]!.body,
+    ).toMatchObject({ duplicate_of_task_id: "task-3", status_id: "st4" });
+    expect(server.calls.filter((c) => c.method === "PATCH")).toHaveLength(0);
+  });
+
   it("批量操作栏的状态候选里没有重复类别", async () => {
     localStorage.setItem(
       `openfox:tasks-display:${ORG}:space:${SPACE}`,

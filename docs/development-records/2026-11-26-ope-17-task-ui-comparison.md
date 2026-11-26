@@ -3,16 +3,17 @@
 - 日期：2026-11-26
 - 任务：OPE-17「对比我们与 HiFox 的任务界面及交互差异，并提出优化方案」
 - 分支：`docs/ope-17-task-ui-comparison`（从本地 `master@1f4d3db` 切出）
-- 交付形态：只交付分析文档，业务代码零改动
+- 交付形态：分析文档 + 实现 D1 第一期（通用「标记为重复任务」）与 D2（属性侧栏整栏收起）。第一版只交文档，人工在 2026-11-26 选择 Q1=D 后补做实现
 
 ## 一、任务摘要与范围
 
 对比两边任务相关界面（列表、详情、创建与编辑、状态流转、评论与动态），重点看操作路径、状态切换和反馈方式，给出 OpenFox 的优化建议。
 
 非目标：
-- 不改 `packages/`、`internal/`、`db/` 下任何代码，不新增接口和迁移。
-- 不另建任务。建议是否立项由人决定。
-- 不重做已经定过的决策（见「排除项」）。
+- 不新增迁移，不改表结构。
+- 不做 D1 第二期（服务端不变量，方案 Q）：PATCH、批量接口、Agent 工具、外部同步写入 Duplicate 的行为不变。
+- 不做 D3、D4。
+- 不另建任务；不重做已经定过的决策（见「排除项」）。
 
 ## 二、证据来源与等级
 
@@ -118,50 +119,105 @@
 | 3 | D3 | 会话行失败态直接重试 | 确认会话摘要带运行 ID |
 | — | D4 | 合并关联入口 | 暂不做 |
 
-## 七、实施与验证
+## 七、已实现的方案
+
+### D1 第一期：通用「标记为重复任务」
+
+后端：
+- 新接口 `POST /v1/organizations/{organizationID}/spaces/{spaceID}/tasks/{taskID}/duplicate`（`operationId: markTaskDuplicate`）。请求体 `{version, duplicate_of_task_id, status_id?}`，返回 `Task`。
+  - 鉴权与 PATCH 一致：`authorizeSpace(..., ActionUpdateObject, taskID)`，停用空间返回 409 `SPACE_RETIRED`。
+  - 乐观锁：`version` 不符返回 409 `VERSION_CONFLICT`，不写任何数据。
+  - 目标不是 UUID、指向自己、不存在或不可见：400 `INVALID_DUPLICATE`（与分拣台一致）。
+  - `status_id` 不在任务工作流里或类别不是 DUPLICATE：400 `INVALID_DUPLICATE_STATUS`（新错误码）。省略时取工作流里排序最前的 DUPLICATE 状态；工作流里没有：409 `STATUS_CATEGORY_MISSING`。
+  - 不要求任务在分拣中。
+- `internal/collaboration/triage.go`：把 `leaveTriage` 的「改状态 + 写重复目标 + 给目标记动态」抽成 `closeInCategory`，分拣台拒绝、分拣台标记重复和新接口共用。分拣台的行为不变（集成测试 `TestTriage*` 全部通过）。
+- `internal/collaboration/task_duplicate.go`：新增 `MarkTaskDuplicate` 和 `requireStatusCategory`。
+- `internal/api/tasks_ext.go`：注册路由和处理函数。
+
+前端：
+- `MarkDuplicateDialog`：包装分拣台的目标选择器 `TaskSearchDialog duplicatePicker`，候选只含同空间、未被标记为重复的任务；取消不写数据。
+- `useMarkDuplicate`：与 `useUpdateTask` 共用串行队列 `task-write:${orgId}`，发送时取缓存里的最新 version；不做乐观更新；成功后写缓存、提示「已标记为重复任务」、刷新计数和两个任务的动态。
+- 入口：
+  - 详情更多菜单新增「标记为重复任务」，只在工作流有重复类别状态时显示，只读时禁用。
+  - 选中重复类别状态时改走目标选择器：详情属性栏状态选择器、详情更多菜单的「状态」子菜单、表格状态单元格、看板卡片和列表行的「移动到」、按状态分列的看板拖动（普通看板与分组看板）。
+  - 不再提供重复类别：批量操作栏、新建任务弹窗、分拣台「接受」弹窗的状态候选。
+- 文案：`tasks.detail.markDuplicate`、`tasks.errors.invalidDuplicateStatus`（中英两份）；其余复用分拣台已有文案。
+
+### D2：属性侧栏整栏收起
+
+- 前置核对：`docs/hifox-parity/` 里没有把这一项定为「不做」的记录；2026-10-27 的设计稿记录过「右侧属性栏收起，改成标题上下两组胶囊」，收起后的布局沿用这条设计。
+- 宽布局属性侧栏右上角新增「收起属性侧栏」按钮。收起后侧栏不渲染，属性改用窄布局同款的胶囊行显示在标题下方，顶部右侧出现「展开属性侧栏」按钮。
+- 收起状态存本机：`localStorage` 键 `openfox:task-properties-collapsed`，值 `"1"` 表示收起；展开时删除这个键。读写失败按展开处理。
+- 窄布局（容器宽度小于 720px）行为不变，不显示收起和展开按钮。
+
+## 八、实施与验证
 
 实施步骤：
 1. 读取任务和评论（评论为空），从本地 `master` 切出独立 worktree 与分支，不在主工作区操作。
-2. 梳理 `packages/app/src/tasks` 下列表、详情、创建、批量、看板、表格代码，以及 `internal/collaboration` 的状态写入与分拣代码。
-3. 对照 HiFox 历史快照和功能复核表，列出差异 C1–C9。
-4. 自省深潜：阅读台账 63 条（精读 55 条），18 个核心文件近 30 天提交考古，三类证伪。结论是 C9（Duplicate 无目标）成立且范围比初诊大，C3 撤回，C2、C8 降为备选。
-5. 编写本文档。写之前重新核对了文中引用的行号。
+2. 梳理任务相关前后端代码，对照 HiFox 历史快照和功能复核表，列出差异 C1–C9。
+3. 自省深潜：阅读台账 63 条（精读 55 条），18 个核心文件近 30 天提交考古，三类证伪。
+4. 编写分析文档，提交 `1c6a933` 并提测。
+5. 人工选择 Q1=D 后，按第七节实现 D1 第一期与 D2，补充测试，真实页面验收，评审后提交。
 
-验证：
-- 文中每个 `file:line` 在 `master@1f4d3db` 上用脚本逐条检查过，25 处引用的文件都存在且行号在范围内；关键符号在 `develop@0621607` 上也复核过（见第二节）。
-- `git diff --stat master...HEAD` 只有本文件一个新增。
-- 纯文档改动，没有运行 `make check`、`pnpm lint/test/build`，因为没有代码、配置或契约变化。
+验证（全部实际运行）：
 
-## 八、问题、根因与决策
+| 项目 | 命令 | 结果 |
+| --- | --- | --- |
+| 新接口集成测试（真实 PostgreSQL） | 一次性集群上 `go test ./tests/integration/stage3 -run '^TestTriage\|^TestMarkTaskDuplicate'` | 7 项全部通过 |
+| stage3 全部集成测试 | 同上，`-run .` | 295 项通过；3 项失败，都报「需要独占 I07/I13 数据库」，是测试环境前提，与本改动无关 |
+| 后端全量 | `make check` | 本分支改动的包 `internal/collaboration`、`internal/api`、`tests/integration/stage3` 通过。`internal/runtime`、`internal/runtime/codex`、`cmd/openfox` 在全量并发时超时，单独重跑通过；`tests/integration/stage8d` 编译失败（`ReadWorkDirectoryPath` 参数不符），本分支没有改动这些目录 |
+| 前端格式与类型 | `pnpm lint` | 通过 |
+| 前端测试（新增） | `vitest run packages/app/src/tasks/duplicate17.test.tsx` | 9 项通过 |
+| 前端测试（任务与分拣目录） | `vitest run packages/app/src/tasks packages/app/src/triage` | 369 项通过 |
+| 前端全量 | `pnpm test` | 2323 项通过，1 项失败：`shell/navMemory.test.tsx`「切换组织后记录不串」。在 `master` 上同样失败，在 `develop` 上已通过，与本改动无关 |
+| 构建 | `pnpm build` | 通过 |
+| 与 develop 合并 | `git merge-tree --write-tree origin/develop HEAD` | 无冲突。在合并结果上 `pnpm gen:api` 无差异、`pnpm typecheck` 通过、任务与分拣目录 371 项通过、`go build ./...` 通过。全量前端测试首次运行有 2 项（对话分叉、Bitbucket 诊断，本分支未改动）超时，单独重跑两次都通过 |
+| 真实页面 | 一次性 PostgreSQL + 真实服务端 + 前端开发服务器，Playwright 操作 | 见下 |
+
+真实页面验收（1440×900，接口和数据都是真的，不是模拟）：
+- 详情更多菜单出现「标记为重复任务」；选择 CHK-1 后服务端返回 `status_category=DUPLICATE`、`duplicate_of=CHK-1`，动态里出现「把状态从 Todo 改为 Duplicate」，提示「已标记为重复任务」。
+- 属性栏状态选择器选 Duplicate 时弹出目标选择器；按 Esc 取消后任务仍是 Todo，version 仍为 1。
+- 收起属性侧栏后属性显示为标题下方的胶囊行；刷新页面后仍是收起状态（本机记为 `"1"`）；展开后恢复侧栏。
+- 批量操作栏的状态候选为 Triage、Backlog、Todo、In Progress、Done、Cancelled，没有 Duplicate。
+
+## 九、问题、根因与决策
 
 | 问题 | 根因 | 处理 |
 | --- | --- | --- |
 | 初诊只看了详情的状态选择器 | 只顺着 HiFox 快照里的入口找对应代码 | 自省时从 `statusGroups` 反查全部调用方，扩大到 6 个界面入口和 3 个非界面入口 |
 | 初诊漏了动态流已内嵌会话行 | `Timeline.tsx` 只读了前 140 行 | 补读 217-245 行后更正 |
 | C3 证据看错 | 快照 1220 标题含「子任务」，实际是任务类型菜单 | 撤回 C3 |
-| 写文档时发现内置「重复了…」关联类型 | 初诊只搜了 `duplicate_of` 字段 | 在 D1 现状里补上这条旁路，D1 的结论收窄为「缺状态加目标的组合」 |
 | 评审发现排除表里 C5 的描述与初诊不符 | 起草时凭记忆写，没有回查初诊 | 按初诊原文改正，并重新逐条核对文中全部引用 |
-| 远端 `develop` 领先 `master` 40 个提交，部分引用文件有改动 | 分支按规定从本地 `master` 切出，而提测 PR 以 `develop` 为目标 | 在 `develop@0621607` 上复核结论与行号，补了偏移对照表 |
-| 新文件被本地排除规则忽略 | 仓库主人的 `.git/info/exclude` 第 15 行排除了 `/docs/development-records/`，但 `master` 上这个目录已有 8 份被跟踪的记录，`d420ae3` 也是在同样规则下新增的记录 | 只对本文件用 `git add -f`，不改排除文件 |
+| 远端 `develop` 领先 `master` 40 个提交 | 分支按规定从本地 `master` 切出，提测 PR 以 `develop` 为目标 | 在 `develop` 上复核结论；import 放在不相邻的位置；用 `merge-tree` 和合并结果上的测试确认 |
+| 新文件被本地排除规则忽略 | 仓库主人的 `.git/info/exclude` 排除了 `/docs/development-records/`，但 `master` 上已有 8 份被跟踪的记录 | 只对本文件用 `git add -f`，不改排除文件 |
+| 一次性 PostgreSQL 启动报 "postmaster became multithreaded during startup" | macOS 上没有有效的 `LC_ALL` | 启动脚本里设置 `LC_ALL=en_US.UTF-8` |
+| 在 `packages/app` 下直接跑 vitest，301 项报 `localStorage is not defined` | `vitest.config.ts` 在仓库根目录 | 改从仓库根目录运行 |
+| 真实页面上侧栏顶部出现两个「属性」标题 | 新加的收起行带了标题，和下方属性卡片自带的标题重复 | 去掉收起行的文字，只留按钮 |
+| 截图工具把快照写进了主工作区 `.playwright-mcp/` | 该工具的输出目录固定在主工作区 | 删除本次写入的两个文件（核对主工作区 `git status` 无变化），改用从本 worktree 运行的独立 Playwright 脚本 |
 
-自主决策（待人追认）：
-1. 交付形态：只交付文档（备选：顺手修 D1；另建任务）。
-2. 重复任务建议推荐方案 P（备选 Q、R）。
-3. D3、D4 作为备选；C3 撤回；C5 不进建议。
-4. D2 标注「需先核对 parity 记录」，不直接推荐实现。
-5. 本地排除规则忽略了开发记录目录，按 `d420ae3` 的先例对本文件用 `git add -f`（备选：修改排除文件，或不提交记录）。
+决策：
+1. 交付形态：第一版只交文档（自主决策 A）。人工改选 D：在本任务实现 D1 第一期与 D2。
+2. 重复任务采用方案 P 第一期（备选 Q、R，理由见 D1）。
+3. D3、D4 作为备选，本次不做；C3 撤回；C5 不进建议。
+4. D2 先核对 parity 记录，确认没有「不做」的决策后再实现。
+5. 本地排除规则忽略开发记录目录，按 `d420ae3` 的先例对本文件用 `git add -f`。
+6. 新接口用单独的 POST，不扩展 PATCH：PATCH 背后的 `UpdateTask` 有 8 个非测试调用方，扩展它会把第二期的不变量问题提前带进来。
+7. 拖进重复列时先弹出目标选择器，确认前不做乐观移动；目标列里的落点位置不保留（取消时卡片留在原列）。
+8. 批量修改、新建任务、分拣台「接受」不提供重复类别：这些入口没法逐个选目标。
 
-## 九、配置变更
+## 十、配置变更
 
-无。
+- 没有服务端配置或环境变量变更。
+- 新增浏览器本机偏好键 `openfox:task-properties-collapsed`（`packages/app/src/storage.ts`）：`"1"` 表示收起属性侧栏，不存在表示展开（默认）。只影响当前浏览器，不同步到服务端，不需要初始化或迁移。
 
-## 十、SQL 与迁移
+## 十一、SQL 与迁移
 
-无。本次没有任何 SQL、表结构迁移或数据迁移。
+无。本次没有 SQL、表结构迁移或数据迁移。新接口只用到已有的 `tasks.duplicate_of_task_id` 列和已有的状态表。
 
-## 十一、剩余风险与回滚
+## 十二、剩余风险与回滚
 
-- HiFox 一侧证据截至 2026-11-13，当前版本可能已经变化。立项 D1 前建议在 HiFox 上真机确认一次。
-- D1 的「无目标 Duplicate」是代码阅读推断，没有运行复现。立项前建议在本地选一次 Duplicate 状态确认。
-- `UpdateTask` 的部分调用方（会话、外部同步、任务扩展接口）只读了调用行，方案 Q 的影响面需要立项时再逐个核实。
-- 回滚：删除本文件即可，没有其他影响。
+- D1 第二期没做：PATCH、批量接口、Agent 工具、外部同步仍能把任务改成 Duplicate 而不带目标；离开 Duplicate 时不清空 `duplicate_of_task_id`。
+- 服务端不阻止「目标本身也是重复任务」或互相指向，只在前端选择器里过滤；与分拣台现有行为一致。
+- 表格状态单元格和看板卡片菜单有前端测试；看板拖进重复列既没有测试，也没有在真实页面上验证，只做了代码审阅。真实页面截图覆盖了详情更多菜单、属性栏状态选择器、批量栏和属性侧栏。
+- HiFox 一侧证据截至 2026-11-13，当前版本可能已经变化。
+- 回滚：回退提交即可。没有迁移，新接口没有其他调用方；本机偏好键残留不影响旧版本。

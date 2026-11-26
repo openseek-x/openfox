@@ -1061,10 +1061,8 @@ function DetailBody({
             aria-label={t("tasks.detail.properties")}
             className="min-h-0 overflow-y-auto border-t border-line-default px-3 py-5 @[720px]:col-start-2 @[720px]:row-span-2 @[720px]:row-start-1 @[720px]:border-t-0 @[720px]:border-l"
           >
-            <div className="-mt-1 mb-2 flex h-7 items-center justify-between pl-1">
-              <span className="text-body-sm font-medium text-fg-muted">
-                {t("tasks.detail.properties")}
-              </span>
+            {/* 只放收起按钮：下方属性卡片已有「属性」标题，这里不再重复 */}
+            <div className="-mt-2 mb-1 flex h-7 items-center justify-end">
               <IconButton
                 label={t("tasks.detail.collapseProperties")}
                 icon={<Icon name="panel-left-close" className="-scale-x-100" />}
