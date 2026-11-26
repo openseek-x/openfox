@@ -606,6 +606,7 @@ export function Composer({
         value={body}
         onValueChange={setBody}
         disabled={disabled}
+        className="rounded-[22px]! shadow-popover!"
         aria-busy={sending || stopping || undefined}
       >
         <div className="relative flex">
@@ -771,7 +772,7 @@ export function Composer({
             {files.map((file, index) => (
               <li
                 key={`${file.name}-${index}`}
-                className="flex h-7 max-w-[240px] items-center gap-1 rounded-md bg-surface-muted pr-0.5 pl-2 text-body-sm"
+                className="flex h-8 min-w-0 max-w-[min(100%,15rem)] items-center gap-1.5 rounded-full border border-line-soft bg-surface-muted pr-1 pl-2.5 text-body-sm"
               >
                 <Icon
                   name={file.type.startsWith("image/") ? "image" : "file-text"}
@@ -779,7 +780,7 @@ export function Composer({
                   className="shrink-0 text-fg-muted"
                 />
                 <span className="truncate">{file.name}</span>
-                <span className="shrink-0 text-fg-muted">
+                <span className="shrink-0 text-caption text-fg-muted">
                   {formatBytes(file.size)}
                 </span>
                 <IconButton
@@ -797,7 +798,7 @@ export function Composer({
             ))}
           </ul>
         )}
-        <PromptInputActions>
+        <PromptInputActions className="mt-1">
           <div className="flex shrink-0 items-center gap-1">
             <input
               ref={fileInput}
@@ -813,9 +814,10 @@ export function Composer({
             />
             <IconButton
               label={t("chat.composer.attach")}
-              icon={<Icon name="plus" size={18} />}
+              icon={<Icon name="paperclip" size={16} />}
               size="28"
-              variant="ghost"
+              variant="secondary"
+              className="rounded-full!"
               disabled={disabled || sending}
               title={t("chat.composer.attach")}
               onClick={() => fileInput.current?.click()}
@@ -888,7 +890,7 @@ export function Composer({
             label={t("chat.composer.quickReply")}
             icon={<Icon name="clipboard" size={16} />}
             size="28"
-            variant="ghost"
+            variant="ghost-soft"
             disabled={disabled || sending || !orgId}
             title={t("chat.composer.quickReply")}
             aria-haspopup="dialog"
@@ -904,8 +906,9 @@ export function Composer({
                 stopping ? t("chat.composer.stopping") : t("chat.composer.stop")
               }
               icon={<Icon name="hifox-circle-stop" size={16} />}
-              size="28"
+              size="32"
               variant="secondary"
+              className="rounded-full!"
               disabled={stopping}
               onClick={onStop}
             />
@@ -919,9 +922,9 @@ export function Composer({
                   <Icon name="hifox-arrow-up" size={18} />
                 )
               }
-              size="28"
+              size="32"
               variant="round"
-              className="enabled:bg-fg-default enabled:text-surface-card enabled:hover:opacity-85 disabled:bg-fg-subtle disabled:text-surface-card"
+              className="border-transparent! enabled:bg-primary! enabled:text-fg-inverse enabled:hover:opacity-85 disabled:bg-surface-muted disabled:text-fg-muted disabled:opacity-100!"
               disabled={!canSend && !(action && !disabled && !sending)}
               onClick={() => void submit()}
             />

@@ -10,8 +10,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"openfox/internal/office"
 )
 
 const (
@@ -484,7 +482,7 @@ func Load() (Config, error) {
 }
 
 func (c Config) Validate() error {
-	if err := office.ValidatePreviewURL(c.OfficePreviewURL); err != nil {
+	if err := validatePreviewURL(c.OfficePreviewURL); err != nil {
 		return err
 	}
 	if c.Environment != EnvironmentDevelopment && c.Environment != EnvironmentTest && c.Environment != EnvironmentProduction {
@@ -846,6 +844,17 @@ func validateListen(listen string) error {
 	}
 	if _, _, err := net.SplitHostPort(listen); err != nil {
 		return errors.New("must be host:port")
+	}
+	return nil
+}
+
+func validatePreviewURL(value string) error {
+	if value == "" {
+		return nil
+	}
+	u, err := url.Parse(value)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Hostname() == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || (u.Path != "" && u.Path != "/") {
+		return errors.New("office preview URL must be an http(s) origin without credentials, path, query or fragment")
 	}
 	return nil
 }

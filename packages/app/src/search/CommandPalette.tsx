@@ -1,5 +1,6 @@
 import { useQueries, useQueryClient } from "@tanstack/react-query";
 import {
+  useEffectEvent,
   useEffect,
   useId,
   useMemo,
@@ -126,11 +127,17 @@ export function CommandPalette({
   const me = useMe().data;
   const historyKey = me ? `openfox:search-history:${orgId}:${me.id}` : "";
   const scopeKey = me ? `openfox:search-spaces:${orgId}:${me.id}` : "";
-  const [historyVersion, setHistoryVersion] = useState(0);
-  const history = useMemo(
-    () => (historyKey ? readSearchHistory(historyKey) : []),
-    [historyKey, historyVersion],
-  );
+  const [historyState, setHistoryState] = useState(() => ({
+    key: historyKey,
+    entries: historyKey ? readSearchHistory(historyKey) : [],
+  }));
+  if (historyState.key !== historyKey) {
+    setHistoryState({
+      key: historyKey,
+      entries: historyKey ? readSearchHistory(historyKey) : [],
+    });
+  }
+  const history = historyState.entries;
   const [confirmClear, setConfirmClear] = useState(false);
   const [category, setCategory] = useState<PaletteFilter>("all");
   const [expanded, setExpanded] = useState<string[]>([]);
@@ -246,7 +253,10 @@ export function CommandPalette({
   const saveHistory = () => {
     if (!historyKey) return;
     recordSearch(historyKey, { query, type: category, scope, conditions });
-    setHistoryVersion((n) => n + 1);
+    setHistoryState({
+      key: historyKey,
+      entries: readSearchHistory(historyKey),
+    });
   };
   const restoreHistory = (entry: SearchHistoryEntry) => {
     setQuery(entry.query);
@@ -719,11 +729,14 @@ export function CommandPalette({
     (query.trim() || (category !== "all" && category !== "conversation"));
   const ready = settled && !loading && !(searching && result.isFetching);
 
-  useEffect(() => {
+  const finishPendingEnter = useEffectEvent(() => {
     if (!pendingEnter.current || !ready) return;
     pendingEnter.current = false;
     if (flat[current]) choose(flat[current]!);
     else saveHistory();
+  });
+  useEffect(() => {
+    finishPendingEnter();
   }, [ready, flat, current]);
   const categoryLabel = (value: PaletteCategory) =>
     t(`commandPalette.category.${value}`);
@@ -1085,7 +1098,7 @@ export function CommandPalette({
         onCancel={() => setConfirmClear(false)}
         onConfirm={() => {
           if (historyKey) writeLocal(historyKey, null);
-          setHistoryVersion((n) => n + 1);
+          setHistoryState({ key: historyKey, entries: [] });
           setConfirmClear(false);
           inputRef.current?.focus();
         }}

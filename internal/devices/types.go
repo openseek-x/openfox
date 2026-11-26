@@ -229,8 +229,12 @@ func nullable(value string) *string {
 	return &value
 }
 
-// Runtime 是从心跳 capabilities.runtimes 解析出的一个 Runtime（目前只有 codex）。
+// Runtime 是从心跳 capabilities.runtimes 解析出的一个 Runtime。
 type Runtime struct {
+	InstallPath              string         `json:"install_path,omitempty"`
+	DiscoverySource          string         `json:"discovery_source,omitempty"`
+	DiscoveryCached          bool           `json:"discovery_cached,omitempty"`
+	DiscoveryOnly            bool           `json:"discovery_only,omitempty"`
 	Provider                 string         `json:"provider"`
 	Version                  *string        `json:"version"`
 	Status                   string         `json:"status"`

@@ -375,7 +375,7 @@ export function GroupedBoard(props: BoardProps) {
                 {visibleColumns.map((column) => (
                   <div
                     key={column.key}
-                    className="w-[280px] shrink-0 rounded-xl bg-surface-muted/60"
+                    className="w-[280px] shrink-0 rounded-xl of-board-lane"
                   >
                     {columnHeader(column)}
                   </div>
@@ -451,7 +451,7 @@ function Cell({
   return (
     <section
       aria-label={label}
-      className="flex w-[280px] shrink-0 flex-col rounded-xl bg-surface-muted/60"
+      className="flex w-[280px] shrink-0 flex-col rounded-xl of-board-lane"
     >
       {header}
       <div

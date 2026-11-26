@@ -2,9 +2,8 @@
 
 WP-09 is the execution core, not a replacement for the WP-02/WP-03
 authorization boundary or the WP-07/WP-08 local runtime/workdir contracts.
-PostgreSQL rows and unique constraints are authoritative in production; the Go
-`internal/execution` engine is a concurrency-safe test seam until its durable
-repository is wired.
+The dispatch worker and device handlers apply state transitions in PostgreSQL.
+The shared Run representation and state names live in `internal/execution`.
 
 ## Run state machine
 

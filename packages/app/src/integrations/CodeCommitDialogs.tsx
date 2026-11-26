@@ -309,11 +309,12 @@ export function CodeCommitRepositoryDialog({
     enabled: !repository && action === "enable",
     retry: false,
   });
+  const remoteVersion = remote.data?.connection_version;
   const refreshedMismatch = useRef(false);
   useEffect(() => {
     const changed =
-      remote.data &&
-      remote.data.connection_version !== config.connection.version;
+      remoteVersion !== undefined &&
+      remoteVersion !== config.connection.version;
     if (
       !refreshedMismatch.current &&
       (changed || isApiError(remote.error, "VERSION_CONFLICT"))
@@ -321,12 +322,7 @@ export function CodeCommitRepositoryDialog({
       refreshedMismatch.current = true;
       refresh();
     }
-  }, [
-    remote.data?.connection_version,
-    remote.error,
-    config.connection.version,
-    refresh,
-  ]);
+  }, [remoteVersion, remote.error, config.connection.version, refresh]);
   const valid =
     action !== "enable" ||
     (confirmed &&

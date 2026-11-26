@@ -8,6 +8,7 @@ import { isDuplicateRunError } from "./steps/format";
 import { ForkConversationDialog } from "./ForkConversationDialog";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  useEffectEvent,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -306,10 +307,13 @@ function ConversationViewContent({
       setChecking(false);
     }
   };
-  useEffect(() => {
+  const checkDraftReceipt = useEffectEvent(() => {
     setReceiptState("pending");
     if (pending) void checkReceipt();
-    // One read-only recovery check per mounted draft. Never auto-send or restore a browser grant.
+    // 每次切换草稿只查询一次既有回执。
+  });
+  useEffect(() => {
+    checkDraftReceipt();
   }, [draftKey]);
   const submit = async (input: ComposerSubmit, retry = false) => {
     if (
@@ -767,7 +771,7 @@ function ConversationViewContent({
           className={
             centeredComposer
               ? "relative mb-auto shrink-0 px-4 pb-4 @lg:px-6"
-              : "relative shrink-0 px-4 pt-3 pb-4 @lg:px-6"
+              : "relative shrink-0 px-4 pt-2 pb-5 @lg:px-6 @lg:pb-6"
           }
         >
           {(target || (!atBottom && !showEmpty)) && (

@@ -5,6 +5,11 @@ services:
       POSTGRES_DB: openfox
       POSTGRES_USER: openfox_migrate
       POSTGRES_PASSWORD: change-me-for-local-use-only
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "openfox_migrate", "-d", "openfox"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
     volumes:
       - openfox-postgres:/var/lib/postgresql/data
 
@@ -31,9 +36,13 @@ services:
 
   openfox:
     image: openfox:dev
+    build:
+      context: ..
     depends_on:
-      - postgres
-      - office-preview
+      postgres:
+        condition: service_healthy
+      office-preview:
+        condition: service_started
     environment:
       OPENFOX_ENV: development
       OPENFOX_SERVER_LISTEN: 0.0.0.0:8080

@@ -153,7 +153,10 @@ export const CardBody = memo(function CardBody({
           label={task.type_name}
           className="mt-0.5 text-fg-muted"
         />
-        <span className="min-w-0 flex-1 text-body font-medium break-words">
+        <span
+          data-board-title
+          className="min-w-0 flex-1 text-body font-medium break-words"
+        >
           {task.title}
         </span>
       </div>

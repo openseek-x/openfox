@@ -99,6 +99,7 @@ export const connectEn: Messages["connect"] = {
     },
   },
   devicePolicy: {
+    providerPath: "{name} CLI path",
     session_idle_minutes: "Persistent session idle timeout (minutes)",
     session_max_minutes: "Persistent session maximum lifetime (minutes)",
     cli: "Codex CLI path",

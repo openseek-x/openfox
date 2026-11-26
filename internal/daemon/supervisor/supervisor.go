@@ -72,8 +72,10 @@ type Config struct {
 	BrowserRoot  string
 	Adapter      runtime.Adapter
 	// Extra 是 Adapter 之外的其他 Runtime 适配器；Run 按 RunContext.Runtime 选择适配器。
-	Extra   []runtime.Adapter
-	Workdir *workdir.Manager
+	Extra []runtime.Adapter
+	// DiscoveryPaths 仅用于配置未接入执行器的本地 CLI。
+	DiscoveryPaths map[string]DevicePathSettings
+	Workdir        *workdir.Manager
 	// DirectoryRoots 把 Agent 配置中 EXPLICIT 模式的逻辑根名映射到本机 Git 仓库绝对路径。
 	// 每个对话在管理根下创建独立 worktree，不修改原仓库的工作区。
 	DirectoryRoots map[string]string

@@ -12,6 +12,470 @@ info:
 servers:
   - url: http://127.0.0.1:8080
 paths:
+  /v1/auth/login:
+    post:
+      operationId: loginWithPassword
+      summary: 使用邮箱和密码建立会话并设置会话、CSRF Cookie
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordLoginRequest"
+      responses:
+        "201":
+          description: 已创建
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginSession"
+        default:
+          description: 请求失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /v1/device/connect:
+    get:
+      operationId: connectDeviceStream
+      summary: 使用设备 Bearer 凭据升级为 WebSocket，确认心跳后接收唤醒
+      security:
+        - DeviceBearer: []
+      responses:
+        "101":
+          description: WebSocket 已升级
+        default:
+          description: 请求失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /v1/device/organizations/{organizationID}/agents:
+    parameters:
+      - name: organizationID
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: listDeviceAgentSlots
+      summary: 列出设备在本组织的 Agent 与槽位
+      security:
+        - DeviceBearer: []
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - agents
+                properties:
+                  agents:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/DeviceAgentSlots"
+        default:
+          description: 请求失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /v1/device/organizations/{organizationID}/offers:
+    parameters:
+      - name: organizationID
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: listDeviceDispatchOffers
+      summary: 列出当前设备可领取的派发
+      security:
+        - DeviceBearer: []
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - offers
+                properties:
+                  offers:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/DispatchOffer"
+        default:
+          description: 请求失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /v1/device/organizations/{organizationID}/offers/{offerID}/claim:
+    parameters:
+      - name: organizationID
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: offerID
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: claimDeviceDispatchOffer
+      summary: 幂等领取派发并获得租约
+      security:
+        - DeviceBearer: []
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DispatchLease"
+        default:
+          description: 请求失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /v1/device/organizations/{organizationID}/runs/{runID}/start:
+    parameters:
+      - name: organizationID
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: runID
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: startDeviceRun
+      summary: 确认运行已开始
+      security:
+        - DeviceBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DispatchGeneration"
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DispatchLease"
+        default:
+          description: 请求失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /v1/device/organizations/{organizationID}/runs/{runID}/lease:
+    parameters:
+      - name: organizationID
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: runID
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: renewDeviceRunLease
+      summary: 续约并读取取消状态
+      security:
+        - DeviceBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RenewDispatchLease"
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DispatchLease"
+        default:
+          description: 请求失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /v1/device/organizations/{organizationID}/runs/{runID}/prepare-failed:
+    parameters:
+      - name: organizationID
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: runID
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: reportDevicePreparationFailure
+      summary: 记录运行准备失败
+      security:
+        - DeviceBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportPreparationFailure"
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunResponse"
+        default:
+          description: 请求失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /v1/device/organizations/{organizationID}/runs/{runID}/reconciliation/fact:
+    parameters:
+      - name: organizationID
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: runID
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: submitDeviceSupervisorFact
+      summary: 提交本机进程事实
+      security:
+        - DeviceBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeviceSupervisorFactInput"
+      responses:
+        "202":
+          description: 已受理
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceSupervisorFact"
+        default:
+          description: 请求失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /v1/device/organizations/{organizationID}/runs/{runID}/reconciliation/evidence:
+    parameters:
+      - name: organizationID
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: runID
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: submitDeviceReconciliationEvidence
+      summary: 提交运行核对证据
+      security:
+        - DeviceBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeviceReconciliationEvidenceInput"
+      responses:
+        "202":
+          description: 已受理
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceReconciliationEvidence"
+        default:
+          description: 请求失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /v1/organizations/{organizationID}/cleanup/previews:
+    parameters:
+      - name: organizationID
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: createArtifactCleanupPreview
+      summary: 管理员预览可清理的产物
+      security:
+        - UserSession: []
+        - UserBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateArtifactCleanupPreview"
+      responses:
+        "201":
+          description: 已创建
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArtifactCleanupPreview"
+        default:
+          description: 请求失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /v1/organizations/{organizationID}/cleanup/previews/{previewID}/confirm:
+    parameters:
+      - name: organizationID
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: previewID
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: confirmArtifactCleanupPreview
+      summary: 管理员确认清理并读取执行结果
+      security:
+        - UserSession: []
+        - UserBearer: []
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArtifactCleanupResult"
+        default:
+          description: 请求失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /v1/organizations/{organizationID}/notifications:
+    parameters:
+      - name: organizationID
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: listConversationNotifications
+      summary: 读取当前用户在组织内的通知
+      security:
+        - UserSession: []
+        - UserBearer: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 100
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - notifications
+                properties:
+                  notifications:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ConversationNotification"
+        default:
+          description: 请求失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /v1/organizations/{organizationID}/notifications/{notificationID}/read:
+    parameters:
+      - name: organizationID
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: notificationID
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: markConversationNotificationRead
+      summary: 将当前用户的通知标记为已读
+      security:
+        - UserSession: []
+        - UserBearer: []
+      responses:
+        "204":
+          description: 已读
+        default:
+          description: 请求失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/organizations/{organizationID}/conversations/{conversationID}/proposals:
     $ref: './schemas/workspace-proposals.yaml#/paths/list'
   /v1/organizations/{organizationID}/conversations/{conversationID}/proposals/{proposalID}:
@@ -2336,6 +2800,12 @@ paths:
       responses:
         '200':
           description: Process is alive
+  /healthz:
+    get:
+      operationId: getHealthCheck
+      responses:
+        "200":
+          description: 进程存活
   /ready:
     get:
       operationId: getReadiness
@@ -3779,6 +4249,8 @@ paths:
                   type: string
                   minLength: 16
                   maxLength: 128
+      parameters:
+        - { name: imProvider, in: path, required: true, schema: { type: string, enum: [dingtalk] } }
       responses:
         "201":
           description: 新建的机器人
@@ -3805,7 +4277,7 @@ paths:
   /v1/organizations/{organizationID}/integrations/{imProvider}/registrations:
     parameters:
       - $ref: "#/components/parameters/OrganizationID"
-      - $ref: "#/components/parameters/IMProvider"
+      - { name: imProvider, in: path, required: true, schema: { type: string, enum: [feishu, lark] } }
     post:
       operationId: startFeishuRegistration
       summary: 阶段 6d-2 · 发起扫码创建飞书应用（任务助手或 Agent 机器人）
@@ -3872,7 +4344,7 @@ paths:
   /v1/organizations/{organizationID}/integrations/{imProvider}/registrations/{registrationID}:
     parameters:
       - $ref: "#/components/parameters/OrganizationID"
-      - $ref: "#/components/parameters/IMProvider"
+      - { name: imProvider, in: path, required: true, schema: { type: string, enum: [feishu, lark] } }
       - name: registrationID
         in: path
         required: true
@@ -3898,7 +4370,7 @@ paths:
   /v1/organizations/{organizationID}/integrations/{imProvider}/registrations/{registrationID}/cancel:
     parameters:
       - $ref: "#/components/parameters/OrganizationID"
-      - $ref: "#/components/parameters/IMProvider"
+      - { name: imProvider, in: path, required: true, schema: { type: string, enum: [feishu, lark] } }
       - name: registrationID
         in: path
         required: true
@@ -10407,6 +10879,37 @@ paths:
   /v1/organizations/{organizationID}/members:
     parameters:
       - $ref: '#/components/parameters/OrganizationID'
+    post:
+      operationId: addOrganizationMember
+      summary: 组织管理员添加成员，重复添加返回现有成员
+      security:
+        - UserSession: []
+        - UserBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddOrganizationMemberRequest"
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationMember"
+        "201":
+          description: 已创建
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationMember"
+        default:
+          description: 请求失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     get:
       operationId: listOrganizationMembers
       summary: 组织成员（按加入时间与 user_id 排序）
@@ -11835,6 +12338,31 @@ paths:
   /v1/organizations/{organizationID}/devices:
     parameters:
       - $ref: '#/components/parameters/OrganizationID'
+    post:
+      operationId: registerOrganizationDevice
+      summary: 组织管理员直接注册设备公钥
+      security:
+        - UserSession: []
+        - UserBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationDeviceRegistration"
+      responses:
+        "201":
+          description: 已创建
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationDeviceRegistered"
+        default:
+          description: 请求失败
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     get:
       operationId: listDevices
       summary: 电脑列表（按注册时间升序，keyset 游标）
@@ -19878,6 +20406,17 @@ paths:
           $ref: "#/components/responses/Error"
 components:
   securitySchemes:
+    UserSession:
+      type: apiKey
+      in: cookie
+      name: openfox_session
+    UserBearer:
+      type: http
+      scheme: bearer
+    DeviceBearer:
+      type: http
+      scheme: bearer
+      description: 设备凭据
     CodeCommitBridge:
       type: http
       scheme: bearer
@@ -19952,6 +20491,601 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
   schemas:
+    PasswordLoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+        client_kind:
+          type: string
+          description: 省略时使用 WEB。
+      required:
+        - email
+        - password
+    AddOrganizationMemberRequest:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        role:
+          $ref: "#/components/schemas/OrganizationRole"
+      required:
+        - user_id
+        - role
+    OrganizationDeviceRegistration:
+      type: object
+      properties:
+        device_key:
+          type: string
+        name:
+          type: string
+        install_id:
+          type: string
+        key_id:
+          type: string
+        public_key:
+          type: string
+        max_slots:
+          type: integer
+          minimum: 0
+          maximum: 1024
+      required:
+        - device_key
+        - key_id
+        - public_key
+    OrganizationDeviceRegistered:
+      type: object
+      properties:
+        device_id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+          format: uuid
+        key_id:
+          type: string
+      required:
+        - device_id
+        - organization_id
+        - key_id
+    DeviceAgentSlots:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+        generation:
+          type: integer
+          minimum: 1
+        max_slots:
+          type: integer
+        reserved_slots:
+          type: integer
+      required:
+        - id
+        - status
+        - generation
+        - max_slots
+        - reserved_slots
+    DispatchOffer:
+      type: object
+      properties:
+        organization_id:
+          type: string
+          format: uuid
+        offer_id:
+          type: string
+          format: uuid
+        run_id:
+          type: string
+          format: uuid
+        generation:
+          type: integer
+          minimum: 1
+        computer_id:
+          type: string
+          format: uuid
+        expires_at:
+          type: string
+          format: date-time
+      required:
+        - organization_id
+        - offer_id
+        - run_id
+        - generation
+        - computer_id
+        - expires_at
+    DispatchLease:
+      type: object
+      properties:
+        run_id:
+          type: string
+          format: uuid
+        generation:
+          type: integer
+          minimum: 1
+        state:
+          $ref: "#/components/schemas/RunState"
+        center_epoch:
+          type: integer
+          minimum: 1
+        lease_expires_at:
+          type: string
+          format: date-time
+        lease_ttl_ms:
+          type: integer
+        renew_interval_ms:
+          type: integer
+        cancel_requested:
+          type: boolean
+        challenge:
+          type: string
+      required:
+        - run_id
+        - generation
+        - state
+        - center_epoch
+        - lease_expires_at
+        - lease_ttl_ms
+        - renew_interval_ms
+        - cancel_requested
+    DispatchGeneration:
+      type: object
+      properties:
+        generation:
+          type: integer
+          minimum: 1
+      required:
+        - generation
+    RenewDispatchLease:
+      type: object
+      properties:
+        generation:
+          type: integer
+          minimum: 1
+        challenge:
+          type: string
+      required:
+        - generation
+    ReportPreparationFailure:
+      type: object
+      properties:
+        generation:
+          type: integer
+          minimum: 1
+        failure_code:
+          type: string
+        detail:
+          type: string
+      required:
+        - generation
+        - failure_code
+    DeviceSupervisorFactInput:
+      type: object
+      properties:
+        generation:
+          type: integer
+          minimum: 1
+        device_generation:
+          type: integer
+          minimum: 1
+        center_epoch:
+          type: integer
+          minimum: 1
+        supervisor_nonce:
+          type: string
+          minLength: 16
+          maxLength: 128
+        process_pid:
+          type: integer
+          minimum: 0
+        process_started_at:
+          type: string
+          format: date-time
+        workdir_binding_id:
+          type: string
+          format: uuid
+        workdir_path_hash:
+          type: string
+        process_state:
+          type: string
+          enum:
+            - INTENDED
+            - STARTED
+            - RUNNING
+            - EXITED
+            - NOT_FOUND
+            - UNKNOWN
+        exit_code:
+          type:
+            - integer
+            - "null"
+        process_exited_at:
+          type: string
+          format: date-time
+        last_event_sequence:
+          type: integer
+          minimum: 0
+        last_result_id:
+          type: string
+          format: uuid
+        observed_at:
+          type: string
+          format: date-time
+        version:
+          type: integer
+      required:
+        - generation
+        - device_generation
+        - center_epoch
+        - supervisor_nonce
+        - process_state
+    DeviceReconciliationEvidenceInput:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        case_id:
+          type: string
+          format: uuid
+        generation:
+          type: integer
+          minimum: 1
+        device_generation:
+          type: integer
+          minimum: 1
+        center_epoch:
+          type: integer
+          minimum: 1
+        supervisor_nonce:
+          type: string
+          minLength: 16
+          maxLength: 128
+        process_pid:
+          type: integer
+          minimum: 0
+        process_started_at:
+          type: string
+          format: date-time
+        kind:
+          type: string
+        process_state:
+          type: string
+          enum:
+            - INTENDED
+            - STARTED
+            - RUNNING
+            - EXITED
+            - NOT_FOUND
+            - UNKNOWN
+        process_exited:
+          type: boolean
+        exit_code:
+          type:
+            - integer
+            - "null"
+        event_sequence:
+          type: integer
+          minimum: 0
+        result_id:
+          type: string
+          format: uuid
+        payload_hash:
+          type: string
+        detail:
+          type: string
+        observed_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - case_id
+        - generation
+        - device_generation
+        - center_epoch
+        - supervisor_nonce
+        - kind
+        - process_state
+    DeviceSupervisorFact:
+      type: object
+      properties:
+        organization_id:
+          type: string
+          format: uuid
+        run_id:
+          type: string
+          format: uuid
+        device_id:
+          type: string
+          format: uuid
+        generation:
+          type: integer
+          minimum: 1
+        device_generation:
+          type: integer
+          minimum: 1
+        center_epoch:
+          type: integer
+          minimum: 1
+        supervisor_nonce:
+          type: string
+          minLength: 16
+          maxLength: 128
+        process_pid:
+          type: integer
+          minimum: 0
+        process_started_at:
+          type: string
+          format: date-time
+        workdir_binding_id:
+          type: string
+          format: uuid
+        workdir_path_hash:
+          type: string
+        last_event_sequence:
+          type: integer
+          minimum: 0
+        result_id:
+          type: string
+          format: uuid
+        manifest_hash:
+          type: string
+        process_state:
+          type: string
+          enum:
+            - INTENDED
+            - STARTED
+            - RUNNING
+            - EXITED
+            - NOT_FOUND
+            - UNKNOWN
+        exit_code:
+          type: integer
+        process_exited_at:
+          type: string
+          format: date-time
+        observed_at:
+          type: string
+          format: date-time
+        version:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - organization_id
+        - run_id
+        - device_id
+        - generation
+        - device_generation
+        - center_epoch
+        - supervisor_nonce
+        - process_pid
+        - last_event_sequence
+        - manifest_hash
+        - process_state
+        - observed_at
+        - version
+        - created_at
+        - updated_at
+    DeviceReconciliationEvidence:
+      type: object
+      properties:
+        organization_id:
+          type: string
+          format: uuid
+        id:
+          type: string
+          format: uuid
+        case_id:
+          type: string
+          format: uuid
+        run_id:
+          type: string
+          format: uuid
+        generation:
+          type: integer
+          minimum: 1
+        device_generation:
+          type: integer
+          minimum: 1
+        center_epoch:
+          type: integer
+          minimum: 1
+        kind:
+          type: string
+        source:
+          type: string
+        device_id:
+          type: string
+          format: uuid
+        supervisor_nonce:
+          type: string
+          minLength: 16
+          maxLength: 128
+        process_pid:
+          type: integer
+          minimum: 0
+        process_started_at:
+          type: string
+          format: date-time
+        process_state:
+          type: string
+          enum:
+            - INTENDED
+            - STARTED
+            - RUNNING
+            - EXITED
+            - NOT_FOUND
+            - UNKNOWN
+        process_exited:
+          type: boolean
+        exit_code:
+          type: integer
+        event_sequence:
+          type: integer
+          minimum: 0
+        result_id:
+          type: string
+          format: uuid
+        payload_hash:
+          type: string
+        safe_detail:
+          type: string
+        accepted_state:
+          type: string
+        observed_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - organization_id
+        - id
+        - case_id
+        - run_id
+        - generation
+        - device_generation
+        - center_epoch
+        - kind
+        - source
+        - supervisor_nonce
+        - process_state
+        - process_exited
+        - event_sequence
+        - payload_hash
+        - safe_detail
+        - accepted_state
+        - observed_at
+        - created_at
+    ArtifactCleanupPreview:
+      type: object
+      properties:
+        organization_id:
+          type: string
+          format: uuid
+        id:
+          type: string
+          format: uuid
+        requested_by:
+          type: string
+          format: uuid
+        config_version:
+          type: integer
+        status:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        candidate_count:
+          type: integer
+        candidate_bytes:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        confirmed_at:
+          type: string
+          format: date-time
+        confirmed_by:
+          type: string
+          format: uuid
+        version:
+          type: integer
+      required:
+        - organization_id
+        - id
+        - requested_by
+        - config_version
+        - status
+        - expires_at
+        - candidate_count
+        - candidate_bytes
+        - created_at
+        - version
+    CreateArtifactCleanupPreview:
+      type: object
+      properties:
+        limit:
+          type: integer
+          minimum: 0
+          maximum: 1000
+        ttl_seconds:
+          type: integer
+          minimum: 0
+    ArtifactCleanupResult:
+      type: object
+      required:
+        - preview
+        - deleted
+        - skipped
+        - failed
+      properties:
+        preview:
+          $ref: "#/components/schemas/ArtifactCleanupPreview"
+        deleted:
+          type: integer
+        skipped:
+          type: integer
+        failed:
+          type: integer
+    ConversationNotification:
+      type: object
+      properties:
+        direct_chat_id:
+          type: string
+          format: uuid
+        direct_message_id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+          format: uuid
+        id:
+          type: string
+          format: uuid
+        recipient_user_id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+        conversation_id:
+          type: string
+          format: uuid
+        message_id:
+          type: string
+          format: uuid
+        task_id:
+          type: string
+          format: uuid
+        comment_id:
+          type: string
+          format: uuid
+        safe_summary:
+          type: string
+        read_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - organization_id
+        - id
+        - recipient_user_id
+        - kind
+        - safe_summary
+        - created_at
     WorkspaceProposal:
       $ref: "./schemas/workspace-proposals.yaml#/schemas/WorkspaceProposal"
     WorkspaceProposalPage:
@@ -28267,7 +29401,11 @@ components:
       properties:
         provider:
           type: string
-          description: Runtime 名称：codex、claude-code、opencode、pi、codebuddy、hermes、gemini
+          description: Runtime 名称：codex、claude-code、opencode、pi、codebuddy、hermes、gemini、cursor
+        install_path: {type: string, description: 已验证的 CLI 安装入口，用户目录用 ~ 表示}
+        discovery_source: {type: string, description: 本地 CLI 的命中来源}
+        discovery_cached: {type: boolean, description: 安装信息来自缓存，本次启动正在探测运行状态}
+        discovery_only: {type: boolean, description: 已发现但没有执行适配器}
         version:
           type:
             - string
@@ -30884,6 +32022,11 @@ components:
       properties:
         session_idle_minutes: {type: integer, minimum: 1, maximum: 1440, default: 10}
         session_max_minutes: {type: integer, minimum: 1, maximum: 10080, default: 120}
+        runtime_paths:
+          type: object
+          description: 每个供应商经本机验证的 CLI 启动路径，提交空字符串恢复自动发现
+          propertyNames: {enum: [claude-code, opencode, pi, codebuddy, gemini, cursor]}
+          additionalProperties: {type: string, maxLength: 1024}
         codex_path: {type: string, maxLength: 1024}
         codex_args: {type: array, maxItems: 16, items: {type: string, maxLength: 512}}
         memory_guard: {type: boolean}

@@ -146,7 +146,10 @@ function runDetail(): Run {
 }
 
 let seq = 0;
-function execEvent(id: string, command: string, output: string): RunEvent {
+function runEvent(
+  type: RunEvent["type"],
+  payload: RunEvent["safe_payload"],
+): RunEvent {
   seq++;
   return {
     id: `ev-${seq}`,
@@ -155,23 +158,20 @@ function execEvent(id: string, command: string, output: string): RunEvent {
     generation: 1,
     sequence: seq,
     stream_seq: seq,
-    type: "step",
-    safe_payload: {
-      data: {
-        schema: 1,
-        step: {
-          id,
-          kind: "exec",
-          state: "done",
-          command,
-          output,
-          exit_code: 0,
-        },
-      },
-    },
+    type,
+    safe_payload: payload,
     occurred_at: TS,
     received_at: TS,
   };
+}
+
+function execEvent(id: string, command: string, output: string): RunEvent {
+  return runEvent("step", {
+    data: {
+      schema: 1,
+      step: { id, kind: "exec", state: "done", command, output, exit_code: 0 },
+    },
+  });
 }
 
 const notFound = () =>
@@ -192,7 +192,7 @@ const where = () => screen.getByTestId("location").textContent;
 const navType = () => screen.getByTestId("nav-type").textContent;
 
 interface HostOptions {
-  /** 事件页：按 after 游标返回；默认一页两条命令 */
+  /** 事件页：按 after 游标返回；默认一页已完成的运行记录 */
   events?: (after: string) => Response | Promise<Response>;
   run?: () => Response;
 }
@@ -225,8 +225,20 @@ function renderHost(path: string, options: HostOptions = {}) {
       return Promise.resolve(
         json(200, {
           events: [
+            runEvent("step", {
+              data: {
+                schema: 1,
+                step: {
+                  id: "n1",
+                  kind: "agent_text",
+                  state: "done",
+                  text: "开始核对",
+                },
+              },
+            }),
             execEvent("x1", "pnpm test", "全部通过"),
             execEvent("x2", "git status", "## main"),
+            runEvent("output", { text: "核对完成" }),
           ],
         }),
       );
@@ -356,13 +368,28 @@ describe("运行记录弹窗", () => {
     await waitFor(() =>
       expect(dialog).toHaveAccessibleDescription(/^已完成 · /),
     );
+    const summary = await within(dialog).findByRole("button", {
+      name: /^已完成/,
+    });
+    const finalReply = within(dialog).getByText("核对完成");
+    expect(summary).toHaveAttribute("aria-expanded", "false");
+    expect(within(dialog).queryByText("开始核对")).toBeNull();
+    expect(finalReply).toBeVisible();
+    await user.click(summary);
+    expect(within(dialog).getByText("开始核对")).toBeVisible();
+    expect(finalReply).toBeVisible();
     const headers = await within(dialog).findAllByRole("button", {
       name: /^运行命令/,
     });
     expect(headers).toHaveLength(2);
     for (const header of headers)
       expect(header).toHaveAttribute("aria-expanded", "false");
+    await user.click(summary);
+    expect(within(dialog).queryByText("开始核对")).toBeNull();
+    expect(finalReply).toBeVisible();
     await user.click(within(dialog).getByRole("button", { name: "全部展开" }));
+    expect(summary).toHaveAttribute("aria-expanded", "true");
+    expect(within(dialog).getByText("开始核对")).toBeVisible();
     for (const header of within(dialog).getAllByRole("button", {
       name: /^运行命令/,
     }))
@@ -461,6 +488,7 @@ describe("运行记录弹窗", () => {
       within(dialog).queryByRole("button", { name: /第二页命令/ }),
     ).toBeNull();
     const eventCalls = () => calls.filter((c) => c.includes("/runs/r1/events"));
+    await user.click(within(dialog).getByRole("button", { name: /^已完成/ }));
     expect(eventCalls()).toEqual([`${ORG}/runs/r1/events?after=0&limit=100`]);
     await user.click(
       within(dialog).getByRole("button", { name: "加载更多记录" }),

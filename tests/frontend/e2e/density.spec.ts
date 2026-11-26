@@ -324,3 +324,28 @@ for (const [locale, theme] of [
     }
   });
 }
+
+test("标准深色看板的状态列和分组泳道使用画布底色", async ({ page }) => {
+  await fixture(page.context(), account("zh-CN", "dark"));
+  await page.goto(`${tasksPath}?view=board`);
+  const laneColor = "rgb(35, 35, 38)";
+  await expect(page.getByRole("region", { name: "待处理 80" })).toHaveCSS(
+    "background-color",
+    laneColor,
+  );
+
+  await page.getByRole("button", { name: "显示设置", exact: true }).click();
+  await page
+    .getByRole("combobox", { name: "列", exact: true })
+    .selectOption("assignee");
+  await expect(page.getByRole("region", { name: "未指派 80" })).toHaveCSS(
+    "background-color",
+    laneColor,
+  );
+  await page
+    .getByRole("combobox", { name: "行", exact: true })
+    .selectOption("priority");
+  await expect(
+    page.getByRole("region", { name: "未指派 · 无优先级" }),
+  ).toHaveCSS("background-color", laneColor);
+});

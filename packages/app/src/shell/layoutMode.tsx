@@ -1,7 +1,7 @@
 import { useRef, useState, useSyncExternalStore } from "react";
 
 import { useT, type MessageKey } from "@openfox/i18n";
-import { Icon, Popover, Radio, cn, type IconName } from "@openfox/ui";
+import { Icon, Popover, Radio, cn } from "@openfox/ui";
 
 import { localKeys, readLocal, writeLocal } from "../storage";
 import type { NavModule } from "./navMemory";
@@ -40,7 +40,7 @@ export function useLayoutMode(): LayoutMode {
 export interface RailItem {
   module: NavModule;
   fallback: string;
-  icon: IconName;
+  icon: "home" | "messages" | "users" | "hexagon-cog" | "square-check";
   label: MessageKey;
 }
 

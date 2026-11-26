@@ -52,6 +52,17 @@ func runFake(path string) {
 		fmt.Println(sc.Version)
 		return
 	}
+	if len(args) > 0 && args[0] == "--help" {
+		switch os.Getenv("OPENFOX_FAKE_PROVIDER") {
+		case NameClaudeCode:
+			fmt.Println("--permission-mode --output-format")
+		case NameOpenCode:
+			fmt.Println("opencode run; opencode models")
+		case NamePi:
+			fmt.Println("--mode --session-dir")
+		}
+		return
+	}
 	if len(args) > 0 && args[0] == "auth" {
 		fmt.Println(sc.AuthJSON)
 		os.Exit(sc.AuthExit)
@@ -165,7 +176,7 @@ func newFixture(t *testing.T, adapter *Adapter) *fixture {
 	dir := t.TempDir()
 	adapter.Executable = exe
 	adapter.StateRoot = dir + "/state"
-	adapter.Environment = map[string]string{"OPENFOX_FAKE_SCENARIO": dir + "/scenario.json", "HOME": dir, "XDG_CONFIG_HOME": dir + "/config", "XDG_DATA_HOME": dir + "/data", "OPENCODE_CONFIG": "", "OPENCODE_CONFIG_CONTENT": "", "OPENCODE_AUTH_CONTENT": ""}
+	adapter.Environment = map[string]string{"OPENFOX_FAKE_PROVIDER": adapter.Name(), "OPENFOX_FAKE_SCENARIO": dir + "/scenario.json", "HOME": dir, "XDG_CONFIG_HOME": dir + "/config", "XDG_DATA_HOME": dir + "/data", "OPENCODE_CONFIG": "", "OPENCODE_CONFIG_CONTENT": "", "OPENCODE_AUTH_CONTENT": ""}
 	return &fixture{t: t, adapter: adapter, dir: dir}
 }
 

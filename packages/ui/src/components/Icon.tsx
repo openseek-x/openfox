@@ -13,7 +13,13 @@ export interface IconProps extends Omit<SVGProps<SVGSVGElement>, "name"> {
   label?: string;
 }
 
-/** Static Lucide glyphs and plain-text service labels. */
+/** 小图标保留可读笔画，大尺寸图标为细节留出空间。 */
+function strokeAtSize(size: number) {
+  if (size <= 14) return 2.5;
+  if (size <= 18) return 2.25;
+  return 1.75;
+}
+
 export function Icon({
   name,
   size = 16,
@@ -28,6 +34,7 @@ export function Icon({
       width={size}
       height={size}
       fill="none"
+      strokeWidth={strokeAtSize(size)}
       role={label ? "img" : undefined}
       aria-label={label}
       aria-hidden={label ? undefined : true}
