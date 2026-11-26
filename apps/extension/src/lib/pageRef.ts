@@ -59,3 +59,36 @@ export function buildMessageBody(
   }
   return lines.join("\n");
 }
+
+/** 仅识别扩展生成的完整引用后缀。其他文字按原样显示。 */
+export function splitPageReference(body: string): {
+  text: string;
+  reference: PageReference | null;
+} {
+  const marker = "\n\n---\n引用的页面：\n";
+  const start = body.lastIndexOf(marker);
+  const plain = { text: body, reference: null };
+  if (start < 0) return plain;
+  const [titleLine, urlLine, selectionLabel, ...lines] = body
+    .slice(start + marker.length)
+    .split("\n");
+  if (!titleLine?.startsWith("标题：") || !urlLine?.startsWith("地址："))
+    return plain;
+  const url = urlLine.slice("地址：".length);
+  if (sanitizePageUrl(url) !== url) return plain;
+  if (
+    selectionLabel !== undefined &&
+    (selectionLabel !== "选中文本：" ||
+      !lines.length ||
+      lines.some((line) => !line.startsWith("> ")))
+  )
+    return plain;
+  return {
+    text: body.slice(0, start),
+    reference: {
+      title: titleLine.slice("标题：".length),
+      url,
+      selection: lines.map((line) => line.slice(2)).join("\n"),
+    },
+  };
+}

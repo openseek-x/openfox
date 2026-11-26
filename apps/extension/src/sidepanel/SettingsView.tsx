@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { Button, Callout, Field, TextInput } from "@openfox/ui";
+import { Callout, Icon } from "@openfox/ui";
 
 import { createExtensionApi, describeApiError } from "../lib/client";
 import {
@@ -51,53 +51,106 @@ export function SettingsView() {
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-4 p-4">
-      <div className="flex flex-col gap-1">
-        <h1 className="flex items-center gap-2 text-lg font-semibold">
-          <img src="./openfox.png" alt="" width="28" height="28" />
-          连接 OpenFox
-        </h1>
-        <p className="text-fg-muted">
-          使用 OpenFox 账号与空间里的 Agent 对话。
+    <main className="connect-page">
+      <header className="brandbar">
+        <img src="./openfox.png" alt="" width="32" height="32" />
+        <span>OpenFox</span>
+      </header>
+      <div className="connect-content">
+        <div className="connect-art" aria-hidden="true">
+          <div className="art-window">
+            <div className="art-toolbar">
+              <i />
+              <i />
+              <i />
+            </div>
+            <div className="art-document">
+              <i />
+              <i />
+              <i />
+              <i />
+            </div>
+            <div className="art-panel">
+              <img src="./openfox.png" alt="" width="22" height="22" />
+              <i />
+              <i />
+            </div>
+          </div>
+          <span className="art-quote">
+            <Icon name="quote" size={18} />
+          </span>
+        </div>
+        <h1>连接 OpenFox</h1>
+        <p className="connect-intro">
+          连接工作台，在浏览网页时与空间里的 Agent 对话。
         </p>
+        <form
+          className="connect-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!busy) void connect();
+          }}
+        >
+          <div>
+            <label htmlFor="server">服务器地址</label>
+            <div className="connect-input">
+              <Icon name="globe" />
+              <input
+                id="server"
+                value={server}
+                onChange={(event) => setServer(event.target.value)}
+                placeholder="https://openfox.example.com"
+                autoComplete="off"
+                spellCheck={false}
+                disabled={busy}
+              />
+            </div>
+          </div>
+          <div>
+            <label htmlFor="token">个人访问令牌</label>
+            <div className="connect-input">
+              <Icon name="key-round" />
+              <input
+                id="token"
+                type="password"
+                value={token}
+                onChange={(event) => setToken(event.target.value)}
+                placeholder={TOKEN_PREFIX + "…"}
+                autoComplete="off"
+                spellCheck={false}
+                disabled={busy}
+                aria-describedby="token-help"
+              />
+            </div>
+            <p id="token-help">
+              在工作台的「个人访问令牌」设置中生成。令牌仅保存在此浏览器。
+            </p>
+          </div>
+          {error && (
+            <div role="alert">
+              <Callout tone="danger">{error}</Callout>
+            </div>
+          )}
+          <button
+            type="submit"
+            className="accent-button connect-submit"
+            disabled={busy}
+          >
+            {busy ? "正在连接…" : "连接"}
+            <Icon name="arrow-right" />
+          </button>
+        </form>
+        <aside className="privacy-note">
+          <Icon name="shield" size={18} />
+          <div>
+            <strong>网页引用权限</strong>
+            <p>
+              连接时会申请访问工作台。勾选「引用当前页面」并发送后，Agent
+              才会收到页面标题、地址和选中文字。
+            </p>
+          </div>
+        </aside>
       </div>
-      <Field
-        label="服务器地址"
-        helper="填写工作台网址，例如 https://openfox.example.com"
-      >
-        <TextInput
-          variant="form"
-          value={server}
-          onChange={(event) => setServer(event.target.value)}
-          placeholder="https://"
-          autoComplete="off"
-          spellCheck={false}
-          disabled={busy}
-        />
-      </Field>
-      <Field
-        label="个人访问令牌"
-        helper="在 OpenFox 网页版的个人访问令牌设置里生成，只保存在这个浏览器里"
-      >
-        <TextInput
-          variant="form"
-          type="password"
-          value={token}
-          onChange={(event) => setToken(event.target.value)}
-          placeholder={`${TOKEN_PREFIX}…`}
-          autoComplete="off"
-          spellCheck={false}
-          disabled={busy}
-        />
-      </Field>
-      {error && <Callout tone="danger">{error}</Callout>}
-      <Button loading={busy} onClick={() => void connect()}>
-        连接
-      </Button>
-      <Callout tone="info" title="权限说明">
-        连接时会申请访问该服务器。勾选“引用当前页面”并发送后，Agent
-        会收到页面标题、地址和选中的文字。
-      </Callout>
-    </div>
+    </main>
   );
 }

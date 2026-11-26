@@ -4,6 +4,7 @@ import {
   MAX_SELECTION_CHARS,
   buildMessageBody,
   sanitizePageUrl,
+  splitPageReference,
 } from "./pageRef";
 
 describe("sanitizePageUrl", () => {
@@ -58,5 +59,33 @@ describe("buildMessageBody", () => {
     });
     expect(body).toContain("（已截断）");
     expect(body).not.toContain("字".repeat(MAX_SELECTION_CHARS + 1));
+  });
+});
+
+describe("splitPageReference", () => {
+  const page = {
+    title: "示例页面",
+    url: "https://example.com/doc",
+    selection: "第一行\n\n第三行",
+  };
+  it.each([page, { ...page, title: "", selection: "" }])(
+    "用同一条消息还原正文和引用",
+    (reference) => {
+      const text = "保留正文中的\n\n---\n引用的页面：\n普通文本";
+      expect(splitPageReference(buildMessageBody(text, reference))).toEqual({
+        text,
+        reference,
+      });
+    },
+  );
+  it.each([
+    "普通正文",
+    "标题：范例\n地址：不是地址",
+    "标题：范例\n地址：https://example.com/?private=x",
+    "标题：范例\n地址：https://example.com/\n没有引用的尾行",
+    "标题：范例\n地址：https://example.com/\n选中文本：\n正文",
+  ])("格式不完整时保留全部原文", (suffix) => {
+    const body = "请阅读\n\n---\n引用的页面：\n" + suffix;
+    expect(splitPageReference(body)).toEqual({ text: body, reference: null });
   });
 });
