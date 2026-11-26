@@ -282,6 +282,54 @@ describe("步骤行", () => {
     expect(screen.queryByTestId("exec-output")).not.toBeInTheDocument();
   });
 
+  it("Exec 展开后命令与输出在同一个终端块里，无输出说明也不另起灰底块", async () => {
+    const user = userEvent.setup();
+    renderTurn([
+      stepEvent({
+        id: "x",
+        kind: "exec",
+        state: "done",
+        command: "pnpm test",
+        output: "ok",
+        exit_code: 0,
+      }),
+      stepEvent({
+        id: "y",
+        kind: "exec",
+        state: "done",
+        command: "git status --short",
+        output: "",
+        exit_code: 0,
+      }),
+    ]);
+    for (const header of screen.getAllByRole("button", { name: /已运行命令/ }))
+      await user.click(header);
+    const output = screen.getByTestId("exec-output");
+    const terminal = output.parentElement!;
+    // 输出不再自带底色，由终端块统一提供；命令行与输出同属一个块
+    expect(terminal).toHaveClass("bg-surface-muted");
+    expect(output).not.toHaveClass("bg-surface-muted");
+    expect(terminal).toHaveTextContent("$ pnpm test");
+    const empty = screen.getByText("命令没有输出。");
+    expect(empty.parentElement).toHaveClass("bg-surface-muted");
+    expect(empty.parentElement).toHaveTextContent("$ git status --short");
+  });
+
+  it("工具调用不单独加外框，与其他步骤行同一层级", () => {
+    const { container } = renderTurn([
+      stepEvent({
+        id: "tool",
+        kind: "tool_call",
+        state: "failed",
+        tool_name: "tasks.get",
+        output: "unavailable",
+      }),
+    ]);
+    const card = container.querySelector("[data-tool-call]")!;
+    expect(card.className).not.toMatch(/\bborder\b|rounded/);
+    expect(screen.getByText("unavailable")).toBeInTheDocument();
+  });
+
   it("Exec 运行中默认展开，被拒绝 / 中断且没有输出时给出说明", async () => {
     const user = userEvent.setup();
     renderTurn([
@@ -1633,7 +1681,7 @@ describe("通用工具与过程层级", () => {
     },
   );
 
-  it("仅分组相邻工具，完成后保留说明，成功准备藏于过程详情，失败可见", async () => {
+  it("仅分组相邻工具；完成后说明与成功准备藏于过程详情，失败可见", async () => {
     const user = userEvent.setup();
     const events = [
       stepEvent({ id: "prep", kind: "prep_env", state: "done" }),
@@ -1670,23 +1718,92 @@ describe("通用工具与过程层级", () => {
         <RunTimelineView turn={turn} run={run({ state: "SUCCEEDED" })} />
       </Providers>,
     );
+    // 收起时：说明被隐藏，不再打断分组，4 项工具合成一组；含失败项，所以自动展开
     expect(screen.queryByText("环境就绪")).not.toBeInTheDocument();
     expect(
+      screen.queryByText("找到项目说明，继续检查。"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "4 项操作 · 存在异常" }),
+    ).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("permission denied")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "已完成" }));
+    // 展开过程：说明回到原位置，把工具重新分成相邻的两组
+    expect(screen.getByText("环境就绪")).toBeInTheDocument();
+    expect(
       screen.getByRole("button", { name: "已执行 2 项操作" }),
-    ).toHaveAttribute("aria-expanded", "false");
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "2 项操作 · 存在异常" }),
     ).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByText("permission denied")).toBeInTheDocument();
     expect(container.textContent!.indexOf("已执行 2 项操作")).toBeLessThan(
       container.textContent!.indexOf("找到项目说明"),
     );
     expect(container.textContent!.indexOf("找到项目说明")).toBeLessThan(
       container.textContent!.indexOf("tasks.update"),
     );
-    await user.click(screen.getByRole("button", { name: "已完成" }));
-    expect(screen.getByText("环境就绪")).toBeInTheDocument();
-    expect(screen.getByText("files.list")).toBeInTheDocument();
+  });
+
+  it("过程说明在回合结束后默认收起，只留最终回复；展开过程后按原顺序出现", async () => {
+    const user = userEvent.setup();
+    const events = [
+      stepEvent({
+        id: "note",
+        kind: "agent_text",
+        state: "done",
+        text: "先查看请求拦截器。",
+      }),
+      stepEvent({ id: "blank", kind: "agent_text", state: "done", text: "  " }),
+      stepEvent({ id: "r", kind: "read", state: "done", path: "http.ts" }),
+      legacy("output", "最终结论"),
+      stepEvent({
+        id: "end",
+        kind: "turn_end",
+        state: "done",
+        final_state: "done",
+      }),
+    ];
+    const turn = foldRunEvents(events, { terminal: true });
+    const { container } = render(
+      <Providers>
+        <RunTimelineView
+          turn={turn}
+          run={run({ state: "SUCCEEDED" })}
+          renderText={(text) => <p>{text}</p>}
+        />
+      </Providers>,
+    );
+    expect(screen.queryByText("先查看请求拦截器。")).not.toBeInTheDocument();
+    expect(screen.getByText("最终结论")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /已完成/ }));
+    expect(screen.getByText("先查看请求拦截器。")).toBeInTheDocument();
+    expect(container.textContent!.indexOf("先查看请求拦截器。")).toBeLessThan(
+      container.textContent!.indexOf("最终结论"),
+    );
+    // 空白说明展开后也不渲染
+    expect(container.querySelectorAll("p").length).toBe(2);
+  });
+
+  it("运行中的过程说明实时显示", () => {
+    const turn = foldRunEvents([
+      stepEvent({
+        id: "note",
+        kind: "agent_text",
+        state: "done",
+        text: "正在查看请求拦截器。",
+      }),
+      stepEvent({ id: "r", kind: "read", state: "running", path: "http.ts" }),
+    ]);
+    render(
+      <Providers>
+        <RunTimelineView
+          turn={turn}
+          run={run({ state: "RUNNING" })}
+          renderText={(text) => <p>{text}</p>}
+        />
+      </Providers>,
+    );
+    expect(screen.getByText("正在查看请求拦截器。")).toBeInTheDocument();
   });
 
   it("用户手动展开的工具在运行结束后保持展开", async () => {
