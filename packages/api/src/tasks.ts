@@ -58,6 +58,8 @@ export type MyTaskListQuery = Query<"listMyTasks">;
 export type InboxListQuery = Query<"listInbox">;
 export type CreateTaskInput = JsonBody<"createTask">;
 export type UpdateTaskInput = JsonBody<"updateTask">;
+/** OPE-17 · 通用「标记为重复」的请求体 */
+export type MarkTaskDuplicateInput = JsonBody<"markTaskDuplicate">;
 export type PostCommentInput = JsonBody<"postTaskComment">;
 export type CreateTaskRelationInput = JsonBody<"createTaskRelation">;
 export type CreateTaskLinkInput = JsonBody<"createTaskLink">;
@@ -170,6 +172,20 @@ export function createTasksApi(http: HttpClient) {
           method: "PATCH",
           body: input,
         }),
+      /** OPE-17 · 标记为另一任务的重复：改到重复类别状态并记录目标，不要求任务在分拣台中。 */
+      markDuplicate: (
+        orgId: string,
+        spaceId: string,
+        taskId: string,
+        input: MarkTaskDuplicateInput,
+      ) =>
+        http.request<TaskDetail>(
+          `${taskPath(orgId, spaceId, taskId)}/duplicate`,
+          {
+            method: "POST",
+            body: input,
+          },
+        ),
       /**
        * 阶段 10c · 批量修改同一空间内 1–100 个任务（patch 恰好一个字段）。
        * 任一任务失败整批回滚，error.details.task_ids 列出问题任务；Idempotency-Key 可选。

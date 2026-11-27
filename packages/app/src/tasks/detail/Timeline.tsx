@@ -1,5 +1,9 @@
 import { zohoImportText } from "./ZohoImportActivity";
 import {
+  DuplicateMarkedActivity,
+  duplicateMarkedText,
+} from "./DuplicateMarkedActivity";
+import {
   BitbucketCommentActivity,
   bitbucketCommentText,
 } from "./BitbucketCommentActivity";
@@ -152,6 +156,9 @@ export function activityText(
       });
     case "task.deleted":
       return t("tasks.activity.deleted", { actor });
+    // 写在目标任务上：来源任务被标记为本任务的重复
+    case "task.duplicate_marked":
+      return duplicateMarkedText(t, activity);
     // 阶段 10e · 从「最近删除」恢复；原父任务已删除时变成顶层任务
     case "task.restored":
       return t(
@@ -342,6 +349,10 @@ function TimelineRow({
           people={book.people}
           locale={locale}
         />
+      );
+    if (a.kind === "task.duplicate_marked")
+      return (
+        <DuplicateMarkedActivity activity={a} orgId={orgId} locale={locale} />
       );
     return (
       <li className="flex items-center gap-2 text-body-sm text-fg-muted">

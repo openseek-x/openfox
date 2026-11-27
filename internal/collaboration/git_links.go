@@ -162,7 +162,7 @@ func (s Service) GitSyncStatus(ctx context.Context, tx pgx.Tx, taskID string, cl
 	}
 	tag, err := tx.Exec(ctx, `
 		UPDATE openfox.tasks
-		   SET status_id = $2::uuid, version = version + 1, updated_at = clock_timestamp()
+		   SET status_id = $2::uuid, duplicate_of_task_id = NULL, version = version + 1, updated_at = clock_timestamp()
 		 WHERE organization_id = openfox_private.current_organization_id() AND id = $1::uuid AND deleted_at IS NULL`, taskID, targetID)
 	if err != nil {
 		return false, mapDatabaseError(err)

@@ -220,11 +220,15 @@ func TestTaskCompletionWindowQueries(t *testing.T) {
 		task := e.createTask(o, space, map[string]any{"title": fmt.Sprintf("completed %d", i), "status_id": done})
 		e.exec(`UPDATE openfox.tasks SET completed_at=$3 WHERE organization_id=$1::uuid AND id=$2::uuid`, e.org, task.ID, at)
 	}
-	e.createTask(o, space, nil)
+	// 这个普通任务同时充当下面「重复」任务的目标，保持任务总数不变。
+	duplicateTarget := e.createTask(o, space, nil)
 	e.createTask(o, space, map[string]any{"status_id": e.statusID(e.org, "CANCELLED")})
 	var duplicate collaboration.TaskStatus
 	o.must(http.StatusCreated, http.MethodPost, "task-statuses", map[string]any{"name": "T02 duplicate", "category": "DUPLICATE"}, &duplicate)
-	e.createTask(o, space, map[string]any{"status_id": duplicate.ID})
+	// 服务端不变量：任务不能直接创建在重复类别，先建任务，再用 POST /duplicate 标成重复。
+	duplicateSource := e.createTask(o, space, nil)
+	o.must(http.StatusOK, http.MethodPost, spacePath(space)+"/tasks/"+duplicateSource.ID+"/duplicate",
+		map[string]any{"version": duplicateSource.Version, "duplicate_of_task_id": duplicateTarget.ID, "status_id": duplicate.ID}, nil)
 	type counts struct {
 		Total         int        `json:"total"`
 		CompletedAsOf *time.Time `json:"completed_as_of"`
