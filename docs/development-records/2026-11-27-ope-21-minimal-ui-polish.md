@@ -50,3 +50,26 @@
 - `pnpm --filter @openfox/desktop test`：129/129 通过。
 - `pnpm build` 通过。
 - 本次未重跑 Playwright E2E，也没有重新做浏览器截图验收，交测试侧在合并结果上复测。
+
+
+## 提测反馈修复 · 去除任务详情页标题与描述内嵌滑条（2026-11-27）
+
+### 问题与根因
+
+测试侧反馈任务详情页正文列右侧存在两条纵向堆叠的内部滚动条：
+1. **任务描述 `<textarea>`**（`packages/app/src/tasks/detail/TaskDetailDrawer.tsx` `InlineText` `multiline` 分支）：原实现按硬换行符数量设置 `rows={Math.min(20, Math.max(3, draft.split("\n").length))}`，未考虑长段落自动折行且在 20 行封顶，导致折行正文底部被截断并在外层可滚动正文区内再叠一层内部滚动条（实测 OPE-19 示例 `clientHeight: 100px` / `scrollHeight: 160px`）。
+2. **任务标题 `<textarea>`**（同组件非 `multiline` 分支）：虽已配置 `field-sizing-content`，但缺少 `overflow-hidden` 与不支持该特性的浏览器高度回退，在传统滚动条模式或亚像素舍入下仍可能绘制短滚动条轨道。
+
+### 改动说明
+
+- `packages/app/src/tasks/detail/TaskDetailDrawer.tsx`：
+  - `InlineText` 标题与描述统一使用 `block w-full min-w-0 resize-none overflow-hidden field-sizing-content` 与 `rows={1}`，移除 `rows` 20 行封顶；多行描述保留 `min-h-[60px]`（保持空态 3 行点击热区），单行标题保留 `min-h-8`。
+  - 增加 `supportsFieldSizingContent()`、`findScrollParent()` 与 `syncTextareaHeight()`：在支持 `field-sizing: content` 的引擎下零 JS 开销原生撑开；在不支持该特性的浏览器下自动按 `scrollHeight` 同步高度，测量前后保护外层滚动容器 `scrollTop` 避免跳滚，通过独立 `ResizeObserver` 仅在 `clientWidth` 变化时重算，并在 `scrollHeight === 0`（隐藏/jsdom）时清空内联高度。
+- `packages/app/src/tasks/detail/inlineText.test.tsx`：新增 5 项单元测试，覆盖原生类名/属性、30 行超长描述不封顶、非支持环境回退与宽度变化重算、滚动位置保护、`scrollHeight === 0` 保护、交互保存/Esc 与停用空间只读态。
+
+### 本轮验证
+
+- `pnpm exec vitest run packages/app/src/tasks`：40 个测试文件、**360 / 360 全部通过**（含新增 `inlineText.test.tsx` 5/5）。
+- `pnpm lint`（Prettier、ESLint、全仓 TypeScript）与 `pnpm build`：全部通过（0 错误）。
+- `OPENFOX_WEB_PORT=4197 pnpm test:e2e tests/frontend/e2e/scroll-containment.spec.ts`（模拟 API）：**12 通过、1 跳过（实时后端用例）、0 失败**。
+- **实机 Chromium 视觉与几何验收（模拟 API，DPR 2，禁用 overlay scrollbar 复现传统滑条场景）**：覆盖浅色 1440×900、深色 1440×900、窄屏 680×860、窄屏超长折行标题、抽屉模式、停用空间只读态、36 行超长描述、末尾空行、140 字符连续 URL、空描述与删减回缩共 11 组场景，全部满足 `overflowY === "hidden"`、`scrollbarW === 0`、`overflowDelta === 0`、`overflowX === false` 且 0 控制台/页面报错（OPE-19 描述完整撑开至 `160px`，不再截断）。
