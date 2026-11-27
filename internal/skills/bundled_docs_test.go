@@ -29,8 +29,9 @@ func TestTestEvidenceDeliverySkillIsImportable(t *testing.T) {
 	if len(content) > MaxInstructionBytes {
 		t.Fatalf("skill is %d bytes, want at most %d", len(content), MaxInstructionBytes)
 	}
-	// 正文要覆盖需求 F01–F07、F10 的关键约定，防止后续误删章节。
-	for _, keyword := range []string{"artifact_ids", "WebM", "脱敏", "report.html", "progress.json", "20"} {
+	// 正文要覆盖需求 F01–F10 的关键约定，防止后续误删章节。
+	for _, keyword := range []string{"artifact_ids", "WebM", "脱敏", "report.html", "progress.json", "20",
+		"仅录 P0", "按要求免录", "缺失", "跳过区间", "实际耗时", "片段播放时长", "剪辑方式", "环境阻塞", "task_view", "待交付"} {
 		if !strings.Contains(parsed.Body, keyword) {
 			t.Errorf("skill body is missing %q", keyword)
 		}
