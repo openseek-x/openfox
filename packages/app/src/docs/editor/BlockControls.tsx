@@ -276,7 +276,7 @@ export function BlockControls({
           role="group"
           aria-label={t("docs.editor.block.convert")}
           style={{ top: hover.top + 2, left: hover.left - 52 }}
-          className="absolute z-20 flex flex-col gap-0.5 rounded-lg border border-line-default bg-surface-card p-0.5 shadow-sm"
+          className="absolute z-20 flex flex-col gap-0.5 rounded-lg border border-line-floating bg-surface-card p-0.5 shadow-card"
         >
           <button
             ref={convertButton}

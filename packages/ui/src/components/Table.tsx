@@ -38,7 +38,7 @@ export function TableRow({
       aria-selected={selected}
       onClick={onClick}
       className={cn(
-        "border-b border-line-soft",
+        "border-b border-line-subtle transition-colors duration-100 motion-reduce:transition-none",
         onClick && "cursor-pointer",
         onClick && !selected && "hover:bg-surface-hover",
         selected && "bg-surface-selected",
@@ -68,7 +68,7 @@ export function TableHeaderCell({
       scope={scope}
       aria-sort={sort}
       className={cn(
-        "relative h-[var(--density-group-row,36px)] px-3 text-caption font-normal text-fg-muted",
+        "relative h-[var(--density-group-row,36px)] px-3 text-caption font-medium text-fg-muted",
         className,
       )}
       {...rest}

@@ -222,21 +222,23 @@ export function LoginPage() {
   if (step === "code") {
     return (
       <AuthLayout>
-        <div className="flex w-[360px] flex-col gap-6">
+        <div className="flex w-full max-w-[408px] flex-col gap-6 rounded-2xl border border-line-floating bg-surface-card p-8 shadow-popover">
           <button
             type="button"
             onClick={() => {
               setStep("email");
               if (limit?.step === "code") setLimit(null);
             }}
-            className="flex w-fit items-center gap-1 text-body-sm text-fg-secondary hover:text-fg-default"
+            className="flex w-fit items-center gap-1 text-body-sm text-fg-secondary transition-colors hover:text-fg-default"
           >
             <Icon name="arrow-left" />
             {t("common.back")}
           </button>
           <div className="flex flex-col gap-2">
-            <h1 className="text-heading font-medium">{t("auth.checkEmail")}</h1>
-            <p className="text-body text-fg-muted">
+            <h1 className="text-heading font-semibold tracking-[-0.015em] text-fg-default">
+              {t("auth.checkEmail")}
+            </h1>
+            <p className="text-body-sm text-fg-muted">
               {t("auth.codeSentTo", { email: email.trim() })}
             </p>
           </div>
@@ -293,11 +295,13 @@ export function LoginPage() {
       <form
         onSubmit={onSubmitEmail}
         noValidate
-        className="flex w-[360px] flex-col gap-6"
+        className="flex w-full max-w-[408px] flex-col gap-6 rounded-2xl border border-line-floating bg-surface-card p-8 shadow-popover"
       >
         <div className="flex flex-col gap-2">
-          <h1 className="text-heading font-medium">{t("auth.welcome")}</h1>
-          <p className="text-body text-fg-muted">{t("auth.emailLogin")}</p>
+          <h1 className="text-heading font-semibold tracking-[-0.015em] text-fg-default">
+            {t("auth.welcome")}
+          </h1>
+          <p className="text-body-sm text-fg-muted">{t("auth.emailLogin")}</p>
         </div>
         <Field
           label={t("auth.email")}

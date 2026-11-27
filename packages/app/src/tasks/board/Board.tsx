@@ -252,18 +252,21 @@ function Column({
   return (
     <section
       aria-label={`${column.name} ${count}`}
-      className="flex w-[280px] shrink-0 flex-col rounded-xl of-board-lane"
+      className="of-board-lane flex w-[280px] shrink-0 flex-col rounded-xl border border-line-subtle"
     >
       <header className="flex h-10 items-center gap-2 px-3">
         <StatusIcon category={column.category} color={column.color} />
         <h3
           id={headingId}
           tabIndex={-1}
-          className="min-w-0 truncate rounded-sm text-body font-medium"
+          className="min-w-0 truncate rounded-sm text-body-sm font-semibold text-fg-default"
         >
           {column.name}
         </h3>
-        <span className="text-body-sm text-fg-muted" data-testid="column-count">
+        <span
+          className="text-caption tabular-nums text-fg-muted"
+          data-testid="column-count"
+        >
           {count}
         </span>
         {onCreate && (

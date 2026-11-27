@@ -61,9 +61,9 @@ export function DirectChatList({
   return (
     <section
       aria-label={t("chat.human.title")}
-      className="mb-2 border-b border-line-default pb-2"
+      className="mb-2 border-b border-line-subtle pb-2"
     >
-      <h3 className="px-2.5 py-2 text-caption text-fg-muted">
+      <h3 className="px-2.5 py-2 text-caption font-medium text-fg-muted">
         {t("chat.human.title")}
       </h3>
       {query.isError && (
@@ -82,9 +82,9 @@ export function DirectChatList({
           to={withChatRail(directChatPath(orgId, c.id), rail)}
           aria-current={directChatId === c.id ? "page" : undefined}
           className={cn(
-            "flex items-center gap-2 rounded-lg px-2.5 py-[var(--density-chat-padding,8px)] hover:bg-surface-muted",
+            "flex items-center gap-2 rounded-lg px-2.5 py-[var(--density-chat-padding,8px)] transition-colors duration-100 hover:bg-surface-sidebar-hover motion-reduce:transition-none",
             (directChatId === c.id || params.get("user") === c.peer.id) &&
-              "bg-surface-muted",
+              "bg-surface-sidebar-active",
           )}
         >
           <PersonAvatar name={c.peer.name} size={28} />
@@ -103,7 +103,7 @@ export function DirectChatList({
           {Number(c.unread_count) > 0 && (
             <span
               aria-label={t("chat.list.unread")}
-              className="rounded-full bg-brand px-1.5 text-caption text-white"
+              className="rounded-full bg-danger px-1.5 text-caption tabular-nums text-fg-inverse"
             >
               {c.unread_count}
             </span>

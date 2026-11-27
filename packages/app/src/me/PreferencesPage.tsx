@@ -293,14 +293,30 @@ function ThemeTileButton({
 }
 
 const PREVIEW: Record<Exclude<ThemeChoice, "system">, Palette> = {
-  light: { app: "#f0f0f2", card: "#ffffff", bar: "#d4d4d8" },
-  dark: { app: "#1f1f23", card: "#27272a", bar: "#52525b" },
-  "magic-blue": { app: "#1a1d36", card: "#222542", bar: "#404665" },
-  "classic-dark": { app: "#101010", card: "#161616", bar: "#303030" },
+  light: {
+    app: "#f0f0f2",
+    sidebar: "#f6f6f7",
+    card: "#ffffff",
+    bar: "#d4d4da",
+  },
+  dark: { app: "#1f1f23", sidebar: "#222226", card: "#27272a", bar: "#4a4a54" },
+  "magic-blue": {
+    app: "#1a1d36",
+    sidebar: "#1d203a",
+    card: "#222542",
+    bar: "#4a5178",
+  },
+  "classic-dark": {
+    app: "#101010",
+    sidebar: "#121212",
+    card: "#161616",
+    bar: "#3d3d3d",
+  },
 };
 
 interface Palette {
   app: string;
+  sidebar: string;
   card: string;
   bar: string;
 }
@@ -323,7 +339,10 @@ function Mock({ palette }: { palette: Palette }) {
       className="flex size-full gap-1 p-1.5"
       style={{ background: palette.app }}
     >
-      <span className="w-1/4 rounded-sm" style={{ background: palette.card }} />
+      <span
+        className="w-1/4 rounded-sm"
+        style={{ background: palette.sidebar }}
+      />
       <span className="flex flex-1 flex-col gap-1">
         <span className="h-3 rounded-sm" style={{ background: palette.card }} />
         <span

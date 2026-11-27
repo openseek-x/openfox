@@ -31,18 +31,19 @@ const sizeClass: Record<ButtonSize, string> = {
 
 const variantClass: Record<ButtonVariant, string> = {
   primary:
-    "bg-primary text-fg-inverse enabled:not-aria-disabled:hover:bg-primary/90",
+    "bg-primary text-fg-inverse shadow-card enabled:not-aria-disabled:hover:bg-primary/90",
   secondary:
     "bg-surface-muted text-fg-default enabled:not-aria-disabled:hover:bg-secondary-hover",
   outline:
-    "bg-surface-card text-fg-default border border-line-default enabled:not-aria-disabled:hover:bg-surface-hover",
-  ghost: "text-fg-secondary enabled:not-aria-disabled:hover:bg-control-hover",
+    "bg-surface-card text-fg-default border border-line-default shadow-card enabled:not-aria-disabled:hover:border-line-strong enabled:not-aria-disabled:hover:bg-surface-hover",
+  ghost:
+    "text-fg-secondary enabled:not-aria-disabled:hover:bg-control-hover enabled:not-aria-disabled:hover:text-fg-default",
   "ghost-muted":
-    "text-fg-muted enabled:not-aria-disabled:hover:bg-control-hover",
+    "text-fg-muted enabled:not-aria-disabled:hover:bg-control-hover enabled:not-aria-disabled:hover:text-fg-default",
   danger:
-    "bg-danger text-fg-inverse enabled:not-aria-disabled:hover:bg-danger/90",
+    "bg-danger text-fg-inverse shadow-card enabled:not-aria-disabled:hover:bg-danger/90",
   "danger-outline":
-    "bg-surface-card text-danger border border-danger-border enabled:not-aria-disabled:hover:bg-danger-soft",
+    "bg-surface-card text-danger border border-danger-border shadow-card enabled:not-aria-disabled:hover:bg-danger-soft",
 };
 
 /** 按钮。loading 时禁用并在文字前显示转圈。 */
@@ -70,7 +71,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={isDisabled}
         aria-busy={loading || undefined}
         className={cn(
-          "inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap transition-colors duration-100 select-none motion-reduce:transition-none",
+          "inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap transition-[color,background-color,border-color,box-shadow,transform] duration-150 select-none enabled:active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100",
           "disabled:cursor-not-allowed disabled:opacity-50",
           variant === "primary" &&
             isDisabled &&

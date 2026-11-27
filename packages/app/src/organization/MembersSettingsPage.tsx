@@ -108,12 +108,12 @@ function MembersBody({
     <SettingsColumn wide>
       <header className="flex items-start gap-4">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <h1 className="text-[20px] leading-7 font-semibold text-fg-default">
+          <h1 className="text-heading font-semibold tracking-[-0.015em] text-fg-default">
             {tab === "external"
               ? t("organization.members.tabExternal")
               : t("organization.members.title", { count: rows.length })}
           </h1>
-          <p className="text-body text-fg-muted">
+          <p className="text-body-sm text-fg-muted">
             {tab === "external"
               ? t("organization.members.externalDescription")
               : t("organization.members.description")}

@@ -22,7 +22,7 @@ export function SettingsColumn({
   return (
     <div
       className={cn(
-        "mx-auto flex w-full flex-col gap-6 px-6 pt-12 pb-12",
+        "mx-auto flex w-full flex-col gap-7 px-6 pt-10 pb-14",
         wide ? "max-w-[1100px]" : narrow ? "max-w-[720px]" : "max-w-[768px]",
         className,
       )}
@@ -49,7 +49,9 @@ export function SettingsSection({
     <section id={id} aria-label={title} className="flex flex-col gap-3">
       <header className="flex items-start gap-3 px-1">
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <h2 className="text-title font-medium text-fg-default">{title}</h2>
+          <h2 className="text-title font-semibold tracking-[-0.01em] text-fg-default">
+            {title}
+          </h2>
           {description && (
             <p className="text-body-sm text-fg-muted">{description}</p>
           )}
@@ -73,13 +75,13 @@ export function SettingsCard({
   return (
     <div
       className={cn(
-        "flex flex-col rounded-xl border border-line-default bg-surface-card",
+        "flex flex-col rounded-xl border border-line-soft bg-surface-card shadow-card",
         className,
       )}
     >
       {rows.map((row, index) => (
         <Fragment key={index}>
-          {index > 0 && <div className="mx-4 h-px bg-line-soft" />}
+          {index > 0 && <div className="mx-4 h-px bg-line-subtle" />}
           {row}
         </Fragment>
       ))}
@@ -139,7 +141,7 @@ export function SettingNavRow({
   return (
     <Link
       to={to}
-      className="flex min-h-[68px] items-center gap-3 rounded-xl p-4 hover:bg-surface-hover"
+      className="flex min-h-[68px] items-center gap-3 rounded-xl p-4 transition-colors duration-100 hover:bg-surface-hover motion-reduce:transition-none"
     >
       <Icon name={icon} className="shrink-0 text-fg-secondary" />
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -196,7 +198,9 @@ export function PageHeading({
   return (
     <header className="flex items-start gap-4">
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <h1 className="text-subheading font-medium text-fg-default">{title}</h1>
+        <h1 className="text-heading font-semibold tracking-[-0.015em] text-fg-default">
+          {title}
+        </h1>
         {description && (
           <p className="text-body text-fg-muted">{description}</p>
         )}

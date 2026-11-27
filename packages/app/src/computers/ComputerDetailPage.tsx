@@ -319,7 +319,7 @@ export function ComputerDetailBody({
               />
             ) : (
               <div className="flex min-w-0 items-center gap-1.5">
-                <h1 className="truncate text-heading font-bold text-fg-default">
+                <h1 className="truncate text-heading font-semibold tracking-[-0.015em] text-fg-default">
                   {update.isPending && update.variables.name
                     ? update.variables.name
                     : device.name}

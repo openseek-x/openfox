@@ -31,7 +31,7 @@ export function DocumentPicker({
         value={text}
         onChange={(e) => setText(e.target.value)}
         maxLength={200}
-        className="w-full rounded-lg border border-line-default bg-surface-default px-3 py-2 text-body-sm"
+        className="w-full rounded-lg border border-line-default bg-surface-card px-3 py-2 text-body-sm"
       />
       {query && results.isError && <p role="alert">{t("docs.loadFailed")}</p>}
       {query &&

@@ -71,7 +71,7 @@ export function TokensPage() {
     <SettingsColumn wide>
       <header className="flex items-start gap-4 px-1">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <h2 className="text-[20px] leading-7 font-bold text-fg-default">
+          <h2 className="text-title font-semibold tracking-[-0.01em] text-fg-default">
             {t("me.tokens.title")}
           </h2>
           <p className="text-body-sm text-fg-muted">
@@ -93,9 +93,11 @@ export function TokensPage() {
       )}
 
       {list && list.length === 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-line-default bg-surface-card py-12">
-          <Icon name="key-round" size={40} className="opacity-50" />
-          <p className="text-body text-fg-default">{t("me.tokens.empty")}</p>
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-line-soft bg-surface-card py-12 shadow-card">
+          <span className="flex size-12 items-center justify-center rounded-xl bg-surface-muted text-fg-muted ring-1 ring-inset ring-line-floating">
+            <Icon name="key-round" size={22} />
+          </span>
+          <p className="text-body-sm text-fg-muted">{t("me.tokens.empty")}</p>
           <Button variant="outline" size="28" onClick={() => setCreating(true)}>
             {t("me.tokens.create")}
           </Button>
@@ -169,7 +171,7 @@ function TokenRow({
     ? t("me.tokens.lastUsed", { time: formatRelative(token.last_used_at) })
     : t("me.tokens.unused");
   return (
-    <div className="flex min-h-[64px] items-center gap-3 p-4 hover:bg-surface-hover">
+    <div className="flex min-h-[64px] items-center gap-3 p-4 transition-colors duration-100 hover:bg-surface-hover motion-reduce:transition-none">
       <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-surface-muted text-fg-secondary">
         <Icon name="key-round" size={14} />
       </span>

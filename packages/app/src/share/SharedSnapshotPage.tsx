@@ -56,22 +56,24 @@ export function SharedSnapshotPage() {
     const unauthorizedHint =
       !isApiError(view.error) || view.error.status !== 429;
     return (
-      <main className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center gap-3 px-6 text-center">
-        <h1 className="text-title font-medium">
-          {t("share.view.notAvailableTitle")}
-        </h1>
-        <p className="text-body text-fg-muted">
-          {t("share.view.notAvailableHelp")}
-        </p>
-        {unauthorizedHint && (
-          <Link
-            className="text-body text-accent underline"
-            to="/login"
-            state={{ next: `/share#${token}` }}
-          >
-            {t("share.view.signIn")}
-          </Link>
-        )}
+      <main className="flex min-h-screen items-center justify-center bg-surface-app p-6">
+        <div className="flex w-full max-w-[420px] flex-col items-center gap-3 rounded-2xl border border-line-floating bg-surface-card p-8 text-center shadow-dialog">
+          <h1 className="text-title font-semibold tracking-[-0.01em] text-fg-default">
+            {t("share.view.notAvailableTitle")}
+          </h1>
+          <p className="text-body-sm text-fg-muted">
+            {t("share.view.notAvailableHelp")}
+          </p>
+          {unauthorizedHint && (
+            <Link
+              className="text-body-sm font-medium text-accent underline underline-offset-4"
+              to="/login"
+              state={{ next: `/share#${token}` }}
+            >
+              {t("share.view.signIn")}
+            </Link>
+          )}
+        </div>
       </main>
     );
   }
@@ -79,37 +81,41 @@ export function SharedSnapshotPage() {
     return (
       <main
         aria-busy="true"
-        className="flex min-h-screen items-center justify-center text-body text-fg-muted"
+        className="flex min-h-screen items-center justify-center bg-surface-app text-body-sm text-fg-muted"
       >
         {t("share.view.loading")}
       </main>
     );
   const data = view.data;
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-4 px-6 py-8">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-title font-medium break-words">{data.title}</h1>
-        <p className="text-body-sm text-fg-muted">
-          {t("share.view.meta", {
-            name: data.creator_name,
-            org: data.organization_name,
-          })}
-        </p>
-        <p className="text-caption text-fg-muted">
-          {t("share.view.createdAt", { date: date(data.created_at) })}
-          {data.expires_at &&
-            ` · ${t("share.view.expiresAt", { date: date(data.expires_at) })}`}
-        </p>
-        <p className="text-caption text-fg-subtle">
-          {t("share.view.snapshotNote")}
-        </p>
-      </header>
-      <ol className="flex flex-col gap-3">
-        {data.items.map((item, index) => (
-          <SnapshotItem key={index} index={index + 1} item={item} />
-        ))}
-      </ol>
-    </main>
+    <div className="min-h-screen bg-surface-app">
+      <main className="mx-auto flex max-w-3xl flex-col gap-5 px-6 py-10">
+        <header className="flex flex-col gap-1.5 rounded-2xl border border-line-floating bg-surface-card p-6 shadow-card">
+          <h1 className="text-subheading font-semibold tracking-[-0.015em] break-words text-fg-default">
+            {data.title}
+          </h1>
+          <p className="text-body-sm text-fg-muted">
+            {t("share.view.meta", {
+              name: data.creator_name,
+              org: data.organization_name,
+            })}
+          </p>
+          <p className="text-caption text-fg-muted">
+            {t("share.view.createdAt", { date: date(data.created_at) })}
+            {data.expires_at &&
+              ` · ${t("share.view.expiresAt", { date: date(data.expires_at) })}`}
+          </p>
+          <p className="text-caption text-fg-subtle">
+            {t("share.view.snapshotNote")}
+          </p>
+        </header>
+        <ol className="flex flex-col gap-3">
+          {data.items.map((item, index) => (
+            <SnapshotItem key={index} index={index + 1} item={item} />
+          ))}
+        </ol>
+      </main>
+    </div>
   );
 }
 
@@ -125,7 +131,7 @@ function SnapshotItem({
   return (
     <li
       id={`item-${index}`}
-      className="flex flex-col gap-1 rounded-lg border border-line-soft bg-surface-card px-4 py-3"
+      className="flex flex-col gap-1.5 rounded-xl border border-line-floating bg-surface-card px-5 py-4 shadow-card"
     >
       <div className="flex items-center gap-2 text-body-sm">
         <span className="font-medium">{item.author}</span>

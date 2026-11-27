@@ -78,8 +78,10 @@ function SubRow({
       end={end}
       className={({ isActive }) =>
         cn(
-          "flex h-[var(--density-subnav-row,30px)] items-center rounded-lg px-2 text-body transition-colors duration-100 not-aria-[current=page]:hover:bg-surface-hover motion-reduce:transition-none",
-          isActive ? "bg-surface-active font-medium" : "text-fg-default",
+          "flex h-[var(--density-subnav-row,30px)] items-center rounded-lg px-2 text-body-sm transition-colors duration-100 not-aria-[current=page]:hover:bg-surface-sidebar-hover not-aria-[current=page]:hover:text-fg-default motion-reduce:transition-none",
+          isActive
+            ? "bg-surface-sidebar-active font-medium text-fg-default"
+            : "text-fg-secondary",
         )
       }
     >
@@ -148,8 +150,10 @@ export function SpaceTaskNav({
             aria-expanded={props.open}
             onClick={props.toggle}
             className={cn(
-              "flex h-[30px] items-center rounded-lg px-2 text-left text-body text-fg-default",
-              props.open ? "bg-surface-active" : "hover:bg-surface-hover",
+              "flex h-[30px] items-center rounded-lg px-2 text-left text-body-sm text-fg-muted transition-colors duration-100 motion-reduce:transition-none",
+              props.open
+                ? "bg-surface-sidebar-active text-fg-default"
+                : "hover:bg-surface-sidebar-hover hover:text-fg-default",
             )}
           >
             {t("shell.space.taskNavMore")}

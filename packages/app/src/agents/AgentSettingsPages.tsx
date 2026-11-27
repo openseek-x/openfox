@@ -51,18 +51,18 @@ function Grouped({
             aria-label={title}
             className="flex flex-col gap-2"
           >
-            <h2 className="text-title font-medium text-fg-secondary">
+            <h2 className="text-body font-semibold text-fg-secondary">
               {title}
             </h2>
             {list.length === 0 ? (
-              <p className="px-3 py-4 text-body-sm text-fg-muted">
+              <p className="rounded-xl border border-dashed border-line-soft bg-surface-muted/35 px-4 py-3 text-body-sm text-fg-muted">
                 {t("agents.settingsPages.empty")}
               </p>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHead>
-                    <tr className="bg-surface-muted">
+                    <tr className="bg-surface-muted/60">
                       {columns.map((column) => (
                         <TableHeaderCell
                           key={column}

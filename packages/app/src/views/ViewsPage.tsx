@@ -151,7 +151,7 @@ export function ViewsPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex h-11 shrink-0 items-center gap-2 border-b border-line-default px-4">
+      <header className="flex h-11 shrink-0 items-center gap-2 border-b border-line-subtle px-4">
         <SpacePageTitle space={space.data.name} title={t("views.title")} />
         <div className="ml-auto">{create}</div>
       </header>

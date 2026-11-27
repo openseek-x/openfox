@@ -358,10 +358,10 @@ function Chip({
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        "h-7 rounded-full border px-3 text-body-sm whitespace-nowrap",
+        "h-7 rounded-full border px-3 text-body-sm whitespace-nowrap transition-colors duration-100 motion-reduce:transition-none",
         active
           ? "border-primary bg-primary text-fg-inverse"
-          : "border-line-default text-fg-secondary hover:bg-surface-hover",
+          : "border-line-soft text-fg-secondary hover:border-line-default hover:bg-surface-hover hover:text-fg-default",
       )}
     >
       {children}
@@ -420,7 +420,7 @@ function PackRail({
             key={pack.id}
             aria-label={pickText(pack.name, locale)}
             style={{ backgroundColor: packBackground(pack.tint) }}
-            className="flex flex-col gap-2 rounded-xl border border-line-default p-3.5 transition-colors hover:brightness-95"
+            className="flex flex-col gap-2 rounded-xl border border-line-soft p-3.5 shadow-card transition-[border-color,filter] duration-150 hover:border-line-strong hover:brightness-[0.98] motion-reduce:transition-none"
           >
             <div className="flex items-center gap-2">
               <span
@@ -497,7 +497,7 @@ function SkillCard({
       type="button"
       aria-label={t("market.card.openSkill", { name })}
       onClick={onOpen}
-      className="flex flex-col gap-2.5 rounded-xl border border-line-default bg-surface-card p-3.5 text-left hover:bg-surface-hover"
+      className="flex flex-col gap-2.5 rounded-xl border border-line-soft bg-surface-card p-4 text-left shadow-card transition-[border-color,background-color,box-shadow] duration-150 hover:border-line-strong hover:bg-surface-hover/50 motion-reduce:transition-none"
     >
       <span className="flex items-center gap-2.5">
         <MarketIcon src={skill.icon} name={name} size={36} />
@@ -545,7 +545,7 @@ function TemplateCard({
       type="button"
       aria-label={t("market.card.openTemplate", { name })}
       onClick={onOpen}
-      className="flex flex-col gap-2.5 rounded-xl border border-line-default bg-surface-card p-3.5 text-left hover:bg-surface-hover"
+      className="flex flex-col gap-2.5 rounded-xl border border-line-soft bg-surface-card p-4 text-left shadow-card transition-[border-color,background-color,box-shadow] duration-150 hover:border-line-strong hover:bg-surface-hover/50 motion-reduce:transition-none"
     >
       <span className="flex items-center gap-2.5">
         <MarketIcon src={template.avatar?.url} name={name} size={36} round />

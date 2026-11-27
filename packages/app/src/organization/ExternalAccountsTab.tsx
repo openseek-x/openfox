@@ -297,7 +297,7 @@ export function ExternalAccountsTab({
           aria-label={t("organization.members.ext.pending", {
             count: edits.size,
           })}
-          className="sticky bottom-4 flex items-center gap-3 rounded-xl border border-line-default bg-surface-card px-4 py-3 shadow-lg"
+          className="sticky bottom-4 flex items-center gap-3 rounded-xl border border-line-floating bg-surface-card px-4 py-3 shadow-popover"
         >
           <span className="flex-1 text-body font-medium">
             {t("organization.members.ext.pending", { count: edits.size })}

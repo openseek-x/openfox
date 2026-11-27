@@ -46,7 +46,7 @@ export function Tabs({ tabs, value, onChange, label, className }: TabsProps) {
       role="tablist"
       aria-label={label}
       onKeyDown={onKeyDown}
-      className={cn("flex gap-5 border-b border-line-default", className)}
+      className={cn("flex gap-5 border-b border-line-soft", className)}
     >
       {tabs.map((tab) => {
         const active = tab.id === value;
@@ -61,7 +61,7 @@ export function Tabs({ tabs, value, onChange, label, className }: TabsProps) {
             tabIndex={active ? 0 : -1}
             onClick={() => onChange(tab.id)}
             className={cn(
-              "-mb-px flex h-9 items-center gap-1.5 border-b-2 text-body disabled:cursor-not-allowed disabled:opacity-50",
+              "-mb-px flex h-9 items-center gap-1.5 border-b-2 text-body transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none",
               active
                 ? "border-primary font-medium text-fg-default"
                 : "border-transparent text-fg-muted enabled:hover:text-fg-default",
@@ -69,7 +69,10 @@ export function Tabs({ tabs, value, onChange, label, className }: TabsProps) {
           >
             {tab.label}
             {tab.count !== undefined && (
-              <span className="text-caption text-fg-muted"> {tab.count}</span>
+              <span className="text-caption tabular-nums text-fg-muted">
+                {" "}
+                {tab.count}
+              </span>
             )}
           </button>
         );

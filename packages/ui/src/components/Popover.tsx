@@ -199,7 +199,7 @@ export function Popover({
         maxHeight: position?.maxHeight,
       }}
       className={cn(
-        "fixed z-50 rounded-xl border border-line-floating bg-surface-card p-1 shadow-popover outline-none",
+        "fixed z-50 rounded-xl border border-line-floating bg-surface-card p-1.5 shadow-popover outline-none",
         position ? "visible" : "invisible",
         className,
       )}

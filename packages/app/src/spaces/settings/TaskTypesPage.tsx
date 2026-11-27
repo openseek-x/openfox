@@ -288,7 +288,7 @@ export function TaskTypesPage({
           >
             <ul
               aria-label={t("spaces.sections.taskTypes")}
-              className="flex flex-col overflow-hidden rounded-[10px] border border-line-default bg-surface-card"
+              className="flex flex-col overflow-hidden rounded-xl border border-line-soft bg-surface-card shadow-card"
             >
               {list.map((type, index) => (
                 <SortableTypeRow
@@ -313,7 +313,7 @@ export function TaskTypesPage({
                           `${spaceSettingsPath(orgId, space.id, "task-types")}/${type.id}`,
                         );
                     }}
-                    className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 p-4 hover:bg-surface-hover"
+                    className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 p-4 transition-colors duration-100 hover:bg-surface-hover motion-reduce:transition-none"
                   >
                     <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-surface-muted">
                       <TaskTypeIcon icon={type.icon} size={16} />
@@ -554,7 +554,7 @@ function Recommended({
           ]}
         />
       </div>
-      <ul className="flex flex-col overflow-hidden rounded-[10px] border border-line-default bg-surface-card">
+      <ul className="flex flex-col overflow-hidden rounded-xl border border-line-soft bg-surface-card shadow-card">
         {rows.map((template, index) => {
           const text = templateText(t, template);
           const categories = template.purposes
@@ -750,7 +750,9 @@ export function TaskTypeDetailPage({
           <TaskTypeIcon icon={type.icon} size={20} />
         </span>
         <div className="flex min-w-0 flex-1 flex-col">
-          <h1 className="truncate text-title font-semibold">{type.name}</h1>
+          <h1 className="truncate text-title font-semibold tracking-[-0.01em] text-fg-default">
+            {type.name}
+          </h1>
           <span className="text-body-sm text-fg-muted">
             {t("spaces.taskTypes.ownedNote")}
           </span>
@@ -1029,8 +1031,8 @@ function FieldsTab({
   return (
     <div className="flex flex-col gap-3">
       {bound.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-md border border-dashed border-line-default bg-surface-card px-4 py-6 text-center">
-          <span className="flex size-10 items-center justify-center rounded-full bg-surface-muted">
+        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-line-soft bg-surface-muted/35 px-4 py-6 text-center">
+          <span className="flex size-10 items-center justify-center rounded-full bg-surface-muted ring-1 ring-inset ring-line-floating">
             <Icon
               name="sliders-horizontal"
               size={20}
@@ -1051,7 +1053,7 @@ function FieldsTab({
             {bound.map((field) => (
               <li
                 key={field.id}
-                className="flex items-center gap-2 rounded-md border border-line-default px-3 py-2"
+                className="flex items-center gap-2 rounded-lg border border-line-soft bg-surface-card px-3 py-2 shadow-card"
               >
                 <Icon
                   name={KIND_META[field.kind].icon}
@@ -1200,7 +1202,7 @@ function FieldPicker({
         </div>
       ) : (
         <>
-          <div className="border-b border-line-default p-2">
+          <div className="border-b border-line-subtle p-2">
             <TextInput
               autoFocus
               aria-label={t("spaces.taskTypes.searchFields")}
@@ -1237,7 +1239,7 @@ function FieldPicker({
               ))
             )}
           </ul>
-          <div className="flex items-center gap-2 border-t border-line-default p-2">
+          <div className="flex items-center gap-2 border-t border-line-subtle p-2">
             <Button
               size="28"
               variant="ghost"
@@ -1356,11 +1358,11 @@ function WorkflowTab({
             <h3 className="text-body font-semibold">
               {categoryName(category)}
             </h3>
-            <ul className="flex flex-col overflow-hidden rounded-xl border border-line-default bg-surface-card">
+            <ul className="flex flex-col overflow-hidden rounded-xl border border-line-soft bg-surface-card shadow-card">
               {rows.map((status, index) => (
                 <li
                   key={status.status_id}
-                  className={`flex items-center gap-3 px-4 py-2.5 ${index > 0 ? "border-t border-line-soft/50" : ""}`}
+                  className={`flex items-center gap-3 px-4 py-2.5 ${index > 0 ? "border-t border-line-subtle" : ""}`}
                 >
                   <span className="flex size-7 items-center justify-center rounded-lg bg-surface-muted">
                     <StatusIcon

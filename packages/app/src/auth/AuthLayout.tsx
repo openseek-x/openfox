@@ -15,7 +15,7 @@ export function AuthLayout({
 }) {
   const { locale, setLocale, t } = useI18n();
   return (
-    <div className="flex min-h-screen flex-col bg-surface-canvas">
+    <div className="flex min-h-screen flex-col bg-surface-app">
       {/* macOS 桌面端：顶部留一条可拖动窗口的区域，放系统红黄绿按钮 */}
       {isMacDesktop() && (
         <div aria-hidden className="h-7 shrink-0 [-webkit-app-region:drag]" />

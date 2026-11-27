@@ -82,7 +82,7 @@ export function IterationsPage() {
   const nextPlanned = iterations.find((item) => item.status === "planned");
   return (
     <div className="flex h-full flex-col">
-      <header className="flex min-h-11 shrink-0 flex-wrap items-center gap-2 border-b border-line-default px-4 py-1">
+      <header className="flex min-h-11 shrink-0 flex-wrap items-center gap-2 border-b border-line-subtle px-4 py-1">
         <SpacePageTitle
           space={space.data.name}
           title={t("spaces.iteration.title")}
@@ -196,7 +196,7 @@ function IterationRow({
   const t = useT();
   const counts = iterationCounts(item);
   return (
-    <li className="flex items-center gap-3 rounded-xl border border-line-default px-4 py-3">
+    <li className="flex items-center gap-3 rounded-xl border border-line-soft bg-surface-card px-4 py-3 shadow-card transition-[border-color,background-color] duration-150 hover:border-line-strong hover:bg-surface-hover/50 motion-reduce:transition-none">
       <Link
         to={`/o/${orgId}/spaces/${spaceId}/iterations/${item.id}`}
         className="flex min-w-0 flex-1 items-center gap-3"

@@ -46,13 +46,15 @@ export function JoinPage() {
 
   return (
     <AuthLayout aside={<AccountBar email={me.data?.email ?? ""} />}>
-      <div className="flex w-[420px] flex-col items-center gap-6 text-center">
-        <span className="flex size-14 items-center justify-center rounded-xl bg-accent-soft text-accent">
+      <div className="flex w-full max-w-[420px] flex-col items-center gap-6 rounded-2xl border border-line-floating bg-surface-card p-8 text-center shadow-popover">
+        <span className="flex size-14 items-center justify-center rounded-xl bg-accent-soft text-accent ring-1 ring-inset ring-line-floating">
           <Icon name="users" size={28} />
         </span>
         <div className="flex flex-col gap-2">
-          <h1 className="text-heading font-medium">{t("join.title")}</h1>
-          <p className="text-body text-fg-muted">{t("join.desc")}</p>
+          <h1 className="text-heading font-semibold tracking-[-0.015em] text-fg-default">
+            {t("join.title")}
+          </h1>
+          <p className="text-body-sm text-fg-muted">{t("join.desc")}</p>
         </div>
         {error && <Callout tone="danger">{error}</Callout>}
         <div className="flex w-full gap-2">

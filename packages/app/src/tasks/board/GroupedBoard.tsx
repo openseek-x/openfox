@@ -301,11 +301,14 @@ export function GroupedBoard(props: BoardProps) {
       <h3
         id={`${boardId}-${group.key}`}
         tabIndex={-1}
-        className="min-w-0 truncate rounded-sm text-body font-medium"
+        className="min-w-0 truncate rounded-sm text-body-sm font-semibold text-fg-default"
       >
         {groupName(group)}
       </h3>
-      <span className="text-body-sm text-fg-muted" data-testid="column-count">
+      <span
+        className="text-caption tabular-nums text-fg-muted"
+        data-testid="column-count"
+      >
         {columnCount(group)}
       </span>
       {onCreate && columnField === "status" && group.status && (
@@ -389,7 +392,7 @@ export function GroupedBoard(props: BoardProps) {
                 {visibleColumns.map((column) => (
                   <div
                     key={column.key}
-                    className="w-[280px] shrink-0 rounded-xl of-board-lane"
+                    className="of-board-lane w-[280px] shrink-0 rounded-xl border border-line-subtle"
                   >
                     {columnHeader(column)}
                   </div>
@@ -472,7 +475,7 @@ function Cell({
   return (
     <section
       aria-label={label}
-      className="flex w-[280px] shrink-0 flex-col rounded-xl of-board-lane"
+      className="of-board-lane flex w-[280px] shrink-0 flex-col rounded-xl border border-line-subtle"
     >
       {header}
       <div

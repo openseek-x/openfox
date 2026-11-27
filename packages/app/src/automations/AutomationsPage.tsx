@@ -138,8 +138,10 @@ function AutomationsList({
 
   return (
     <div className={`flex flex-col${agent ? "" : " h-full"}`}>
-      <header className="flex h-11 shrink-0 items-center gap-2 border-b border-line-default px-4">
-        <h1 className="font-medium">{t("automations.title")}</h1>
+      <header className="flex h-11 shrink-0 items-center gap-2 border-b border-line-subtle px-4">
+        <h1 className="text-body font-semibold text-fg-default">
+          {t("automations.title")}
+        </h1>
         {automations.length > 0 && <div className="ml-auto">{create}</div>}
       </header>
       {automations.length === 0 ? (
@@ -283,7 +285,7 @@ function AutomationCard({
           open();
       }}
       aria-label={automation.title}
-      className="flex h-[143px] cursor-pointer flex-col gap-2 rounded-xl border border-line-default bg-surface-card p-4 hover:bg-surface-hover"
+      className="flex h-[143px] cursor-pointer flex-col gap-2 rounded-xl border border-line-soft bg-surface-card p-4 shadow-card transition-[border-color,background-color,box-shadow] duration-150 hover:border-line-strong hover:bg-surface-hover/50 motion-reduce:transition-none"
     >
       <div className="flex items-center gap-2">
         <AgentAvatar
@@ -362,7 +364,7 @@ function AutomationCard({
       <p className="line-clamp-2 text-body-sm text-fg-muted">
         {plainPrompt(automation.prompt)}
       </p>
-      <div className="mt-auto flex items-center gap-2 border-t border-dashed border-line-default pt-2 text-body-sm text-fg-secondary">
+      <div className="mt-auto flex items-center gap-2 border-t border-dashed border-line-soft pt-2 text-body-sm text-fg-secondary">
         {triggers.length > 1 && (
           <button
             type="button"

@@ -140,7 +140,9 @@ function DetailBody({
       <header className="flex items-center gap-3 px-1">
         <ProviderIcon name={provider.name} size={40} />
         <div className="flex min-w-0 flex-col gap-0.5">
-          <h1 className="text-title font-bold">{provider.name}</h1>
+          <h1 className="text-heading font-semibold tracking-[-0.015em] text-fg-default">
+            {provider.name}
+          </h1>
           <p className="text-body-sm text-fg-muted">
             {provider.id === "zoho_bugtracker"
               ? t("integrations.zoho.organizationTitle")

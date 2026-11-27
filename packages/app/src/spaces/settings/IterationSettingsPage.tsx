@@ -360,7 +360,7 @@ function AutomaticSettings({
                   type="button"
                   disabled={!editable || saving}
                   className={cn(
-                    "h-8 rounded-lg border border-line-default px-2.5 text-body-sm hover:bg-surface-hover",
+                    "h-8 rounded-lg border border-line-soft bg-surface-card px-2.5 text-body-sm shadow-card transition-colors duration-100 hover:border-line-default hover:bg-surface-hover motion-reduce:transition-none",
                     !value.next_start_date && "text-fg-muted",
                   )}
                   onClick={() => setCalendarOpen(true)}
@@ -446,8 +446,10 @@ function ModeDialog({
           <label
             key={item}
             className={cn(
-              "flex cursor-pointer items-start gap-2 rounded-xl border border-line-default p-3",
-              mode === item && "border-line-focus bg-surface-active",
+              "flex cursor-pointer items-start gap-2 rounded-xl border p-3 transition-colors duration-100 motion-reduce:transition-none",
+              mode === item
+                ? "border-primary/70 bg-surface-muted/75 shadow-card"
+                : "border-line-soft bg-surface-card hover:border-line-default hover:bg-surface-hover",
             )}
           >
             <Radio
