@@ -62,7 +62,7 @@ export function BubbleToolbar({ editor }: { editor: Editor }) {
       {linking ? (
         <LinkBar editor={editor} onDone={() => setLinking(false)} />
       ) : (
-        <div className="flex items-center gap-0.5 rounded-[10px] border border-line-default bg-surface-card p-1 shadow-lg">
+        <div className="flex items-center gap-0.5 rounded-[10px] border border-line-floating bg-surface-card p-1 shadow-popover">
           <BlockTypeMenu
             label={
               state.heading
@@ -247,7 +247,7 @@ function LinkBar({ editor, onDone }: { editor: Editor; onDone: () => void }) {
     onDone();
   };
   return (
-    <div className="flex w-72 items-center gap-1 rounded-[10px] border border-line-default bg-surface-card p-1 shadow-lg">
+    <div className="flex w-72 items-center gap-1 rounded-[10px] border border-line-floating bg-surface-card p-1 shadow-popover">
       <input
         ref={input}
         aria-label={t("docs.editor.bubble.link")}

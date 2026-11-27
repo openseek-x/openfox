@@ -51,13 +51,15 @@ export function WelcomePage() {
   if (!started) {
     return (
       <AuthLayout aside={<AccountBar email={email} />}>
-        <div className="flex w-[560px] flex-col gap-8">
+        <div className="flex w-full max-w-[560px] flex-col gap-7 rounded-2xl border border-line-floating bg-surface-card p-8 shadow-popover">
           <div className="flex flex-col gap-2">
-            <h1 className="text-display font-medium">{t("welcome.title")}</h1>
+            <h1 className="text-display font-semibold tracking-[-0.02em] text-fg-default">
+              {t("welcome.title")}
+            </h1>
             <p className="text-body text-fg-secondary">
               {t("welcome.subtitle")}
             </p>
-            <p className="text-body text-fg-muted">
+            <p className="text-body-sm text-fg-muted">
               {t("welcome.desktopHint")}
             </p>
           </div>
@@ -66,7 +68,7 @@ export function WelcomePage() {
               {t("welcome.start")}
             </Button>
           </div>
-          <ol className="flex flex-col gap-3 rounded-xl border border-line-default bg-surface-card p-5">
+          <ol className="flex flex-col gap-3 rounded-xl border border-line-soft bg-surface-canvas p-5">
             <li className="text-body-sm text-fg-muted">
               {t("welcome.duration")}
             </li>
@@ -155,11 +157,13 @@ function CreateOrganizationForm({ email }: { email: string }) {
     <form
       onSubmit={(e) => void submit(e)}
       noValidate
-      className="flex w-[400px] flex-col gap-6"
+      className="flex w-full max-w-[440px] flex-col gap-6 rounded-2xl border border-line-floating bg-surface-card p-8 shadow-popover"
     >
       <div className="flex flex-col gap-2">
-        <h1 className="text-heading font-medium">{t("org.createTitle")}</h1>
-        <p className="text-body text-fg-muted">{t("org.createSubtitle")}</p>
+        <h1 className="text-heading font-semibold tracking-[-0.015em] text-fg-default">
+          {t("org.createTitle")}
+        </h1>
+        <p className="text-body-sm text-fg-muted">{t("org.createSubtitle")}</p>
       </div>
       <Field
         label={t("org.name")}

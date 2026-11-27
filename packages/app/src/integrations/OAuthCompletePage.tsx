@@ -103,9 +103,11 @@ export function OAuthCompletePage() {
     : "/";
   return (
     <main className="flex min-h-screen items-center justify-center bg-surface-app p-6">
-      <div className="flex w-full max-w-[420px] flex-col items-center gap-3 rounded-xl border border-line-default bg-surface-card p-8 text-center">
-        <Icon name={ok ? "check" : "circle-alert"} size={24} />
-        <h1 className="text-title font-medium">
+      <div className="flex w-full max-w-[420px] flex-col items-center gap-3.5 rounded-2xl border border-line-floating bg-surface-card p-8 text-center shadow-dialog">
+        <span className="flex size-11 items-center justify-center rounded-xl bg-surface-muted text-fg-default ring-1 ring-inset ring-line-floating">
+          <Icon name={ok ? "check" : "circle-alert"} size={22} />
+        </span>
+        <h1 className="text-title font-semibold tracking-[-0.01em] text-fg-default">
           {ok
             ? brandText(
                 provider ?? "",
@@ -119,12 +121,15 @@ export function OAuthCompletePage() {
               )
             : t("integrations.oauth.failedTitle")}
         </h1>
-        <p className="text-body text-fg-muted">
+        <p className="text-body-sm text-fg-muted">
           {ok
             ? t("integrations.oauth.okDesc")
             : gitBrandText(provider, t(oauthErrorKey(reason)))}
         </p>
-        <Link to={back} className="text-body-sm font-medium underline">
+        <Link
+          to={back}
+          className="text-body-sm font-medium text-fg-default underline underline-offset-4 hover:text-fg-secondary"
+        >
           {lastOrg
             ? t("integrations.oauth.backToIntegrations")
             : t("integrations.oauth.backHome")}

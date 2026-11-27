@@ -112,7 +112,9 @@ export function ImportExportPage() {
   return (
     <SettingsColumn wide>
       <header className="flex flex-col gap-1 px-1">
-        <h1 className="text-title font-bold">{t("imports.title")}</h1>
+        <h1 className="text-heading font-semibold tracking-[-0.015em] text-fg-default">
+          {t("imports.title")}
+        </h1>
         <p className="text-body-sm text-fg-muted">{t("imports.description")}</p>
       </header>
       {!canManage && first && (
@@ -136,7 +138,7 @@ export function ImportExportPage() {
                       ? setMethodOpen((open) => !open)
                       : openWizard({ brand: name })
                   }
-                  className="flex h-[60px] items-center gap-3 rounded-xl border border-line-default bg-surface-card px-4 text-left hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-60"
+                  className="flex h-[60px] items-center gap-3 rounded-xl border border-line-soft bg-surface-card px-4 text-left shadow-card transition-[border-color,background-color] duration-150 hover:border-line-strong hover:bg-surface-hover/50 disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none"
                 >
                   <ProviderIcon name={name} />
                   <span className="min-w-0 flex-1 truncate text-body font-medium">

@@ -23,7 +23,7 @@ export function MessageContent({
       className={cn(
         "min-w-0 text-body leading-6 [overflow-wrap:anywhere]",
         variant === "user"
-          ? "max-w-[85%] rounded-2xl bg-surface-muted px-4 py-3 whitespace-pre-wrap"
+          ? "max-w-[85%] rounded-2xl rounded-br-md bg-surface-muted/85 px-4 py-2.5 whitespace-pre-wrap"
           : "w-full",
         className,
       )}

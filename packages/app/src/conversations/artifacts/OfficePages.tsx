@@ -363,7 +363,7 @@ export function OfficePages({
       <div ref={scroll} className="min-h-0 flex-1 overflow-auto p-4">
         <div
           ref={stage}
-          className="relative mx-auto bg-white shadow-sm"
+          className="relative mx-auto bg-white shadow-card"
           style={{
             width: (frame?.width ?? 816) * scale,
             height: (frame?.height ?? 1056) * scale,

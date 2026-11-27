@@ -449,7 +449,8 @@ export function Gantt({
                           className={cn(
                             "absolute top-1.5 flex items-center overflow-hidden rounded-md px-2 text-caption font-medium text-fg-inverse select-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-line-focus",
                             readOnly ? "cursor-default" : "cursor-grab",
-                            active && "cursor-grabbing opacity-90 shadow-md",
+                            active &&
+                              "cursor-grabbing opacity-90 shadow-popover",
                             closed ? "bg-fg-muted" : "bg-warning",
                           )}
                           style={{

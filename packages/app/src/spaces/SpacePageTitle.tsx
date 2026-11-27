@@ -7,11 +7,12 @@ export function SpacePageTitle({
   title: string;
 }) {
   return (
-    <h1 className="flex min-w-0 items-baseline gap-1 font-medium">
-      <span className="truncate" title={space}>
+    <h1 className="flex min-w-0 items-baseline gap-1.5 text-body">
+      <span className="truncate font-normal text-fg-muted" title={space}>
         {space}
       </span>
-      <span className="shrink-0">· {title}</span>
+      <span className="shrink-0 text-fg-subtle">·</span>
+      <span className="shrink-0 font-semibold text-fg-default">{title}</span>
     </h1>
   );
 }

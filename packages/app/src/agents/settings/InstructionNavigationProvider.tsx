@@ -346,7 +346,7 @@ export function InstructionNavigationPrompt() {
       {navigation?.unsupported && (
         <div
           role="status"
-          className="fixed bottom-4 left-1/2 z-50 max-w-lg -translate-x-1/2 rounded-lg bg-surface-card p-3 text-sm shadow-lg"
+          className="fixed bottom-4 left-1/2 z-50 max-w-lg -translate-x-1/2 rounded-xl border border-line-floating bg-surface-card p-3 text-body-sm shadow-popover"
         >
           {t("agents.drawer.saveBeforeHistory")}
         </div>

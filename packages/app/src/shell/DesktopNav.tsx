@@ -53,7 +53,7 @@ function NavButton({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "flex size-[26px] items-center justify-center rounded-md text-fg-secondary hover:bg-surface-muted",
+        "flex size-[26px] items-center justify-center rounded-md text-fg-secondary transition-colors duration-100 hover:bg-control-hover hover:text-fg-default motion-reduce:transition-none",
         "disabled:cursor-default disabled:text-fg-subtle disabled:hover:bg-transparent",
       )}
     >

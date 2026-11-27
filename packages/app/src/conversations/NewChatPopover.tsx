@@ -226,7 +226,7 @@ export function NewChatButton({
         onClick={() => setOpen((value) => !value)}
         className={cn(
           landing
-            ? "flex min-h-12 w-full items-center gap-3 rounded-xl border border-line-strong bg-surface-card px-4 text-left text-body text-fg-secondary shadow-sm hover:bg-surface-hover"
+            ? "flex min-h-12 w-full items-center gap-3 rounded-xl border border-line-default bg-surface-card px-4 text-left text-body text-fg-secondary shadow-card transition-[border-color,background-color] duration-150 hover:border-line-strong hover:bg-surface-hover motion-reduce:transition-none"
             : "flex size-7 items-center justify-center rounded-lg text-fg-secondary hover:bg-surface-muted",
           className,
         )}

@@ -98,7 +98,7 @@ export function CustomFieldsPage() {
           )
         }
       />
-      <div className="flex items-start gap-4 rounded-xl border border-line-default bg-surface-card px-4 py-3">
+      <div className="flex items-start gap-4 rounded-xl border border-line-soft bg-surface-card px-4 py-3 shadow-card">
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <p className="text-body font-medium">
             {t("settings.customFields.hintTitle")}
@@ -109,7 +109,7 @@ export function CustomFieldsPage() {
         </div>
         <Link
           to={`/o/${orgId}/settings/spaces`}
-          className="inline-flex h-7 shrink-0 items-center rounded-md border border-line-default px-2.5 text-body-sm font-medium hover:bg-surface-hover"
+          className="inline-flex h-7 shrink-0 items-center rounded-lg border border-line-soft bg-surface-card px-2.5 text-body-sm font-medium shadow-card transition-colors duration-100 hover:border-line-default hover:bg-surface-hover motion-reduce:transition-none"
         >
           {t("settings.customFields.goToTypes")}
         </Link>
@@ -216,7 +216,7 @@ function FieldCard({
   const meta = KIND_META[field.kind];
   const detailsId = `field-details-${field.id}`;
   return (
-    <li className="rounded-xl border border-line-default bg-surface-card">
+    <li className="rounded-xl border border-line-soft bg-surface-card shadow-card">
       <div className="flex h-14 items-center gap-3 px-3">
         <span
           className="flex size-8 shrink-0 items-center justify-center rounded-lg"
@@ -348,7 +348,7 @@ function Muted({ children }: { children: ReactNode }) {
 
 function OptionPill({ label, color }: { label: string; color: string }) {
   return (
-    <span className="inline-flex h-6 items-center gap-1.5 rounded-full border border-line-default px-2 text-body-sm">
+    <span className="inline-flex h-6 items-center gap-1.5 rounded-full border border-line-soft px-2 text-body-sm">
       <OptionDot color={color} />
       {label}
     </span>

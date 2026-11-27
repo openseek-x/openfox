@@ -232,10 +232,10 @@ function GetStartedBody({
           {/* OrgIcon 没有 48 的尺寸，取最接近的 40 */}
           {org && <OrgIcon org={org} size={40} />}
           <div className="flex flex-col items-center gap-2 text-center">
-            <h1 className="text-[24px] leading-8 font-bold text-fg-default">
+            <h1 className="text-heading font-semibold tracking-[-0.015em] text-fg-default">
               {allDone ? t("me.getStarted.allDone") : t("me.getStarted.title")}
             </h1>
-            <p className="text-body text-fg-muted">
+            <p className="text-body-sm text-fg-muted">
               {allDone
                 ? t("me.getStarted.allDoneSubtitle")
                 : t("me.getStarted.subtitle")}
@@ -246,10 +246,10 @@ function GetStartedBody({
         <div className="flex min-w-0 flex-1 flex-col gap-6">
           <header className="flex items-start gap-4">
             <div className="flex min-w-0 flex-1 flex-col gap-1">
-              <h2 className="text-[20px] leading-7 font-medium text-fg-default">
+              <h2 className="text-title font-semibold tracking-[-0.01em] text-fg-default">
                 {t("me.getStarted.guideTitle")}
               </h2>
-              <p className="text-body text-fg-muted">
+              <p className="text-body-sm text-fg-muted">
                 {t("me.getStarted.guideDescription")}
               </p>
             </div>
@@ -421,12 +421,12 @@ function CategoryCard({
   const available = category.steps.filter((step) => step.available);
   const done = available.filter((step) => step.completed).length;
   return (
-    <section className="flex flex-col rounded-xl border border-line-default bg-surface-card">
+    <section className="flex flex-col rounded-xl border border-line-soft bg-surface-card shadow-card">
       <button
         type="button"
         aria-expanded={open}
         onClick={onToggle}
-        className="flex w-full items-center gap-3 rounded-xl p-4 text-left hover:bg-surface-hover"
+        className="flex w-full items-center gap-3 rounded-xl p-4 text-left transition-colors duration-100 hover:bg-surface-hover motion-reduce:transition-none"
       >
         <Icon
           name={CATEGORY_ICON[category.key]}

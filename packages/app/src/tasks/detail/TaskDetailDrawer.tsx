@@ -4,6 +4,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type ReactNode,
@@ -1090,7 +1091,46 @@ function DetailBody({
   );
 }
 
-/** 行内编辑：失焦或回车（单行）保存；Esc 放弃。 */
+/** 判断当前运行环境是否原生支持 CSS field-sizing: content。 */
+function supportsFieldSizingContent(): boolean {
+  return (
+    typeof CSS !== "undefined" &&
+    typeof CSS.supports === "function" &&
+    CSS.supports("field-sizing", "content")
+  );
+}
+
+/** 找到最近的可滚动祖先容器，回退测量高度时用于保持滚动位置不跳动。 */
+function findScrollParent(node: HTMLElement | null): HTMLElement | null {
+  let parent = node?.parentElement ?? null;
+  while (parent) {
+    const { overflowY } = getComputedStyle(parent);
+    if (overflowY === "auto" || overflowY === "scroll") return parent;
+    parent = parent.parentElement;
+  }
+  return null;
+}
+
+/** 在不支持 field-sizing: content 的浏览器下按内容高度同步 textarea，避免出现内部滚动条。 */
+function syncTextareaHeight(element: HTMLTextAreaElement) {
+  const scroller = findScrollParent(element);
+  const savedScrollTop = scroller?.scrollTop ?? 0;
+  element.style.height = "auto";
+  if (element.scrollHeight > 0) {
+    const cs = getComputedStyle(element);
+    const borderY =
+      (parseFloat(cs.borderTopWidth) || 0) +
+      (parseFloat(cs.borderBottomWidth) || 0);
+    element.style.height = `${Math.ceil(element.scrollHeight + borderY)}px`;
+  } else {
+    element.style.height = "";
+  }
+  if (scroller && scroller.scrollTop !== savedScrollTop) {
+    scroller.scrollTop = savedScrollTop;
+  }
+}
+
+/** 行内编辑：失焦或回车（单行）保存；Esc 放弃；高度随内容自适应且不显示内部滚动条。 */
 function InlineText({
   label,
   value,
@@ -1114,9 +1154,33 @@ function InlineText({
   className?: string;
 }) {
   const [draft, setDraft] = useState(value);
+  const fieldRef = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     if (readOnly) setDraft(value);
   }, [readOnly, value]);
+  useLayoutEffect(() => {
+    const element = fieldRef.current;
+    if (!element || supportsFieldSizingContent()) return;
+    syncTextareaHeight(element);
+  }, [draft]);
+  useEffect(() => {
+    const element = fieldRef.current;
+    if (
+      !element ||
+      supportsFieldSizingContent() ||
+      typeof ResizeObserver === "undefined"
+    )
+      return;
+    let lastWidth = element.clientWidth;
+    const observer = new ResizeObserver(() => {
+      const width = element.clientWidth;
+      if (width === lastWidth) return;
+      lastWidth = width;
+      syncTextareaHeight(element);
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
   const commit = async () => {
     if (readOnly) return;
     const next = multiline ? draft : draft.trim();
@@ -1133,14 +1197,17 @@ function InlineText({
     }
   };
   const common = {
+    ref: fieldRef,
     "aria-label": label,
     value: draft,
     placeholder,
     maxLength,
     readOnly,
+    rows: 1,
     onBlur: commit,
     className: cn(
-      "w-full resize-none rounded-md bg-transparent px-1 -mx-1 outline-none placeholder:text-fg-subtle focus-visible:shadow-none",
+      "block w-full min-w-0 resize-none overflow-hidden field-sizing-content rounded-md bg-transparent px-1 -mx-1 outline-none placeholder:text-fg-subtle focus-visible:shadow-none",
+      multiline ? "min-h-[60px]" : "min-h-8",
       className,
     ),
   };
@@ -1148,7 +1215,6 @@ function InlineText({
     return (
       <textarea
         {...common}
-        rows={Math.min(20, Math.max(3, draft.split("\n").length))}
         onChange={(event) => setDraft(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === "Escape") {
@@ -1162,8 +1228,6 @@ function InlineText({
   return (
     <textarea
       {...common}
-      rows={1}
-      className={cn(common.className, "block min-h-8 field-sizing-content")}
       onChange={(event) =>
         setDraft(event.target.value.replace(/[\r\n]+/g, " "))
       }

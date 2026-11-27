@@ -521,7 +521,7 @@ function Queue({
               : { width: `clamp(280px, min(${width}px, 100% - 720px), 520px)` }
           }
         >
-          <header className="flex h-11 shrink-0 items-center gap-1 border-b border-line-soft px-3">
+          <header className="flex h-11 shrink-0 items-center gap-1 border-b border-line-subtle px-3">
             <h1 className="shrink-0 text-body font-semibold">
               {t("spaces.triage.title")}
             </h1>
@@ -789,7 +789,7 @@ function Queue({
               rejectReplacement={location.pathname}
               frame={({ title, actions, children }) => (
                 <>
-                  <header className="flex h-11 shrink-0 items-center gap-2 border-b border-line-soft px-3">
+                  <header className="flex h-11 shrink-0 items-center gap-2 border-b border-line-subtle px-3">
                     {narrow && (
                       <IconButton
                         label={t("common.back")}

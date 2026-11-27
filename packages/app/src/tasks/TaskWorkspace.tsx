@@ -60,8 +60,10 @@ export function TaskState({
       className="flex flex-1 flex-col items-center justify-center gap-3 p-10 text-center"
     >
       {icon}
-      <h2 className="text-title font-medium">{title}</h2>
-      {desc && <p className="max-w-md text-body text-fg-muted">{desc}</p>}
+      <h2 className="text-title font-semibold tracking-[-0.01em] text-fg-default">
+        {title}
+      </h2>
+      {desc && <p className="max-w-md text-body-sm text-fg-muted">{desc}</p>}
       {actions && <div className="mt-1 flex items-center gap-2">{actions}</div>}
     </div>
   );

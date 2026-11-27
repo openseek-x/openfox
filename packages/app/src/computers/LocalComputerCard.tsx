@@ -154,7 +154,7 @@ function LocalRegistrationRow({ orgId }: { orgId: string }) {
   }
   if (!message) return null;
   return (
-    <div className="flex items-center gap-3 border-t border-line-default px-4 py-2.5">
+    <div className="flex items-center gap-3 border-t border-line-subtle px-4 py-2.5">
       <span
         role={tone === "danger" ? "alert" : "status"}
         className={cn(
@@ -239,7 +239,7 @@ export function LocalComputerCard({
     <section
       aria-label={t("computers.local.name")}
       aria-busy={local.isLoading || undefined}
-      className="flex flex-col rounded-xl border border-line-default"
+      className="flex flex-col rounded-xl border border-line-soft bg-surface-card shadow-card"
     >
       <div className="flex items-center gap-3 px-4 py-3">
         <OsBadge os={os} size={32} />

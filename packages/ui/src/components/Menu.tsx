@@ -77,12 +77,12 @@ export function MenuItem({
 }
 
 export function MenuSeparator() {
-  return <div role="separator" className="my-1 h-px bg-line-default" />;
+  return <div role="separator" className="my-1 h-px bg-line-soft" />;
 }
 
 export function MenuLabel({ children }: { children: ReactNode }) {
   return (
-    <div className="px-2.5 pt-2 pb-1 text-caption text-fg-muted">
+    <div className="px-2.5 pt-2 pb-1 text-caption font-medium text-fg-muted">
       {children}
     </div>
   );
