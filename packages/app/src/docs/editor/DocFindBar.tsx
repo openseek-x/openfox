@@ -42,7 +42,7 @@ export function DocFindBar({
     <div
       role="search"
       aria-label={t("docs.find.open")}
-      className="of-input-frame sticky top-0 z-10 mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-line-default bg-surface-panel p-2 focus-within:border-line-focus"
+      className="of-input-frame sticky top-0 z-10 mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-line-default bg-surface-card p-2 shadow-card focus-within:border-line-focus"
       onKeyDown={(event) => {
         if (event.key === "Escape") {
           event.preventDefault();

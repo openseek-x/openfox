@@ -293,7 +293,7 @@ function Canvas({
             placement="top-start"
             offset={8}
             aria-label={t("artifacts.review.comment")}
-            className="w-75 max-w-[calc(100vw-16px)] rounded-[22px] p-[7px] shadow-lg"
+            className="w-75 max-w-[calc(100vw-16px)] rounded-[22px] p-[7px] shadow-popover"
           >
             <div
               aria-busy={adding}

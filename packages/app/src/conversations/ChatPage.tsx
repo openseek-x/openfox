@@ -98,7 +98,7 @@ export function ChatPage() {
     <div className="flex h-full min-h-0 items-center justify-center overflow-y-auto px-5 py-8">
       <section className="flex w-full max-w-[420px] flex-col items-center text-center">
         <Icon name="brand-logo" size={48} />
-        <h1 className="mt-5 mb-6 text-display font-semibold tracking-tight">
+        <h1 className="mt-5 mb-6 text-display font-semibold tracking-[-0.02em] text-fg-default">
           {t("chat.newChat")}
         </h1>
         <NewChatButton orgId={orgId} landing />

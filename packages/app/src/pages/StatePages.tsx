@@ -18,11 +18,13 @@ function StatePage({
 }) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 p-10 text-center">
-      <span className="flex size-12 items-center justify-center rounded-xl bg-surface-muted text-fg-muted">
+      <span className="flex size-12 items-center justify-center rounded-xl bg-surface-muted text-fg-muted ring-1 ring-inset ring-line-floating">
         <Icon name={icon} size={24} />
       </span>
-      <h1 className="text-title font-medium">{title}</h1>
-      <p className="max-w-sm text-body text-fg-muted">{desc}</p>
+      <h1 className="text-title font-semibold tracking-[-0.01em] text-fg-default">
+        {title}
+      </h1>
+      <p className="max-w-sm text-body-sm text-fg-muted">{desc}</p>
       {action}
     </div>
   );

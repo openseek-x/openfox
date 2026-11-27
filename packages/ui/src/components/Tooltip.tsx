@@ -81,7 +81,7 @@ export function Tooltip({ content, children, delay = 300 }: TooltipProps) {
             id={id}
             role="tooltip"
             style={{ left: rect.left + rect.width / 2, top: rect.top - 6 }}
-            className="pointer-events-none fixed z-[70] max-w-xs -translate-x-1/2 -translate-y-full rounded-sm bg-primary px-2 py-[5px] text-caption leading-4 text-fg-inverse"
+            className="pointer-events-none fixed z-[70] max-w-xs -translate-x-1/2 -translate-y-full rounded-md bg-primary px-2.5 py-[5px] text-caption leading-4 text-fg-inverse shadow-popover"
           >
             {content}
           </div>,

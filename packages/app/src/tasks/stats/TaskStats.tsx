@@ -406,7 +406,7 @@ function TrendChart({
         <div
           role="status"
           className={cn(
-            "pointer-events-none absolute top-2 rounded-lg border border-line-default bg-surface-card px-3 py-1.5 text-body-sm shadow-md",
+            "pointer-events-none absolute top-2 rounded-lg border border-line-floating bg-surface-card px-3 py-1.5 text-body-sm shadow-popover",
           )}
           style={{
             left: `${Math.min(80, Math.max(2, (hover / Math.max(1, trend.length - 1)) * 100))}%`,

@@ -10,6 +10,7 @@ import {
   STATUS_LIFECYCLE_COLORS,
 } from "./ColorSwatches";
 import { Kbd } from "./Kbd";
+import { Segmented } from "./Segmented";
 import {
   Table,
   TableBody,
@@ -212,5 +213,30 @@ describe("Toast 撤销动作", () => {
     act(() => vi.advanceTimersByTime(1));
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+describe("Segmented", () => {
+  it("渲染 radiogroup 并在切换时更新选中态与卡片浮起样式", async () => {
+    const onChange = vi.fn();
+    render(
+      <Segmented
+        label="视图切换"
+        value="board"
+        onChange={onChange}
+        options={[
+          { value: "board", label: "看板" },
+          { value: "list", label: "列表" },
+        ]}
+      />,
+    );
+    const group = screen.getByRole("radiogroup", { name: "视图切换" });
+    const board = within(group).getByRole("radio", { name: "看板" });
+    const list = within(group).getByRole("radio", { name: "列表" });
+    expect(board).toHaveAttribute("aria-checked", "true");
+    expect(board.className).toContain("bg-surface-card");
+    expect(list).toHaveAttribute("aria-checked", "false");
+    await userEvent.click(list);
+    expect(onChange).toHaveBeenCalledWith("list");
   });
 });

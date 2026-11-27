@@ -771,7 +771,7 @@ function ConversationViewContent({
               aria-label={t("chat.messages.scrollBottom")}
               title={t("chat.messages.scrollBottom")}
               onClick={scrollToBottom}
-              className="absolute -top-10 left-1/2 flex size-8 -translate-x-1/2 items-center justify-center rounded-full border border-line-default bg-surface-card shadow-popover hover:bg-surface-hover"
+              className="absolute -top-10 left-1/2 flex size-8 -translate-x-1/2 items-center justify-center rounded-full border border-line-floating bg-surface-card shadow-popover transition-colors duration-100 hover:bg-surface-hover motion-reduce:transition-none"
             >
               <Icon name="arrow-up" size={16} className="rotate-180" />
             </button>

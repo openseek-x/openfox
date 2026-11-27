@@ -13,7 +13,7 @@ export function Kbd({
   return (
     <kbd
       className={cn(
-        "inline-flex h-5 min-w-5 items-center justify-center rounded-sm border border-line-default bg-surface-muted px-1 font-sans text-caption text-fg-muted",
+        "inline-flex h-5 min-w-5 items-center justify-center rounded-sm border border-line-soft bg-surface-card/90 px-1.5 font-sans text-caption text-fg-muted shadow-card",
         className,
       )}
     >

@@ -120,7 +120,7 @@ function Segments<T extends string>({
             type="button"
             aria-pressed={item.id === value}
             disabled={disabled}
-            className={`rounded px-3 py-1 text-body-sm ${item.id === value ? "bg-surface-card text-fg-default shadow-sm" : "text-fg-secondary"}`}
+            className={`rounded-md px-3 py-1 text-body-sm ${item.id === value ? "bg-surface-card text-fg-default shadow-card" : "text-fg-secondary"}`}
             onClick={() => onChange(item.id)}
           >
             {item.label}

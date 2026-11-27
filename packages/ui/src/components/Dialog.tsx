@@ -107,7 +107,7 @@ export function Dialog({
   if (!open) return null;
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-scrim/25 p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-scrim/30 p-6 backdrop-blur-[2px]"
       onPointerDown={closeOnBackdrop ? dismissOnBackdrop(onClose) : undefined}
     >
       <div
@@ -119,7 +119,7 @@ export function Dialog({
         tabIndex={-1}
         style={{ width }}
         className={cn(
-          "flex max-h-full max-w-full flex-col gap-4 rounded-2xl border border-line-default bg-surface-card px-6 py-5 shadow-dialog outline-none",
+          "flex max-h-full max-w-full flex-col gap-5 rounded-2xl border border-line-floating bg-surface-card px-6 py-5 shadow-dialog outline-none",
           className,
         )}
       >
@@ -134,7 +134,7 @@ export function Dialog({
               {title && (
                 <h2
                   id={titleId}
-                  className="text-title font-medium text-fg-default"
+                  className="text-title font-semibold tracking-[-0.01em] text-fg-default"
                 >
                   {title}
                 </h2>

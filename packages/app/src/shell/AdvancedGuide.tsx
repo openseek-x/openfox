@@ -114,7 +114,7 @@ export function AdvancedGuide({
         aria-controls="advanced-guide-list"
         aria-label={t(open ? "shell.guide.collapse" : "shell.guide.expand")}
         onClick={toggle}
-        className="flex h-10 items-center gap-2 rounded-lg px-2.5 text-body font-bold hover:bg-surface-hover"
+        className="flex h-9 items-center gap-2 rounded-lg px-2.5 text-body-sm font-semibold text-fg-secondary transition-colors duration-100 hover:bg-surface-sidebar-hover hover:text-fg-default motion-reduce:transition-none"
       >
         <Icon name="graduation-cap" size={18} />
         <span className="flex-1 text-left">{t("shell.advancedGuide")}</span>
@@ -190,7 +190,7 @@ export function AdvancedGuide({
                   {enabled ? (
                     <Link
                       to={item.path(base, firstSpaceId, orgId)}
-                      className="flex min-h-8 items-center gap-2 rounded-lg px-2.5 py-1 hover:bg-surface-hover"
+                      className="flex min-h-8 items-center gap-2 rounded-lg px-2.5 py-1 transition-colors duration-100 hover:bg-surface-sidebar-hover motion-reduce:transition-none"
                     >
                       {content}
                     </Link>
@@ -209,7 +209,7 @@ export function AdvancedGuide({
           </ul>
           <Link
             to={`${base}/settings/get-started?guide=advanced`}
-            className="flex h-8 items-center rounded-lg px-2.5 text-body-sm text-fg-muted hover:bg-surface-hover hover:text-fg-default"
+            className="flex h-8 items-center rounded-lg px-2.5 text-body-sm text-fg-muted transition-colors duration-100 hover:bg-surface-sidebar-hover hover:text-fg-default motion-reduce:transition-none"
           >
             {t("shell.guide.viewAll")}
           </Link>

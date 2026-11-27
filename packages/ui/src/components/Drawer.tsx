@@ -100,7 +100,7 @@ export function Drawer({
       className={cn(
         "fixed inset-0 z-40",
         // 非模态：外层不拦截指针，只有抽屉本身可点
-        modal ? "bg-black/25" : "pointer-events-none",
+        modal ? "bg-scrim/30 backdrop-blur-[2px]" : "pointer-events-none",
       )}
       onPointerDown={modal ? dismissOnBackdrop(onClose) : undefined}
     >
@@ -114,7 +114,7 @@ export function Drawer({
         style={{ width }}
         onKeyDown={modal ? undefined : (event) => closeOnEscape(event, onClose)}
         className={cn(
-          "absolute top-11 bottom-[9px] flex flex-col overflow-hidden rounded-xl border border-line-default bg-surface-card shadow-dialog outline-none",
+          "absolute top-11 bottom-[9px] flex flex-col overflow-hidden rounded-xl border border-line-floating bg-surface-card shadow-dialog outline-none",
           !modal && "pointer-events-auto",
           "transition-transform duration-300 ease-drawer",
           side === "left" ? "left-[9px]" : "right-[9px]",
@@ -125,7 +125,7 @@ export function Drawer({
           "motion-reduce:transition-none",
         )}
       >
-        <div className="flex h-11 shrink-0 items-center gap-2 border-b border-line-default px-3">
+        <div className="flex h-11 shrink-0 items-center gap-2 border-b border-line-subtle px-3.5">
           <IconButton
             label={t("common.close")}
             icon={<Icon name="x" />}
@@ -134,7 +134,7 @@ export function Drawer({
           />
           <h2
             id={titleId}
-            className="min-w-0 flex-1 truncate text-body font-medium"
+            className="min-w-0 flex-1 truncate text-body font-semibold"
           >
             {title}
           </h2>

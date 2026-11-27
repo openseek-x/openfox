@@ -1,23 +1,27 @@
-/* 离线页：沿用网页端的浅色基调（surface-canvas / fg-default），不依赖网页端样式文件 */
+/* 离线页：沿用网页端的新版简约中性色基调，不依赖网页端样式文件 */
 :root {
   color-scheme: light dark;
-  --bg: #f6f7f9;
+  --bg: #f0f0f2;
   --card: #ffffff;
-  --fg: #1f2329;
-  --muted: #646a73;
-  --line: #e4e6ea;
-  --primary: #1f2329;
+  --fg: #09090b;
+  --muted: #6c6c75;
+  --line: #e6e6ea;
+  --primary: #18181b;
   --primary-fg: #ffffff;
+  --card-shadow:
+    0 1px 2px rgba(9, 9, 11, 0.04), 0 4px 12px -2px rgba(9, 9, 11, 0.03);
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #17181a;
-    --card: #1f2023;
-    --fg: #ebedf0;
-    --muted: #9ba0a8;
-    --line: #2e3035;
-    --primary: #ebedf0;
-    --primary-fg: #17181a;
+    --bg: #1f1f23;
+    --card: #27272a;
+    --fg: #fafafa;
+    --muted: #a1a1aa;
+    --line: #35353c;
+    --primary: #fafafa;
+    --primary-fg: #18181b;
+    --card-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.28), 0 4px 12px -2px rgba(0, 0, 0, 0.2);
   }
 }
 * {
@@ -50,6 +54,7 @@ main {
   border: 1px solid var(--line);
   border-radius: 16px;
   background: var(--card);
+  box-shadow: var(--card-shadow);
 }
 .logo {
   display: block;

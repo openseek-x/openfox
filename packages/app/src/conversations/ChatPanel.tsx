@@ -108,7 +108,7 @@ export function ChatPanel({
       className="group/panel flex min-w-0 flex-1 flex-col px-1.5 pt-1.5"
     >
       <div className="flex h-11 shrink-0 items-center gap-1 pr-1 pl-2.5">
-        <h2 className="min-w-0 flex-1 truncate text-title font-bold">
+        <h2 className="min-w-0 flex-1 truncate text-body font-semibold tracking-[-0.01em] text-fg-default">
           {t("chat.title")}
         </h2>
         <SidebarCollapseButton onClick={onCollapse} />
@@ -123,7 +123,7 @@ export function ChatPanel({
       <div
         role="radiogroup"
         aria-label={t("chat.modes.label")}
-        className="flex h-11 shrink-0 items-center justify-center gap-2 border-t border-line-default"
+        className="flex h-11 shrink-0 items-center justify-center gap-2 border-t border-line-subtle"
       >
         {CHAT_MODES.map((item) => (
           <button
@@ -135,10 +135,10 @@ export function ChatPanel({
             title={t(`chat.modes.${item}` as MessageKey)}
             onClick={() => change(item)}
             className={cn(
-              "flex size-7 items-center justify-center rounded-md",
+              "flex size-7 items-center justify-center rounded-md transition-colors duration-100 motion-reduce:transition-none",
               mode === item
-                ? "bg-surface-active text-fg-default"
-                : "text-fg-subtle hover:bg-control-hover hover:text-fg-secondary",
+                ? "bg-surface-sidebar-active text-fg-default"
+                : "text-fg-subtle hover:bg-surface-sidebar-hover hover:text-fg-secondary",
             )}
           >
             <Icon name={MODE_ICONS[item]} size={16} />
@@ -168,7 +168,7 @@ function GroupLabel({
         type="button"
         aria-expanded={open}
         onClick={onToggle}
-        className="flex flex-1 items-center gap-1 px-2 text-body-sm text-fg-muted hover:text-fg-default"
+        className="flex flex-1 items-center gap-1 px-2 text-caption font-medium text-fg-muted transition-colors duration-100 hover:text-fg-default motion-reduce:transition-none"
       >
         <span>{label}</span>
         <Icon

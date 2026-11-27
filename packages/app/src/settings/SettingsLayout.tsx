@@ -144,7 +144,7 @@ export function SettingsNavigation({
       className="group/panel flex min-w-0 flex-1 flex-col gap-3 overflow-y-auto px-1.5 pt-1.5 pb-3"
     >
       <div className="flex h-11 shrink-0 items-center gap-1 pr-1 pl-2.5">
-        <h2 className="min-w-0 flex-1 truncate text-title font-bold">
+        <h2 className="min-w-0 flex-1 truncate text-body font-semibold tracking-[-0.01em] text-fg-default">
           {t("settings.title")}
         </h2>
         <SidebarCollapseButton onClick={onCollapse} />
@@ -156,7 +156,7 @@ export function SettingsNavigation({
             <MySpacesNavGroup orgId={orgId} />
           )}
           <div className="flex flex-col gap-0.5">
-            <div className="px-2.5 pb-1 text-caption text-fg-muted">
+            <div className="px-2.5 pb-1 text-caption font-medium text-fg-muted">
               {t(group.label)}
             </div>
             {group.items
@@ -169,19 +169,28 @@ export function SettingsNavigation({
                   end={item.path === "spaces"}
                   className={({ isActive }) =>
                     cn(
-                      "flex h-[var(--density-nav-row,30px)] items-center gap-2 rounded-lg px-2 text-body transition-colors duration-100 not-aria-[current=page]:hover:bg-surface-hover motion-reduce:transition-none",
+                      "flex h-[var(--density-nav-row,30px)] items-center gap-2 rounded-lg px-2 text-body-sm transition-colors duration-100 not-aria-[current=page]:hover:bg-surface-sidebar-hover not-aria-[current=page]:hover:text-fg-default motion-reduce:transition-none",
                       isActive
-                        ? "bg-surface-active font-medium"
-                        : "text-fg-default",
+                        ? "bg-surface-sidebar-active font-medium text-fg-default"
+                        : "text-fg-secondary",
                     )
                   }
                 >
-                  <Icon name={item.icon} className="text-fg-secondary" />
-                  <span className="min-w-0 flex-1 truncate">
-                    {t(item.label)}
-                  </span>
-                  {item.path === "get-started" && (
-                    <GetStartedNavCount orgId={orgId} />
+                  {({ isActive }) => (
+                    <>
+                      <Icon
+                        name={item.icon}
+                        className={
+                          isActive ? "text-fg-default" : "text-fg-muted"
+                        }
+                      />
+                      <span className="min-w-0 flex-1 truncate">
+                        {t(item.label)}
+                      </span>
+                      {item.path === "get-started" && (
+                        <GetStartedNavCount orgId={orgId} />
+                      )}
+                    </>
                   )}
                 </NavLink>
               ))}
@@ -191,34 +200,56 @@ export function SettingsNavigation({
                   to={base + "/daemon"}
                   className={({ isActive }) =>
                     cn(
-                      "flex h-[var(--density-nav-row,30px)] items-center gap-2 rounded-lg px-2 text-body transition-colors duration-100 not-aria-[current=page]:hover:bg-surface-hover motion-reduce:transition-none",
-                      isActive && "bg-surface-active font-medium",
+                      "flex h-[var(--density-nav-row,30px)] items-center gap-2 rounded-lg px-2 text-body-sm transition-colors duration-100 not-aria-[current=page]:hover:bg-surface-sidebar-hover not-aria-[current=page]:hover:text-fg-default motion-reduce:transition-none",
+                      isActive
+                        ? "bg-surface-sidebar-active font-medium text-fg-default"
+                        : "text-fg-secondary",
                     )
                   }
                 >
-                  <Icon name="monitor" />
-                  {t("shell.localService")}
+                  {({ isActive }) => (
+                    <>
+                      <Icon
+                        name="monitor"
+                        className={
+                          isActive ? "text-fg-default" : "text-fg-muted"
+                        }
+                      />
+                      {t("shell.localService")}
+                    </>
+                  )}
                 </NavLink>
                 {bridge.getAbout && (
                   <NavLink
                     to={base + "/about"}
                     className={({ isActive }) =>
                       cn(
-                        "flex h-[var(--density-nav-row,30px)] items-center gap-2 rounded-lg px-2 text-body transition-colors duration-100 not-aria-[current=page]:hover:bg-surface-hover motion-reduce:transition-none",
-                        isActive && "bg-surface-active font-medium",
+                        "flex h-[var(--density-nav-row,30px)] items-center gap-2 rounded-lg px-2 text-body-sm transition-colors duration-100 not-aria-[current=page]:hover:bg-surface-sidebar-hover not-aria-[current=page]:hover:text-fg-default motion-reduce:transition-none",
+                        isActive
+                          ? "bg-surface-sidebar-active font-medium text-fg-default"
+                          : "text-fg-secondary",
                       )
                     }
                   >
-                    <Icon name="info" />
-                    {t("settings.items.about")}
+                    {({ isActive }) => (
+                      <>
+                        <Icon
+                          name="info"
+                          className={
+                            isActive ? "text-fg-default" : "text-fg-muted"
+                          }
+                        />
+                        {t("settings.items.about")}
+                      </>
+                    )}
                   </NavLink>
                 )}
                 {bridge.getProxy && (
                   <button
                     onClick={() => setProxyOpen(true)}
-                    className="flex h-[var(--density-nav-row,30px)] items-center gap-2 rounded-lg px-2 text-body hover:bg-surface-hover"
+                    className="flex h-[var(--density-nav-row,30px)] items-center gap-2 rounded-lg px-2 text-body-sm text-fg-secondary transition-colors duration-100 hover:bg-surface-sidebar-hover hover:text-fg-default motion-reduce:transition-none"
                   >
-                    <Icon name="globe" />
+                    <Icon name="globe" className="text-fg-muted" />
                     {t("shell.proxyTitle")}
                   </button>
                 )}

@@ -129,14 +129,14 @@ export function TaskPage() {
                 aria-label={t("tasks.detail.label")}
                 className="flex min-h-0 flex-1 flex-col"
               >
-                <div className="flex h-11 shrink-0 items-center gap-2 border-b border-line-default px-3">
+                <div className="flex h-11 shrink-0 items-center gap-2 border-b border-line-subtle px-3">
                   <IconButton
                     label={t("common.close")}
                     icon={<Icon name="x" />}
                     size="28"
                     onClick={exit.close}
                   />
-                  <h1 className="min-w-0 flex-1 truncate text-body font-medium">
+                  <h1 className="min-w-0 flex-1 truncate text-body font-semibold">
                     {title}
                   </h1>
                   {actions}
@@ -158,7 +158,7 @@ export function TaskPage() {
                 ? showTask
                   ? "hidden"
                   : "flex min-w-0 flex-1 flex-col"
-                : "relative flex min-h-0 w-[var(--task-ai-panel-width)] shrink-0 flex-col border-l border-line-default"
+                : "relative flex min-h-0 w-[var(--task-ai-panel-width)] shrink-0 flex-col border-l border-line-subtle"
             }
           >
             {!compact && (
@@ -228,7 +228,7 @@ function TaskAiPanel({
   );
 
   const header = (
-    <header className="flex h-11 shrink-0 items-center gap-2 border-b border-line-default px-3">
+    <header className="flex h-11 shrink-0 items-center gap-2 border-b border-line-subtle px-3">
       <IconButton
         label={t("tasks.detail.aiPanelClose")}
         icon={<Icon name="x" />}

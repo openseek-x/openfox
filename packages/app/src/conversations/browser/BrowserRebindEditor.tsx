@@ -124,7 +124,7 @@ export function BrowserRebindEditor({
         </>
       )}
       <div
-        className={`${selection.image ? "absolute left-2 right-2 top-2" : ""} mx-auto flex max-w-96 flex-wrap items-center gap-2 rounded-2xl border border-line-default bg-surface-card p-2 text-caption shadow-lg`}
+        className={`${selection.image ? "absolute left-2 right-2 top-2" : ""} mx-auto flex max-w-96 flex-wrap items-center gap-2 rounded-2xl border border-line-floating bg-surface-card p-2 text-caption shadow-popover`}
       >
         <span>{t("artifacts.resolution.rebindHint")}</span>
         <button type="button" disabled={busy} onClick={() => void confirm()}>

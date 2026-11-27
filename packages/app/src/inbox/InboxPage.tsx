@@ -184,12 +184,13 @@ export function InboxPage() {
     : t(`inbox.empty.${section}`);
 
   return (
-    <div className="flex h-full min-w-0 flex-col bg-surface-canvas">
+    <div className="flex h-full min-w-0 flex-col bg-surface-card">
       <h1 className="sr-only">{t("inbox.title")}</h1>
+      {/* 轻量水平页签栏，与全站 h-11 顶栏等高，释放垂直阅读空间 */}
       <div
         role="tablist"
         aria-label={t("inbox.title")}
-        className="flex shrink-0 gap-2 border-b border-line-default p-2"
+        className="flex h-11 shrink-0 items-center gap-1 border-b border-line-subtle px-4"
       >
         {SECTIONS.map((item) => {
           const selected = item.id === section;
@@ -209,23 +210,25 @@ export function InboxPage() {
                 setImportance("all");
               }}
               className={cn(
-                "relative flex h-15 min-w-0 flex-1 items-center gap-4 rounded-lg px-4 text-left transition-colors sm:max-w-64",
+                "relative flex h-full min-w-0 items-center gap-2 px-3 text-left transition-colors duration-150 motion-reduce:transition-none",
                 selected
-                  ? "bg-surface-selected text-fg-default after:absolute after:-bottom-[9px] after:inset-x-0.5 after:h-0.5 after:rounded-full after:bg-fg-default"
-                  : "text-fg-muted hover:bg-surface-hover",
+                  ? "font-semibold text-fg-default after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-primary"
+                  : "text-fg-muted hover:text-fg-default",
               )}
             >
-              <Icon name={item.icon} />
-              <span className="flex min-w-0 flex-col">
-                <span className="text-body font-medium">
-                  {t(`inbox.sections.${item.id}`)}
-                </span>
-                {count > 0 && (
-                  <span className="text-body-sm text-fg-muted tabular-nums">
-                    {sub}
-                  </span>
-                )}
+              <Icon
+                name={item.icon}
+                size={15}
+                className={selected ? "text-fg-default" : "text-fg-muted"}
+              />
+              <span className="truncate text-body-sm">
+                {t(`inbox.sections.${item.id}`)}
               </span>
+              {count > 0 && (
+                <span className="shrink-0 rounded-full bg-surface-muted/85 px-1.5 py-px text-[11px] leading-4 font-normal text-fg-muted tabular-nums">
+                  {sub}
+                </span>
+              )}
             </button>
           );
         })}
@@ -242,7 +245,6 @@ export function InboxPage() {
           icon={<Icon name="list-filter" />}
           variant="round"
           size="28"
-          className="bg-surface-canvas"
           active={spaceOpen || spaceIds.length > 0}
           aria-expanded={spaceOpen}
           onClick={() => setSpaceOpen((v) => !v)}
@@ -320,10 +322,10 @@ export function InboxPage() {
                   aria-checked={importance === option.value}
                   onClick={() => setImportance(option.value as Importance)}
                   className={cn(
-                    "h-7 rounded-full border border-line-default px-3 text-body-sm font-medium tabular-nums transition-colors",
+                    "h-7 rounded-full border px-3 text-body-sm font-medium tabular-nums transition-colors duration-100 motion-reduce:transition-none",
                     importance === option.value
-                      ? "bg-surface-selected text-fg-default"
-                      : "text-fg-muted hover:bg-surface-hover",
+                      ? "border-line-strong bg-surface-active text-fg-default"
+                      : "border-line-soft text-fg-muted hover:bg-surface-hover hover:text-fg-default",
                   )}
                 >
                   {option.label}
@@ -353,7 +355,6 @@ export function InboxPage() {
             icon={<Icon name="search" />}
             variant="round"
             size="28"
-            className="bg-surface-canvas"
             onClick={() => setSearching(true)}
           />
         )}
@@ -362,7 +363,6 @@ export function InboxPage() {
           icon={<Icon name="mail-check" />}
           variant="round"
           size="28"
-          className="bg-surface-canvas"
           disabled={
             section === "cleared" || groups.length === 0 || bulk.isPending
           }
@@ -381,7 +381,7 @@ export function InboxPage() {
           variant="outline"
           size="28"
           leading={<Icon name="check-check" />}
-          className="rounded-full bg-surface-canvas text-fg-muted"
+          className="rounded-full text-fg-secondary"
           style={{ borderRadius: 999 }}
           disabled={
             section !== "inbox" || groups.length === 0 || bulk.isPending
@@ -588,7 +588,7 @@ const Row = memo(function Row({
           ]
         : [{ id: "unclear", icon: "undo", label: "inbox.actions.unclear" }];
   return (
-    <li className="group relative flex h-[var(--density-table-row,40px)] items-center gap-2 border-b border-line-soft px-2 first:border-t hover:bg-surface-hover">
+    <li className="group relative flex h-[var(--density-table-row,40px)] items-center gap-2 border-b border-line-subtle px-2 transition-colors duration-100 first:border-t hover:bg-surface-hover motion-reduce:transition-none">
       <button
         type="button"
         onClick={() => onOpen(group)}

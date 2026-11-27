@@ -462,14 +462,14 @@ export function ConversationHeader({
     : [];
 
   return (
-    <header className="flex h-11 shrink-0 items-center gap-1 border-b border-line-soft px-4">
+    <header className="flex h-11 shrink-0 items-center gap-1 border-b border-line-subtle px-4">
       <AgentAvatar
         name={agent.name}
         avatar={agent.avatar}
         size={20}
         offline={!agent.online}
       />
-      <span className="truncate text-body font-medium">
+      <span className="truncate text-body font-semibold text-fg-default">
         {crew?.name ?? agent.name}
       </span>
       {crew && (

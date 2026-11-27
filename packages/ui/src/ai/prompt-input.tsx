@@ -46,7 +46,7 @@ export const PromptInput = forwardRef<
         ref={ref}
         data-slot="prompt-input"
         className={cn(
-          "of-input-frame @container/prompt flex min-w-0 flex-col gap-1 rounded-[18px] border border-line-default bg-surface-card p-3 shadow-sm transition-colors focus-within:border-line-focus",
+          "of-input-frame @container/prompt flex min-w-0 flex-col gap-1.5 rounded-[18px] border border-line-default bg-surface-card px-3.5 py-3 shadow-card transition-[border-color,background-color,box-shadow] duration-150 focus-within:border-line-focus focus-within:ring-2 focus-within:ring-line-focus/15 motion-reduce:transition-none",
           disabled && "bg-surface-muted",
           className,
         )}

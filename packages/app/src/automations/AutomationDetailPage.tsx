@@ -134,7 +134,7 @@ export function AutomationDetailPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex h-12 shrink-0 items-center gap-3 border-b border-line-default px-4">
+      <header className="flex h-11 shrink-0 items-center gap-3 border-b border-line-subtle px-4">
         <button
           type="button"
           onClick={() => navigate(back)}

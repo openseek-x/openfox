@@ -440,11 +440,13 @@ function AssistantHeader({
   };
 
   return (
-    <header className="flex h-11 shrink-0 items-center gap-1 border-b border-line-soft px-4">
+    <header className="flex h-11 shrink-0 items-center gap-1 border-b border-line-subtle px-4">
       <span className="flex size-5 items-center justify-center rounded-full bg-surface-muted">
         <Icon name="bot-face" size={12} />
       </span>
-      <span className="text-body font-medium">{t("chat.assistant.title")}</span>
+      <span className="text-body font-semibold text-fg-default">
+        {t("chat.assistant.title")}
+      </span>
       <span className="text-fg-subtle">/</span>
       {renaming && currentId ? (
         <div className="w-56">

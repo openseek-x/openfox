@@ -105,7 +105,7 @@ export function SpacesListPage() {
   return (
     <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-5 px-6 pt-12 pb-12">
       <header className="flex items-center gap-4">
-        <h2 className="flex-1 text-[20px] leading-7 font-semibold text-fg-default">
+        <h2 className="flex-1 text-heading font-semibold tracking-[-0.015em] text-fg-default">
           {t("spaces.list.title")}
         </h2>
         {isOrgAdmin(orgRole) && (

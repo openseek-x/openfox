@@ -138,8 +138,9 @@ export function Select<T extends string>({
                 anchor.current?.focus();
               }}
               className={cn(
-                "flex min-h-8 w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-body outline-none",
+                "flex min-h-8 w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-body outline-none transition-colors duration-100 motion-reduce:transition-none",
                 "focus-visible:bg-surface-active focus-visible:shadow-none",
+                option.value === value && "font-medium",
                 option.disabled
                   ? "cursor-not-allowed opacity-50"
                   : "hover:bg-surface-hover",

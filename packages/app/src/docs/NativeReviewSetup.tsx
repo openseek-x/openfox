@@ -68,7 +68,7 @@ export function NativeReviewSetup({
           disabled={busy}
           value={id}
           onChange={(e) => setID(e.target.value)}
-          className="w-full border border-line-default bg-surface-default p-2"
+          className="w-full rounded-md border border-line-default bg-surface-card p-2"
         >
           <option value="">—</option>
           {choices.map((c) => (

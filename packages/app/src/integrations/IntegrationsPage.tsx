@@ -26,7 +26,9 @@ export function IntegrationsPage() {
   return (
     <SettingsColumn wide>
       <header className="flex flex-col gap-1 px-1">
-        <h1 className="text-title font-bold">{t("integrations.title")}</h1>
+        <h1 className="text-heading font-semibold tracking-[-0.015em] text-fg-default">
+          {t("integrations.title")}
+        </h1>
         <p className="text-body-sm text-fg-muted">
           {t("integrations.description")}
         </p>
@@ -83,7 +85,7 @@ function EnabledCard({
   return (
     <Link
       to={`/o/${orgId}/settings/integrations/${provider.id}`}
-      className="flex items-center gap-2.5 rounded-xl border border-line-default bg-surface-card p-3 hover:bg-surface-hover"
+      className="flex items-center gap-2.5 rounded-xl border border-line-soft bg-surface-card p-3 shadow-card transition-[border-color,background-color] duration-150 hover:border-line-strong hover:bg-surface-hover/50 motion-reduce:transition-none"
     >
       <ProviderIcon name={provider.name} size={28} />
       <div className="flex min-w-0 flex-1 flex-col">
@@ -127,7 +129,7 @@ function ProviderCard({ orgId, card }: { orgId: string; card: Card }) {
       <div
         aria-disabled="true"
         data-testid={`provider-${card.key}`}
-        className="flex h-[60px] items-center gap-3 rounded-xl border border-line-default bg-surface-card px-4 opacity-60"
+        className="flex h-[60px] items-center gap-3 rounded-xl border border-line-soft bg-surface-card px-4 opacity-60"
       >
         {body}
         <Badge tone="muted">{t("integrations.comingSoon")}</Badge>
@@ -137,7 +139,7 @@ function ProviderCard({ orgId, card }: { orgId: string; card: Card }) {
     <Link
       to={`/o/${orgId}/settings/integrations/${provider.id}`}
       data-testid={`provider-${card.key}`}
-      className="flex h-[60px] items-center gap-3 rounded-xl border border-line-default bg-surface-card px-4 hover:bg-surface-hover"
+      className="flex h-[60px] items-center gap-3 rounded-xl border border-line-soft bg-surface-card px-4 shadow-card transition-[border-color,background-color] duration-150 hover:border-line-strong hover:bg-surface-hover/50 motion-reduce:transition-none"
     >
       {body}
       <Icon name="chevron-right" className="text-fg-muted" />

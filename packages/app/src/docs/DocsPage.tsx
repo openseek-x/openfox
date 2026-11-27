@@ -160,7 +160,7 @@ export function DocsPage() {
             />
             <div className="min-w-0 flex-1">
               {!nodeId ? (
-                <h1 className="truncate text-body font-medium">
+                <h1 className="truncate text-body font-semibold text-fg-default">
                   {t("docs.nav.groupPersonal")}
                 </h1>
               ) : current ? (

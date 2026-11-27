@@ -61,13 +61,13 @@ export function SearchLauncher({ orgId }: { orgId: string }) {
         type="button"
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
-        className="flex h-7 w-full max-w-[300px] min-w-0 items-center gap-1.5 rounded-lg bg-surface-card px-2.5 text-body-sm text-fg-muted hover:bg-surface-hover"
+        className="flex h-7 w-full max-w-[320px] min-w-0 items-center gap-2 rounded-lg border border-line-floating bg-surface-card/90 px-2.5 text-body-sm text-fg-muted shadow-card transition-[background-color,border-color,color] duration-150 hover:border-line-default hover:bg-surface-card hover:text-fg-secondary motion-reduce:transition-none"
       >
-        <Icon name="search" size={14} />
+        <Icon name="search" size={14} className="shrink-0" />
         <span className="min-w-0 flex-1 truncate text-left">
           {t("shell.search")}
         </span>
-        <span className="hidden text-caption text-fg-subtle sm:inline">
+        <span className="hidden rounded-sm border border-line-subtle bg-surface-muted/70 px-1.5 py-px text-[11px] leading-4 text-fg-muted sm:inline">
           {keycaps}
         </span>
       </button>

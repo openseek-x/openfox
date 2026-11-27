@@ -22,8 +22,10 @@ export function PinnedViews({
           to={`/o/${orgId}/spaces/${spaceId}/views/${view.id}`}
           className={({ isActive }) =>
             cn(
-              "flex h-[var(--density-subnav-row,30px)] items-center gap-2 rounded-lg pr-1.5 pl-6 text-body hover:bg-surface-hover",
-              isActive ? "bg-surface-active font-medium" : "text-fg-default",
+              "flex h-[var(--density-subnav-row,30px)] items-center gap-2 rounded-lg pr-1.5 pl-6 text-body-sm transition-colors duration-100 hover:bg-surface-sidebar-hover hover:text-fg-default motion-reduce:transition-none",
+              isActive
+                ? "bg-surface-sidebar-active font-medium text-fg-default"
+                : "text-fg-secondary",
             )
           }
         >
