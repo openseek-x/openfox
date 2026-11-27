@@ -268,3 +268,28 @@ it("keeps a closed selection draft and only adds it to chat after explicit submi
     screen.getByRole("textbox", { name: "针对选区的修改意见" }),
   ).toHaveValue("");
 });
+
+it("supports inline editing of pending draft annotations and updates the draft store", async () => {
+  fixture(true);
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "批注" }));
+  await user.click(
+    await screen.findByRole("button", { name: "第 2 行，第 2 列" }),
+  );
+  await user.type(
+    screen.getByRole("textbox", { name: "针对选区的修改意见" }),
+    "原批注内容",
+  );
+  await user.click(screen.getByRole("button", { name: "添加到聊天" }));
+  expect(readDraft("c1")?.fileContexts?.[0]?.comments[0]?.body).toBe(
+    "原批注内容",
+  );
+  await user.click(screen.getByRole("button", { name: "编辑批注" }));
+  const editor = screen.getByRole("textbox", { name: "编辑批注" });
+  await user.clear(editor);
+  await user.type(editor, "修改后的批注内容");
+  await user.click(screen.getByRole("button", { name: "保存" }));
+  expect(readDraft("c1")?.fileContexts?.[0]?.comments[0]?.body).toBe(
+    "修改后的批注内容",
+  );
+});

@@ -18,7 +18,10 @@ import {
   cn,
 } from "@openfox/ui";
 import { BrowserAnnotationEditor } from "./BrowserAnnotationEditor";
-import { desktopBridge } from "../../desktop";
+import { desktopBridge, type BrowserAnnotationMode } from "../../desktop";
+import { isMacPlatform } from "../../me/shortcuts";
+import { copyText } from "../../tasks/parts";
+import { useDraftBrowserContexts } from "../drafts";
 import type { BrowserSession } from "./useBrowserSession";
 import { useConversation } from "../queries";
 import { useRun } from "../steps/queries";
@@ -34,11 +37,27 @@ export function BrowserPanel({ session }: { session: BrowserSession }) {
   const binding = useStoredValue<Rebind>(rebindKey(session.conversationId));
   const annotation = state?.annotation;
   const selection = annotation?.selection;
+  const draftBrowsers = useDraftBrowserContexts(session.conversationId);
+  const pendingAnnotations = draftBrowsers.reduce(
+    (sum, item) => sum + item.comments.length,
+    0,
+  );
   const [address, setAddress] = useState("");
   const [addressFocused, setAddressFocused] = useState(false);
+  const [urlCopied, setUrlCopied] = useState(false);
+  const [externalError, setExternalError] = useState(false);
   const viewport = useRef<HTMLDivElement>(null);
   const addressInput = useRef<HTMLInputElement>(null);
+  const lastLayout = useRef<{
+    visible: boolean;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
   const active = state?.tabs.find((tab) => tab.id === state.activeTab);
+  const hasRealUrl = Boolean(active?.url && active.url !== "about:blank");
+  const controlBannerVisible = Boolean(control?.active || session.armed);
   let currentOrigin: string | null = null;
   try {
     if (active?.url && /^https?:/.test(active.url))
@@ -159,13 +178,37 @@ export function BrowserPanel({ session }: { session: BrowserSession }) {
   );
   useEffect(() => {
     setAddress(active?.url === "about:blank" ? "" : active?.url || "");
+    setExternalError(false);
   }, [active?.id, active?.url]);
+  useEffect(() => {
+    if (!urlCopied) return;
+    const timer = window.setTimeout(() => setUrlCopied(false), 1600);
+    return () => window.clearTimeout(timer);
+  }, [urlCopied]);
+  const copyCurrentUrl = async () => {
+    if (!hasRealUrl || !active?.url) return;
+    if (await copyText(active.url)) setUrlCopied(true);
+  };
+  const openExternal = async () => {
+    if (!active || !currentOrigin || !state?.lease) return;
+    setExternalError(false);
+    try {
+      await desktopBridge()?.browserCommand?.({
+        lease: state.lease,
+        action: "open-external",
+        tabId: active.id,
+      });
+    } catch {
+      setExternalError(true);
+    }
+  };
   useEffect(() => {
     if (active?.url === "about:blank") addressInput.current?.focus();
   }, [active?.id, active?.url]);
   useEffect(() => {
     const element = viewport.current;
     if (!element || !state?.lease) return;
+    lastLayout.current = null;
     let frame = 0;
     const layout = () => {
       cancelAnimationFrame(frame);
@@ -182,6 +225,26 @@ export function BrowserPanel({ session }: { session: BrowserSession }) {
         );
         const visible =
           !document.hidden && !occluded && rect.width >= 1 && rect.height >= 1;
+        const next = {
+          visible,
+          x: Math.round(rect.x),
+          y: Math.round(rect.y),
+          width: Math.round(rect.width),
+          height: Math.round(rect.height),
+        };
+        const prev = lastLayout.current;
+        // 仅在可见性或像素边界真实变化时下发原生布局，避免流式输出触发无意义 IPC
+        if (
+          prev &&
+          prev.visible === next.visible &&
+          (!next.visible ||
+            (prev.x === next.x &&
+              prev.y === next.y &&
+              prev.width === next.width &&
+              prev.height === next.height))
+        )
+          return;
+        lastLayout.current = next;
         void desktopBridge()
           ?.browserCommand?.({
             lease: state.lease,
@@ -190,10 +253,10 @@ export function BrowserPanel({ session }: { session: BrowserSession }) {
             ...(visible
               ? {
                   bounds: {
-                    x: rect.x,
-                    y: rect.y,
-                    width: rect.width,
-                    height: rect.height,
+                    x: next.x,
+                    y: next.y,
+                    width: next.width,
+                    height: next.height,
                   },
                 }
               : {}),
@@ -210,6 +273,7 @@ export function BrowserPanel({ session }: { session: BrowserSession }) {
     layout();
     return () => {
       cancelAnimationFrame(frame);
+      lastLayout.current = null;
       void desktopBridge()
         ?.browserCommand?.({ lease: state.lease, action: "hide" })
         .catch(() => {});
@@ -219,8 +283,23 @@ export function BrowserPanel({ session }: { session: BrowserSession }) {
       document.removeEventListener("visibilitychange", layout);
     };
   }, [state?.lease]);
+  const annotationMode: BrowserAnnotationMode = annotation?.mode ?? "element";
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
+      if (
+        event.key === "Escape" &&
+        annotation?.enabled &&
+        !selection &&
+        !addressFocused
+      ) {
+        event.preventDefault();
+        void command({
+          action: "annotate",
+          enabled: false,
+          mode: annotationMode,
+        });
+        return;
+      }
       if (!(event.metaKey || event.ctrlKey)) return;
       if (event.key.toLowerCase() === "l") {
         event.preventDefault();
@@ -238,7 +317,20 @@ export function BrowserPanel({ session }: { session: BrowserSession }) {
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [command, active]);
+  }, [
+    command,
+    active,
+    annotation?.enabled,
+    annotationMode,
+    selection,
+    addressFocused,
+  ]);
+  const annotationHint =
+    annotationMode === "text"
+      ? t("artifacts.browser.annotateHintText")
+      : annotationMode === "region"
+        ? t("artifacts.browser.annotateHintRegion")
+        : t("artifacts.browser.annotateHintElement");
   return (
     <div
       className="flex min-h-0 flex-1 flex-col"
@@ -246,7 +338,7 @@ export function BrowserPanel({ session }: { session: BrowserSession }) {
     >
       <form
         aria-label={t("artifacts.browser.navigation")}
-        className="@container/browser flex h-[52px] min-w-0 shrink-0 items-center gap-1.5 border-b border-line-default px-2"
+        className="@container/browser relative flex h-[52px] min-w-0 shrink-0 items-center gap-1.5 border-b border-line-default px-2"
         onSubmit={(event) => {
           event.preventDefault();
           void command(
@@ -300,64 +392,92 @@ export function BrowserPanel({ session }: { session: BrowserSession }) {
             }
           />
         </div>
-        <IconButton
-          label={t("artifacts.browser.annotate")}
-          title={t(
-            annotation?.enabled
-              ? "artifacts.browser.stopSelecting"
-              : "artifacts.browser.selectElement",
-          )}
-          icon={<Icon name="hifox-scan-eye" size={18} />}
-          size="32"
-          variant="round"
-          active={annotation?.enabled ?? false}
-          aria-pressed={annotation?.enabled ?? false}
-          className={
-            annotation?.enabled
-              ? "border-accent! bg-accent-soft! text-accent!"
-              : "bg-surface-muted"
-          }
-          disabled={!currentOrigin}
-          onClick={() =>
-            void command({
-              action: "annotate",
-              enabled: !annotation?.enabled,
-              mode: "element",
-            })
-          }
-        />
-        <TextInput
-          ref={addressInput}
-          aria-label={t("artifacts.browser.address")}
-          placeholder={t("artifacts.browser.address")}
-          value={
-            addressFocused
-              ? address
-              : currentOrigin
-                ? new URL(currentOrigin).host
-                : address
-          }
-          disabled={!state}
-          onChange={(event) => setAddress(event.target.value)}
-          onFocus={() => setAddressFocused(true)}
-          onBlur={() => setAddressFocused(false)}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              event.stopPropagation();
-              setAddress(
-                active?.url === "about:blank" ? "" : active?.url || "",
-              );
-              event.currentTarget.blur();
+        <div className="relative shrink-0">
+          <IconButton
+            label={t("artifacts.browser.annotate")}
+            title={t(
+              annotation?.enabled
+                ? "artifacts.browser.stopSelecting"
+                : "artifacts.browser.selectElement",
+            )}
+            icon={<Icon name="hifox-scan-eye" size={18} />}
+            size="32"
+            variant="round"
+            active={annotation?.enabled ?? false}
+            aria-pressed={annotation?.enabled ?? false}
+            className={
+              annotation?.enabled
+                ? "border-accent! bg-accent-soft! text-accent!"
+                : "bg-surface-muted"
             }
-          }}
-          className={cn(
-            "h-[34px] min-w-0 flex-1 rounded-full! bg-surface-muted px-3 text-body-sm",
-            !addressFocused && "[&_input]:text-center",
+            disabled={!currentOrigin}
+            onClick={() =>
+              void command({
+                action: "annotate",
+                enabled: !annotation?.enabled,
+                mode: "element",
+              })
+            }
+          />
+          {pendingAnnotations > 0 && (
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-medium leading-none text-fg-inverse"
+            >
+              {pendingAnnotations > 99 ? "99+" : pendingAnnotations}
+            </span>
           )}
-          spellCheck={false}
-          autoComplete="off"
-          autoCapitalize="off"
-        />
+        </div>
+        <div className="relative flex min-w-0 flex-1 items-center">
+          <TextInput
+            ref={addressInput}
+            aria-label={t("artifacts.browser.address")}
+            placeholder={t("artifacts.browser.address")}
+            value={
+              addressFocused
+                ? address
+                : currentOrigin
+                  ? new URL(currentOrigin).host
+                  : address
+            }
+            disabled={!state}
+            onChange={(event) => setAddress(event.target.value)}
+            onFocus={() => setAddressFocused(true)}
+            onBlur={() => setAddressFocused(false)}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.stopPropagation();
+                setAddress(
+                  active?.url === "about:blank" ? "" : active?.url || "",
+                );
+                event.currentTarget.blur();
+              }
+            }}
+            className={cn(
+              "h-[34px] min-w-0 flex-1 rounded-full! bg-surface-muted px-3 text-body-sm",
+              !addressFocused && "[&_input]:text-center",
+              addressFocused && address && "pr-8",
+            )}
+            spellCheck={false}
+            autoComplete="off"
+            autoCapitalize="off"
+          />
+          {addressFocused && address && (
+            <button
+              type="button"
+              aria-label={t("artifacts.browser.clearAddress")}
+              title={t("artifacts.browser.clearAddress")}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => {
+                setAddress("");
+                addressInput.current?.focus();
+              }}
+              className="absolute right-2 flex size-5 items-center justify-center rounded-full text-fg-muted hover:bg-surface-hover hover:text-fg-default"
+            >
+              <Icon name="x" size={12} />
+            </button>
+          )}
+        </div>
         <button
           type="submit"
           className="sr-only"
@@ -368,30 +488,33 @@ export function BrowserPanel({ session }: { session: BrowserSession }) {
         </button>
         <div className="hidden shrink-0 items-center rounded-full border border-line-default bg-surface-muted p-0.5 @[400px]/browser:flex">
           <IconButton
-            label={controlLabel}
-            title={
-              control?.active || session.armed
-                ? `${controlStatus} · ${controlLabel}`
-                : controlLabel
-            }
-            icon={
-              <Icon
-                name={control?.active || session.armed ? "shield" : "bot"}
-                size={17}
-              />
-            }
-            size="28"
-            className={cn(
-              "rounded-full",
-              (control?.active || session.armed) &&
-                "text-accent! bg-surface-selected!",
+            label={t(
+              urlCopied
+                ? "artifacts.browser.urlCopied"
+                : "artifacts.browser.copyUrl",
             )}
-            active={Boolean(control?.active || session.armed)}
-            disabled={
-              control?.active || session.armed ? false : controlDisabled
-            }
-            onClick={changeControl}
+            title={t(
+              urlCopied
+                ? "artifacts.browser.urlCopied"
+                : "artifacts.browser.copyUrl",
+            )}
+            icon={<Icon name={urlCopied ? "check" : "copy"} size={15} />}
+            size="28"
+            className={cn("rounded-full", urlCopied && "text-accent!")}
+            disabled={!hasRealUrl}
+            onClick={() => void copyCurrentUrl()}
           />
+          {!controlBannerVisible && (
+            <IconButton
+              label={controlLabel}
+              title={controlLabel}
+              icon={<Icon name="bot" size={17} />}
+              size="28"
+              className="rounded-full"
+              disabled={controlDisabled}
+              onClick={changeControl}
+            />
+          )}
           <Menu
             label={t("artifacts.browser.downloads")}
             placement="bottom-end"
@@ -433,17 +556,27 @@ export function BrowserPanel({ session }: { session: BrowserSession }) {
             />
           )}
         >
+          <MenuItem
+            icon={<Icon name={urlCopied ? "check" : "copy"} size={16} />}
+            disabled={!hasRealUrl}
+            onSelect={() => void copyCurrentUrl()}
+          >
+            {t("artifacts.browser.copyUrl")}
+          </MenuItem>
+          <MenuItem
+            icon={<Icon name="external-link" size={16} />}
+            disabled={!currentOrigin}
+            onSelect={() => void openExternal()}
+          >
+            {t("artifacts.browser.openExternal")}
+          </MenuItem>
+          <MenuSeparator />
           <MenuLabel>{controlStatus}</MenuLabel>
           <MenuItem
             icon={
-              <Icon
-                name={control?.active || session.armed ? "shield" : "bot"}
-                size={16}
-              />
+              <Icon name={controlBannerVisible ? "shield" : "bot"} size={16} />
             }
-            disabled={
-              control?.active || session.armed ? false : controlDisabled
-            }
+            disabled={controlBannerVisible ? false : controlDisabled}
             onSelect={changeControl}
           >
             {controlLabel}
@@ -466,25 +599,123 @@ export function BrowserPanel({ session }: { session: BrowserSession }) {
             {t("artifacts.browser.clear")}
           </MenuItem>
         </Menu>
+        {active?.loading && (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 overflow-hidden bg-accent/15"
+          >
+            <div className="h-full w-1/2 animate-pulse bg-accent" />
+          </div>
+        )}
       </form>
-      <span role="status" className="sr-only">
-        {controlStatus}
-      </span>
+      {controlBannerVisible ? (
+        <div
+          role="status"
+          className="flex shrink-0 items-center justify-between gap-2 border-b border-line-subtle bg-accent-soft/50 px-3 py-1.5 text-caption"
+        >
+          <span className="flex min-w-0 items-center gap-1.5 font-medium text-fg-default">
+            <Icon name="shield" size={14} className="shrink-0 text-accent" />
+            <span className="truncate">{controlStatus}</span>
+          </span>
+          <Button
+            size="28"
+            variant="outline"
+            className="h-6 shrink-0 px-2 text-caption"
+            onClick={changeControl}
+          >
+            {controlLabel}
+          </Button>
+        </div>
+      ) : (
+        <span role="status" className="sr-only">
+          {controlStatus}
+        </span>
+      )}
+      {annotation?.enabled && !selection && (
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-line-subtle bg-surface-muted px-2.5 py-1.5 text-caption">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <div
+              role="group"
+              aria-label={t("artifacts.browser.annotationMode")}
+              className="inline-flex shrink-0 items-center gap-0.5 rounded-lg border border-line-subtle bg-surface-card p-0.5"
+            >
+              {(
+                [
+                  ["element", t("artifacts.browser.element")],
+                  ["text", t("artifacts.browser.text")],
+                  ["region", t("artifacts.browser.region")],
+                ] as const
+              ).map(([mode, label]) => (
+                <button
+                  key={mode}
+                  type="button"
+                  aria-pressed={annotationMode === mode}
+                  onClick={() =>
+                    void command({ action: "annotate", enabled: true, mode })
+                  }
+                  className={cn(
+                    "rounded-md px-2 py-0.5 text-caption transition-colors",
+                    annotationMode === mode
+                      ? "bg-accent-soft font-medium text-accent"
+                      : "text-fg-secondary hover:bg-surface-hover hover:text-fg-default",
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <span className="truncate text-fg-muted">{annotationHint}</span>
+          </div>
+          <Button
+            size="28"
+            variant="ghost"
+            className="h-6 shrink-0 px-2 text-caption"
+            onClick={() =>
+              void command({
+                action: "annotate",
+                enabled: false,
+                mode: annotationMode,
+              })
+            }
+          >
+            {t("artifacts.browser.exitAnnotate")}
+          </Button>
+        </div>
+      )}
+      {externalError && (
+        <p
+          role="alert"
+          className="shrink-0 border-b border-line-default px-3 py-1.5 text-caption text-danger"
+        >
+          {t("artifacts.browser.openExternalFailed")}
+        </p>
+      )}
       {binding && !selection && (
-        <div className="shrink-0 px-3 py-2 text-caption" role="status">
-          {t("artifacts.resolution.rebindHint")}{" "}
-          <button
-            type="button"
+        <div
+          className="flex shrink-0 items-center justify-between gap-2 border-b border-line-subtle bg-surface-muted px-3 py-1.5 text-caption"
+          role="status"
+        >
+          <span className="truncate text-fg-secondary">
+            {t("artifacts.resolution.rebindHint")}
+          </span>
+          <Button
+            size="28"
+            variant="ghost"
+            className="h-6 shrink-0 px-2 text-caption"
             onClick={() => {
               workspaceStore().write(
                 rebindKey(session.conversationId),
                 undefined,
               );
-              void command({ action: "annotate", enabled: false });
+              void command({
+                action: "annotate",
+                enabled: false,
+                mode: annotationMode,
+              });
             }}
           >
             {t("artifacts.resolution.cancelRebind")}
-          </button>
+          </Button>
         </div>
       )}
       {annotation?.error && (
@@ -586,9 +817,29 @@ export function BrowserPanel({ session }: { session: BrowserSession }) {
           </div>
         ) : (
           (!active || active.url === "about:blank") && (
-            <div className="flex flex-col items-center gap-2 p-8 text-center text-fg-muted">
-              <Icon name="globe" size={24} />
-              <p className="text-body-sm">{t("artifacts.browser.empty")}</p>
+            <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
+              <div className="flex size-11 items-center justify-center rounded-full border border-line-subtle bg-surface-muted text-fg-muted">
+                <Icon name="globe" size={20} />
+              </div>
+              <div className="space-y-1">
+                <p className="text-body-sm font-medium text-fg-default">
+                  {t("artifacts.browser.empty")}
+                </p>
+                <p className="text-caption text-fg-muted">
+                  {t("artifacts.browser.emptyHint", {
+                    focus: isMacPlatform() ? "⌘L" : "Ctrl+L",
+                    newTab: isMacPlatform() ? "⌘T" : "Ctrl+T",
+                  })}
+                </p>
+              </div>
+              <Button
+                size="28"
+                variant="outline"
+                disabled={!state}
+                onClick={() => addressInput.current?.focus()}
+              >
+                {t("artifacts.browser.focusAddress")}
+              </Button>
             </div>
           )
         )}

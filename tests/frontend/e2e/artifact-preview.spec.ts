@@ -148,6 +148,10 @@ async function mockArtifacts(
         next_cursor: 0,
       };
     else if (path.endsWith("/artifacts")) body = { artifacts };
+    else if (path.endsWith("/comments"))
+      body = { threads: [], next_cursor: "" };
+    else if (path.endsWith("/proposals"))
+      body = { proposals: [], next_cursor: "" };
     else if (path === `${org}/runs/r1`)
       body = {
         id: "r1",
@@ -451,4 +455,52 @@ test("long conversation scrolls independently while split headers and composer s
   await expect(panel).toHaveCount(0);
   await assertContained();
   expect((await header.boundingBox())!.width).toBe(mainBox.width);
+});
+
+test("dual sidebars: top-right workspace toggle, inline comments/proposals tabs and keyboard shortcuts", async ({
+  page,
+}) => {
+  await mockArtifacts(page, "dark");
+  await page.goto("/o/o1/chat/c1");
+  const panel = page.getByRole("complementary", { name: "会话产物" });
+  await expect(panel).toHaveCount(0);
+
+  // 点击顶栏工作区按钮打开启动页，展示最近产物与内联评论/提案入口
+  await page.getByRole("button", { name: "打开工作区", exact: true }).click();
+  await expect(panel).toBeVisible();
+  await expect(panel.getByText("最近产物")).toBeVisible();
+  await panel.getByRole("button", { name: "已保存评论", exact: true }).click();
+  await expect(
+    panel.getByRole("tab", { name: "已保存评论", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  await expect(panel.getByText("还没有保存的评论")).toBeVisible();
+
+  // 从「更多」菜单切到修改提案内联标签（不弹模态框）
+  await page.getByRole("button", { name: "更多操作", exact: true }).click();
+  await page.getByRole("menuitem", { name: "修改提案", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(
+    panel.getByRole("tab", { name: "修改提案", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  await expect(panel.getByText("暂无修改提案")).toBeVisible();
+
+  // ⌘⇧\ / Ctrl+Shift+\ 收起并恢复工作区
+  const mod = process.platform === "darwin" ? "Meta" : "Control";
+  await page.keyboard.press(`${mod}+Shift+Backslash`);
+  await expect(panel).toHaveCount(0);
+  await page.keyboard.press(`${mod}+Shift+Backslash`);
+  await expect(panel).toBeVisible();
+  await expect(
+    panel.getByRole("tab", { name: "修改提案", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+
+  // ⌘\ / Ctrl+\ 切换左侧导航栏收起并恢复
+  await page.keyboard.press(`${mod}+Backslash`);
+  await expect(
+    page.getByRole("button", { name: "展开侧边栏", exact: true }),
+  ).toBeVisible();
+  await page.keyboard.press(`${mod}+Backslash`);
+  await expect(
+    page.getByRole("button", { name: "展开侧边栏", exact: true }),
+  ).toHaveCount(0);
 });

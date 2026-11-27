@@ -29,6 +29,7 @@ import {
   artifactPreviewable,
 } from "./model";
 import { useArtifactContent } from "./queries";
+import { useDraftFileContexts } from "../drafts";
 
 // Reuse the authenticated attachment download. HTML is static and sandboxed;
 // source and copy always retain the original file, including omitted scripts.
@@ -71,6 +72,13 @@ export function ArtifactPreview({
   const [annotate, setAnnotate] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [navigation, setNavigation] = useState<HTMLDivElement | null>(null);
+  const draftFiles = useDraftFileContexts(conversationId ?? "");
+  const pendingCount = draftFiles
+    .filter(
+      (item) =>
+        item.artifact_id === artifact.id && item.sha256 === artifact.sha256,
+    )
+    .reduce((sum, item) => sum + item.comments.length, 0);
   const infoRef = useRef<HTMLButtonElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   usePreviewScroll(
@@ -128,20 +136,30 @@ export function ArtifactPreview({
             previewable &&
             !gone &&
             content.data && (
-              <IconButton
-                label={t("artifacts.review.annotate")}
-                icon={<Icon name="hifox-scan-eye" size={18} />}
-                size="32"
-                variant="round"
-                active={annotate}
-                aria-pressed={annotate}
-                onClick={() => setAnnotate((value) => !value)}
-                className={
-                  annotate
-                    ? "border-accent! bg-accent-soft! text-accent!"
-                    : "bg-surface-muted"
-                }
-              />
+              <div className="relative shrink-0">
+                <IconButton
+                  label={t("artifacts.review.annotate")}
+                  icon={<Icon name="hifox-scan-eye" size={18} />}
+                  size="32"
+                  variant="round"
+                  active={annotate}
+                  aria-pressed={annotate}
+                  onClick={() => setAnnotate((value) => !value)}
+                  className={
+                    annotate
+                      ? "border-accent! bg-accent-soft! text-accent!"
+                      : "bg-surface-muted"
+                  }
+                />
+                {pendingCount > 0 && (
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-medium leading-none text-fg-inverse"
+                  >
+                    {pendingCount > 99 ? "99+" : pendingCount}
+                  </span>
+                )}
+              </div>
             )}
           <div
             className="flex min-w-0 flex-1 items-center justify-center gap-1.5 text-caption text-fg-muted"

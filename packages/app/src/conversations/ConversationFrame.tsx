@@ -1,18 +1,23 @@
 import type { ReactNode } from "react";
 
 import { ArtifactPanel } from "./artifacts/ArtifactPanel";
-import { ArtifactOpenContext } from "./artifacts/context";
+import {
+  ArtifactOpenContext,
+  WorkspacePanelContext,
+} from "./artifacts/context";
 import { useArtifactPanel } from "./artifacts/params";
 
-/** Keep the header mounted while sessions load/change; resize it with the chat. */
+/** 会话主容器：会话加载与切换期间保持头部挂载，并与右侧工作区并排/覆盖布局。 */
 export function ConversationFrame({
   orgId,
   conversationId,
+  reviewDisabled = false,
   header,
   children,
 }: {
   orgId: string;
   conversationId: string | null;
+  reviewDisabled?: boolean;
   header: ReactNode;
   children: ReactNode;
 }) {
@@ -21,19 +26,22 @@ export function ConversationFrame({
     <ArtifactOpenContext.Provider
       value={conversationId ? panel.openArtifact : null}
     >
-      <div className="relative flex h-full min-h-0 min-w-0 flex-1 @container">
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          {header}
-          {children}
+      <WorkspacePanelContext.Provider value={conversationId ? panel : null}>
+        <div className="relative flex h-full min-h-0 min-w-0 flex-1 @container">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            {header}
+            {children}
+          </div>
+          {conversationId && panel.open && (
+            <ArtifactPanel
+              orgId={orgId}
+              conversationId={conversationId}
+              panel={panel}
+              reviewDisabled={reviewDisabled}
+            />
+          )}
         </div>
-        {conversationId && panel.open && (
-          <ArtifactPanel
-            orgId={orgId}
-            conversationId={conversationId}
-            panel={panel}
-          />
-        )}
-      </div>
+      </WorkspacePanelContext.Provider>
     </ArtifactOpenContext.Provider>
   );
 }

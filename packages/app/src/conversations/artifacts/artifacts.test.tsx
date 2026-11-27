@@ -518,6 +518,49 @@ describe("会话产物 · 预览规则", () => {
     );
     expect(aside.querySelector("iframe")).toBeNull();
   });
+
+  it("顶栏工作区按钮与 ⌘⇧\\ 快捷键可一键开合并恢复上次标签；启动页展示最近产物与评论/提案直达", async () => {
+    open("/o/o1/chat/c1", { list: [MD, CSV] });
+    const user = userEvent.setup();
+    const toggle = await screen.findByRole("button", { name: "打开工作区" });
+    await user.click(toggle);
+    const aside = await panel();
+    // 启动页展示最近产物、已保存评论与修改提案入口
+    expect(within(aside).getByText("最近产物")).toBeVisible();
+    expect(
+      within(aside).getByRole("button", { name: "已保存评论" }),
+    ).toBeVisible();
+    expect(
+      within(aside).getByRole("button", { name: "修改提案" }),
+    ).toBeVisible();
+    // 从最近产物直达报告.md
+    await user.click(within(aside).getByRole("button", { name: "报告.md" }));
+    expect(
+      await within(aside).findByRole("heading", { name: "周报标题" }),
+    ).toBeVisible();
+    // ⌘⇧\ 收起工作区，再次按下恢复「报告.md」标签
+    fireEvent.keyDown(window, {
+      key: "\\",
+      code: "Backslash",
+      metaKey: true,
+      shiftKey: true,
+    });
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("complementary", { name: "会话产物" }),
+      ).not.toBeInTheDocument(),
+    );
+    fireEvent.keyDown(window, {
+      key: "\\",
+      code: "Backslash",
+      metaKey: true,
+      shiftKey: true,
+    });
+    const reopened = await panel();
+    expect(
+      within(reopened).getByRole("tab", { name: "报告.md" }),
+    ).toHaveAttribute("aria-selected", "true");
+  });
 });
 
 describe("会话产物 · 实时", () => {

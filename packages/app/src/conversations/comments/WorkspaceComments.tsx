@@ -10,6 +10,7 @@ import {
   type WorkspaceCommentPost,
 } from "@openfox/api";
 import { useT } from "@openfox/i18n";
+import { Button, cn } from "@openfox/ui";
 import { useApi, keys } from "../../context";
 import { useMe } from "../../agents/queries";
 import {
@@ -20,6 +21,7 @@ import {
 } from "../drafts";
 import { workspaceStore } from "../workspaceStorage";
 import { useOpenArtifactList, BROWSER_PANEL } from "../artifacts/params";
+import { requestFileLocation } from "../artifacts/fileLocation";
 import { requestBrowserLocation } from "../browser/BrowserReferences";
 
 const commentKey = (org: string, conversation: string) => [
@@ -117,13 +119,17 @@ export function WorkspaceComments({
   orgId,
   conversationId,
   disabled,
+  embedded = false,
 }: {
   orgId: string;
   conversationId: string;
   disabled: boolean;
+  /** 嵌入右侧工作区标签页时占满剩余高度，不限制 60vh。 */
+  embedded?: boolean;
 }) {
   const api = useApi(),
     t = useT();
+  const [filter, setFilter] = useState<"ALL" | "OPEN" | "RESOLVED">("ALL");
   const query = useInfiniteQuery({
     queryKey: commentKey(orgId, conversationId),
     initialPageParam: "",
@@ -133,51 +139,104 @@ export function WorkspaceComments({
     refetchInterval: 15000,
     retry: false,
   });
+  const allThreads = query.data?.pages.flatMap((page) => page.threads) ?? [];
+  const openCount = allThreads.filter((item) => item.status === "OPEN").length;
+  const resolvedCount = allThreads.length - openCount;
+  const visibleThreads =
+    filter === "ALL"
+      ? allThreads
+      : allThreads.filter((item) => item.status === filter);
   return (
-    <div className="max-h-[60vh] space-y-2 overflow-auto text-body-sm">
+    <div
+      className={cn(
+        "space-y-2.5 overflow-y-auto text-body-sm",
+        embedded ? "min-h-0 flex-1 p-3" : "max-h-[60vh]",
+      )}
+    >
       <p className="text-caption text-fg-muted">
         {t("artifacts.comments.hint")}
       </p>
+      {!query.isPending && !query.isError && allThreads.length > 0 && (
+        <div
+          role="group"
+          aria-label={t("artifacts.comments.saved")}
+          className="inline-flex items-center gap-0.5 rounded-lg border border-line-subtle bg-surface-muted p-0.5 text-caption"
+        >
+          {(
+            [
+              ["ALL", t("artifacts.comments.all"), allThreads.length],
+              ["OPEN", t("artifacts.comments.open"), openCount],
+              ["RESOLVED", t("artifacts.comments.resolved"), resolvedCount],
+            ] as const
+          ).map(([value, label, count]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={filter === value}
+              onClick={() => setFilter(value)}
+              className={cn(
+                "rounded-md px-2 py-0.5 transition-colors",
+                filter === value
+                  ? "border border-line-subtle bg-surface-card font-medium text-fg-default"
+                  : "border border-transparent text-fg-muted hover:text-fg-default",
+              )}
+            >
+              {label} · {count}
+            </button>
+          ))}
+        </div>
+      )}
       {query.isError ? (
-        <p role="alert">
-          {t("artifacts.comments.loadFailed")}{" "}
-          <button
-            type="button"
-            className={actionClass}
+        <div
+          role="alert"
+          className="flex items-center justify-between gap-2 rounded-lg border border-line-subtle bg-surface-muted p-3 text-body-sm"
+        >
+          <span className="text-danger">
+            {t("artifacts.comments.loadFailed")}
+          </span>
+          <Button
+            size="28"
+            variant="outline"
             onClick={() => void query.refetch()}
           >
             {t("common.retry")}
-          </button>
-        </p>
+          </Button>
+        </div>
       ) : query.isPending ? (
-        <p>{t("artifacts.review.loading")}</p>
+        <p className="text-fg-muted">{t("artifacts.review.loading")}</p>
       ) : (
         <>
-          {!query.data.pages.some((page) => page.threads.length) && (
-            <p className="text-caption text-fg-muted">
+          {allThreads.length === 0 ? (
+            <p className="py-4 text-center text-caption text-fg-muted">
               {t("artifacts.comments.empty")}
             </p>
-          )}
-          {query.data.pages
-            .flatMap((page) => page.threads)
-            .map((thread) => (
-              <Thread
-                key={thread.id}
-                thread={thread}
-                orgId={orgId}
-                conversationId={conversationId}
-                disabled={disabled}
-              />
-            ))}
+          ) : visibleThreads.length === 0 ? (
+            <p className="py-4 text-center text-caption text-fg-muted">
+              {t(
+                filter === "OPEN"
+                  ? "artifacts.comments.emptyOpen"
+                  : "artifacts.comments.emptyResolved",
+              )}
+            </p>
+          ) : null}
+          {visibleThreads.map((thread) => (
+            <Thread
+              key={thread.id}
+              thread={thread}
+              orgId={orgId}
+              conversationId={conversationId}
+              disabled={disabled}
+            />
+          ))}
           {query.hasNextPage && (
-            <button
-              type="button"
-              className={actionClass}
+            <Button
+              size="28"
+              variant="ghost"
               disabled={query.isFetchingNextPage}
               onClick={() => void query.fetchNextPage()}
             >
               {t("artifacts.comments.more")}
-            </button>
+            </Button>
           )}
         </>
       )}
@@ -371,15 +430,28 @@ function Thread({
           <button
             type="button"
             className={actionClass}
-            onClick={() =>
-              thread.source.browser
-                ? requestBrowserLocation(
-                    conversationId,
-                    thread.source.browser.comments[0]!.anchor.live,
-                    openBrowser,
-                  )
-                : openFile()
-            }
+            onClick={() => {
+              if (thread.source.browser) {
+                requestBrowserLocation(
+                  conversationId,
+                  thread.source.browser.comments[0]!.anchor.live,
+                  openBrowser,
+                );
+              } else if (
+                thread.source.file?.artifact_id &&
+                thread.source.file.comments[0]
+              ) {
+                requestFileLocation(
+                  conversationId,
+                  thread.source.file.artifact_id,
+                  thread.source.file.sha256,
+                  thread.source.file.comments[0].anchor,
+                  openFile,
+                );
+              } else {
+                openFile();
+              }
+            }}
           >
             {t("artifacts.comments.locate")}
           </button>

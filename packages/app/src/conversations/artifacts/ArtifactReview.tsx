@@ -10,6 +10,7 @@ import { useViewState, usePreviewScroll } from "./viewState";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ArtifactReviewAnchor, ArtifactReviewFile } from "@openfox/api";
 import { useT } from "@openfox/i18n";
+import { Button, cn } from "@openfox/ui";
 import { Link } from "react-router-dom";
 import { useApi } from "../../context";
 import { MarkdownView, TextView } from "../../preview/FileViews";
@@ -127,6 +128,11 @@ export function ArtifactReview({
   useEffect(() => {
     if (!located || !data) return;
     if (located.kind === "cell") {
+      const targetPage = Math.floor((located.row ?? 0) / 50);
+      if (targetPage !== page) {
+        setPage(targetPage);
+        return;
+      }
       cellsRef.current
         ?.querySelector<HTMLButtonElement>(
           `[data-cell="${located.row ?? 0}:${located.column ?? 0}"]`,
@@ -165,7 +171,7 @@ export function ArtifactReview({
       }
       setLocated(null);
     }
-  }, [located, text, source, page, data]);
+  }, [located, text, source, page, setPage, data]);
   const csv = useMemo(() => {
     if (artifactPreviewKind(artifact) !== "table" || !data) return null;
     try {
@@ -254,20 +260,34 @@ export function ArtifactReview({
       ) : kind === "table" && !source && !large ? (
         <>
           {csv ? (
-            <>
+            <div className="flex min-h-0 flex-1 flex-col">
               <div
                 ref={cellsRef}
-                className="max-h-80 overflow-auto rounded-md border border-line-default"
+                className={cn(
+                  "overflow-auto",
+                  embedded
+                    ? "min-h-0 flex-1"
+                    : "max-h-80 rounded-md border border-line-default",
+                )}
               >
-                <table className="w-full text-body-sm">
+                <table className="w-full border-collapse text-body-sm">
                   <tbody>
                     {csv.slice(page * 50, page * 50 + 50).map((row, r) => (
-                      <tr key={page * 50 + r}>
-                        <th className="px-2 text-fg-muted" scope="row">
+                      <tr
+                        key={page * 50 + r}
+                        className="border-b border-line-subtle hover:bg-surface-hover/50"
+                      >
+                        <th
+                          className="border-r border-line-subtle bg-surface-muted/60 px-2 text-caption font-normal text-fg-muted"
+                          scope="row"
+                        >
                           {page * 50 + r + 1}
                         </th>
                         {row.map((cell, c) => (
-                          <td key={c} className="border border-line-default">
+                          <td
+                            key={c}
+                            className="border-r border-line-subtle last:border-r-0"
+                          >
                             <button
                               className="min-h-8 min-w-12 whitespace-pre-wrap px-2 py-1 text-left focus-visible:ring-2"
                               aria-disabled={!annotate}
@@ -293,26 +313,30 @@ export function ArtifactReview({
                   </tbody>
                 </table>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  className={button}
-                  disabled={page === 0}
-                  onClick={() => setPage((p) => p - 1)}
-                >
-                  {t("artifacts.review.previous")}
-                </button>
-                <span>
-                  {page + 1} / {Math.max(1, Math.ceil(csv.length / 50))}
-                </span>
-                <button
-                  className={button}
-                  disabled={(page + 1) * 50 >= csv.length}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  {t("artifacts.review.next")}
-                </button>
+              <div className="flex shrink-0 items-center justify-between gap-2 border-t border-line-subtle bg-surface-card px-3 py-1.5 text-caption text-fg-muted">
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    size="28"
+                    variant="outline"
+                    disabled={page === 0}
+                    onClick={() => setPage((p) => p - 1)}
+                  >
+                    {t("artifacts.review.previous")}
+                  </Button>
+                  <span className="px-1.5 font-mono text-fg-secondary">
+                    {page + 1} / {Math.max(1, Math.ceil(csv.length / 50))}
+                  </span>
+                  <Button
+                    size="28"
+                    variant="outline"
+                    disabled={(page + 1) * 50 >= csv.length}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    {t("artifacts.review.next")}
+                  </Button>
+                </div>
               </div>
-            </>
+            </div>
           ) : (
             <p role="alert">{t("artifacts.review.csvInvalid")}</p>
           )}

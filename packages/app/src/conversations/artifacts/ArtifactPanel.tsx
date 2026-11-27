@@ -1,10 +1,12 @@
 import { useApi, keys } from "../../context";
 import { NativeCanvas } from "../canvas/NativeCanvas";
 import { DocumentPicker } from "../canvas/DocumentPicker";
-import { documentTab } from "./params";
-import { proposalKey } from "../proposals/WorkspaceProposals";
+import { WorkspaceComments } from "../comments/WorkspaceComments";
+import {
+  proposalKey,
+  WorkspaceProposals,
+} from "../proposals/WorkspaceProposals";
 import { ProposalPreview } from "../proposals/ProposalPreview";
-import { isProposalTab } from "./params";
 import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { PreviewStateKey, useViewState } from "./viewState";
 import { AppErrorBoundary } from "../../ErrorBoundary";
@@ -29,13 +31,18 @@ import {
   isCurrentTab,
   ARTIFACT_LIST,
   BROWSER_PANEL,
+  COMMENTS_PANEL,
+  PROPOSALS_PANEL,
   NEW_PANEL,
   browserTabKey,
+  documentTab,
   isBrowserTab,
   isArtifactTab,
+  isProposalTab,
   type ArtifactPanelState,
 } from "./params";
 import { desktopBridge } from "../../desktop";
+import { isMacPlatform } from "../../me/shortcuts";
 import { BrowserPanel } from "../browser/BrowserPanel";
 import { useBrowserSession } from "../browser/useBrowserSession";
 import {
@@ -47,7 +54,7 @@ import { PanelResizeHandle } from "../../shell/PanelResizeHandle";
 import { usePanelWidth } from "../../shell/panelWidth";
 import { localKeys } from "../../storage";
 
-// 会话右侧工作区：按需打开的文件、网页和产物列表共用动态标签栏。
+// 会话右侧工作区：按需打开的文件、网页、评论、提案和产物列表共用动态标签栏。
 // 宽容器里与消息流并排；窄容器（任务全页的侧边会话、小窗口）里覆盖在消息流上。
 
 /** 中心返回的会话产物上限（listConversationArtifacts maxItems）。 */
@@ -57,17 +64,19 @@ function ArtifactPanelContent({
   orgId,
   conversationId,
   panel,
+  reviewDisabled = false,
 }: {
   orgId: string;
   conversationId: string;
   panel: ArtifactPanelState;
+  reviewDisabled?: boolean;
 }) {
   const t = useT();
   const panelId = useId();
   const [expanded, setExpanded] = useViewState("expanded", false);
   const resize = usePanelWidth({
     storageKey: localKeys.artifactPanelWidth,
-    initial: 960,
+    initial: 640,
     min: 280,
     max: 1280,
     remaining: 360,
@@ -188,6 +197,7 @@ function ArtifactPanelContent({
         controls={panelId}
         side="right"
         onCollapse={panel.closePanel}
+        onReset={resize.reset}
         className={cn(
           "absolute inset-y-0 -left-1 hidden w-2",
           !expanded && "@[720px]:block",
@@ -197,6 +207,10 @@ function ArtifactPanelContent({
         <div
           role="tablist"
           aria-label={t("artifacts.panel.tabs")}
+          onWheel={(event) => {
+            if (Math.abs(event.deltaY) > Math.abs(event.deltaX))
+              event.currentTarget.scrollLeft += event.deltaY;
+          }}
           className="flex min-w-0 items-center gap-1 overflow-x-auto"
         >
           {panel.tabs.map((id) => {
@@ -213,21 +227,25 @@ function ArtifactPanelContent({
             const title =
               id === ARTIFACT_LIST
                 ? t("artifacts.panel.list", { count: visible.length })
-                : id === NEW_PANEL
-                  ? t("artifacts.workspace.newTab")
-                  : webTab
-                    ? webTab.title ||
-                      (webTab.url === "about:blank"
-                        ? t("artifacts.browser.newTab")
-                        : webTab.url)
-                    : documentTab(id)
-                      ? (docNames.get(id) ?? t("docs.untitled"))
-                      : isProposalTab(id)
-                        ? `${proposalNames.get(id) ?? t("artifacts.version.file")} · ${t("artifacts.proposals.review")}`
-                        : (artifact?.name ??
-                          (isArtifactTab(id)
-                            ? t("artifacts.version.file")
-                            : undefined));
+                : id === COMMENTS_PANEL
+                  ? t("artifacts.comments.tabTitle")
+                  : id === PROPOSALS_PANEL
+                    ? t("artifacts.proposals.tabTitle")
+                    : id === NEW_PANEL
+                      ? t("artifacts.workspace.newTab")
+                      : webTab
+                        ? webTab.title ||
+                          (webTab.url === "about:blank"
+                            ? t("artifacts.browser.newTab")
+                            : webTab.url)
+                        : documentTab(id)
+                          ? (docNames.get(id) ?? t("docs.untitled"))
+                          : isProposalTab(id)
+                            ? `${proposalNames.get(id) ?? t("artifacts.version.file")} · ${t("artifacts.proposals.review")}`
+                            : (artifact?.name ??
+                              (isArtifactTab(id)
+                                ? t("artifacts.version.file")
+                                : undefined));
             if (!title) return null;
             return (
               <Tab
@@ -268,9 +286,13 @@ function ArtifactPanelContent({
                     ? "globe"
                     : id === ARTIFACT_LIST
                       ? "folder"
-                      : id === NEW_PANEL
-                        ? "plus"
-                        : "file-text"
+                      : id === COMMENTS_PANEL
+                        ? "message-circle"
+                        : id === PROPOSALS_PANEL || isProposalTab(id)
+                          ? "layers"
+                          : id === NEW_PANEL
+                            ? "plus"
+                            : "file-text"
                 }
                 closeLabel={t("artifacts.panel.closeTab", {
                   name: title,
@@ -326,32 +348,29 @@ function ArtifactPanelContent({
             conversationId={conversationId}
             id={selected.slice(9)}
           />
+        ) : selected === COMMENTS_PANEL ? (
+          <WorkspaceComments
+            orgId={orgId}
+            conversationId={conversationId}
+            disabled={reviewDisabled}
+            embedded
+          />
+        ) : selected === PROPOSALS_PANEL ? (
+          <WorkspaceProposals
+            orgId={orgId}
+            conversationId={conversationId}
+            onOpen={() => {}}
+            embedded
+          />
         ) : selected === NEW_PANEL ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6">
-            <p className="mb-2 text-body text-fg-muted">
-              {t("artifacts.workspace.choose")}
-            </p>
-            <DocumentPicker
-              orgId={orgId}
-              conversationId={conversationId}
-              onOpen={panel.select}
-            />
-            {browserAvailable && (
-              <Button variant="outline" onClick={openBrowser}>
-                <Icon name="globe" size={16} />
-                {t("artifacts.workspace.openBrowser")}
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              onClick={() => panel.select(ARTIFACT_LIST)}
-            >
-              <Icon name="folder" size={16} />
-              {t("artifacts.workspace.openArtifacts", {
-                count: visible.length,
-              })}
-            </Button>
-          </div>
+          <WorkspaceLauncher
+            orgId={orgId}
+            conversationId={conversationId}
+            browserAvailable={browserAvailable}
+            visible={visible}
+            onOpenBrowser={openBrowser}
+            onSelect={panel.select}
+          />
         ) : query.isError && !artifacts ? (
           <div role="alert" className="flex flex-col items-start gap-2 p-4">
             <p className="text-body text-danger">
@@ -432,6 +451,115 @@ function ArtifactPanelContent({
   );
 }
 
+/** 工作区新标签启动页：文档检索、快捷入口（网页/产物/评论/提案）与最近产物直达。 */
+function WorkspaceLauncher({
+  orgId,
+  conversationId,
+  browserAvailable,
+  visible,
+  onOpenBrowser,
+  onSelect,
+}: {
+  orgId: string;
+  conversationId: string;
+  browserAvailable: boolean;
+  visible: readonly RunArtifact[];
+  onOpenBrowser: () => void;
+  onSelect: (id: string) => void;
+}) {
+  const t = useT();
+  const recent = [...visible]
+    .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
+    .slice(0, 5);
+  const shortcut = isMacPlatform() ? "⌘⇧\\" : "Ctrl+Shift+\\";
+  return (
+    <div className="@container/launcher flex min-h-0 flex-1 flex-col overflow-y-auto p-5">
+      <div className="mx-auto flex w-full max-w-sm flex-col gap-4 py-4">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-body font-medium text-fg-default">
+            {t("artifacts.workspace.choose")}
+          </p>
+          <span className="shrink-0 rounded border border-line-subtle bg-surface-muted px-1.5 py-0.5 font-mono text-[11px] text-fg-muted">
+            {shortcut}
+          </span>
+        </div>
+        <DocumentPicker
+          orgId={orgId}
+          conversationId={conversationId}
+          onOpen={onSelect}
+        />
+        <div className="grid grid-cols-1 gap-2 @[360px]/launcher:grid-cols-2">
+          {browserAvailable && (
+            <Button
+              variant="outline"
+              className="justify-start"
+              onClick={onOpenBrowser}
+            >
+              <Icon name="globe" size={16} />
+              {t("artifacts.workspace.openBrowser")}
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            className="justify-start"
+            onClick={() => onSelect(ARTIFACT_LIST)}
+          >
+            <Icon name="folder" size={16} />
+            {t("artifacts.workspace.openArtifacts", {
+              count: visible.length,
+            })}
+          </Button>
+          <Button
+            variant="outline"
+            className="justify-start"
+            onClick={() => onSelect(COMMENTS_PANEL)}
+          >
+            <Icon name="message-circle" size={16} />
+            {t("artifacts.workspace.openComments")}
+          </Button>
+          <Button
+            variant="outline"
+            className="justify-start"
+            onClick={() => onSelect(PROPOSALS_PANEL)}
+          >
+            <Icon name="layers" size={16} />
+            {t("artifacts.workspace.openProposals")}
+          </Button>
+        </div>
+        {recent.length > 0 && (
+          <div className="space-y-1.5 border-t border-line-subtle pt-3">
+            <p className="text-caption font-medium text-fg-muted">
+              {t("artifacts.workspace.recentArtifacts")}
+            </p>
+            <ul className="space-y-0.5">
+              {recent.map((item) => (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    onClick={() => onSelect(currentTabKey(item.content_id))}
+                    className="flex w-full min-w-0 items-center gap-2 rounded-lg px-2 py-1.5 text-left text-body-sm text-fg-secondary hover:bg-surface-hover hover:text-fg-default"
+                  >
+                    <Icon
+                      name={
+                        artifactPreviewKind(item) === "image"
+                          ? "image"
+                          : "file-text"
+                      }
+                      size={14}
+                      className="shrink-0 text-fg-muted"
+                    />
+                    <span className="min-w-0 flex-1 truncate">{item.name}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Tab({
   id,
   label,
@@ -454,17 +582,18 @@ function Tab({
   onClose?: () => void;
   closeLabel?: string;
   children: React.ReactNode;
-  icon: "globe" | "folder" | "plus" | "file-text";
+  icon: "globe" | "folder" | "plus" | "file-text" | "message-circle" | "layers";
   onReorder: (id: string, before: string) => void;
 }) {
   const tabRef = useRef<HTMLDivElement>(null);
+  const [dragOver, setDragOver] = useState(false);
   useEffect(() => {
     const tab = tabRef.current;
     if (!selected || !tab) return;
     const reveal = () =>
       tab.scrollIntoView?.({ block: "nearest", inline: "nearest" });
     reveal();
-    // Restoring the workspace can resize the strip after the tabs first mount.
+    // 恢复工作区或缩放宽度时确保当前选中标签滚动进可视区域。
     if (!tab.parentElement || typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver(reveal);
     observer.observe(tab.parentElement);
@@ -479,10 +608,16 @@ function Tab({
         event.dataTransfer.effectAllowed = "move";
       }}
       onDragOver={(event) => {
-        if (event.dataTransfer.types.includes("application/openfox-panel-tab"))
+        if (
+          event.dataTransfer.types.includes("application/openfox-panel-tab")
+        ) {
           event.preventDefault();
+          setDragOver(true);
+        }
       }}
+      onDragLeave={() => setDragOver(false)}
       onDrop={(event) => {
+        setDragOver(false);
         const source = event.dataTransfer.getData(
           "application/openfox-panel-tab",
         );
@@ -498,10 +633,11 @@ function Tab({
         }
       }}
       className={cn(
-        "flex h-8 w-44 max-w-[min(240px,calc(100cqw-100px))] shrink-0 items-center rounded-lg border text-body-sm",
+        "flex h-8 min-w-[100px] max-w-[min(184px,calc(100cqw-100px))] shrink-0 items-center rounded-lg border text-body-sm transition-colors",
         selected
           ? "border-line-default bg-surface-active text-fg-default"
           : "border-transparent text-fg-secondary hover:bg-surface-hover",
+        dragOver && "border-l-2 border-l-accent",
       )}
     >
       <button

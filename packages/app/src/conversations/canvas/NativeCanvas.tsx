@@ -17,6 +17,7 @@ import {
   addFileComment,
   readAnnotationBody,
   saveAnnotationBody,
+  useDraftFileContexts,
 } from "../drafts";
 import { useCanvasDocument } from "./documentDraft";
 import { useConversation } from "../queries";
@@ -108,6 +109,10 @@ function Canvas({
   const anchor = useRef<HTMLSpanElement>(null);
   const draftKey = `canvas-comment:${conversationId}:${spaceId}:${node.id}`;
   const [comment, setComment] = useState(() => readAnnotationBody(draftKey));
+  const draftFiles = useDraftFileContexts(conversationId);
+  const pendingCount = draftFiles
+    .filter((item) => item.node_id === node.id)
+    .reduce((sum, item) => sum + item.comments.length, 0);
   const clear = () => {
     setSelection(null);
     setError("");
@@ -194,18 +199,34 @@ function Canvas({
         aria-label={t("artifacts.preview.toolbar")}
         className="flex h-[52px] shrink-0 items-center gap-2 border-b border-line-default px-3"
       >
-        <IconButton
-          label={t("artifacts.review.annotate")}
-          icon={<Icon name="hifox-scan-eye" size={17} />}
-          size="28"
-          active={annotate}
-          aria-pressed={annotate}
-          disabled={!node.can_edit || !canAnnotate || adding}
-          onClick={() => {
-            clear();
-            setAnnotate((v) => !v);
-          }}
-        />
+        <div className="relative shrink-0">
+          <IconButton
+            label={t("artifacts.review.annotate")}
+            icon={<Icon name="hifox-scan-eye" size={18} />}
+            size="32"
+            variant="round"
+            active={annotate}
+            aria-pressed={annotate}
+            disabled={!node.can_edit || !canAnnotate || adding}
+            className={
+              annotate
+                ? "border-accent! bg-accent-soft! text-accent!"
+                : "bg-surface-muted"
+            }
+            onClick={() => {
+              clear();
+              setAnnotate((v) => !v);
+            }}
+          />
+          {pendingCount > 0 && (
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-medium leading-none text-fg-inverse"
+            >
+              {pendingCount > 99 ? "99+" : pendingCount}
+            </span>
+          )}
+        </div>
         <span className="min-w-0 flex-1 truncate text-body-sm">
           {node.title}
         </span>

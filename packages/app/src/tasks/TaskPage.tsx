@@ -7,6 +7,7 @@ import { Button, Icon, IconButton } from "@openfox/ui";
 
 import { AgentAvatar } from "../agents/AgentAvatar";
 import { useAgentSettingsParam } from "../agents/params";
+import { useMe } from "../agents/queries";
 import {
   PageSkeleton,
   PageState,
@@ -168,6 +169,7 @@ export function TaskPage() {
                 controls={panelId}
                 side="right"
                 onCollapse={panel.close}
+                onReset={resize.reset}
                 className="absolute inset-y-0 -left-1 w-2"
               />
             )}
@@ -200,6 +202,7 @@ function TaskAiPanel({
   taskKnown: boolean;
 }) {
   const t = useT();
+  const me = useMe();
   const location = useLocation();
   const query = useConversation(orgId, conversationId);
   const conversation = query.data;
@@ -334,10 +337,18 @@ function TaskAiPanel({
       />
     );
 
+  const reviewDisabled =
+    readOnly ||
+    !conversation ||
+    Boolean(conversation.archived_at) ||
+    conversation.lifecycle !== "OPEN" ||
+    conversation.owner_user_id !== me.data?.id;
+
   return (
     <ConversationFrame
       orgId={orgId}
       conversationId={!foreign ? (conversation?.id ?? null) : null}
+      reviewDisabled={reviewDisabled}
       header={header}
     >
       {body}

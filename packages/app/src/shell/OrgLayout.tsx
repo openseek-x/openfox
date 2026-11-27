@@ -34,6 +34,7 @@ import { useInstructionNavigation } from "../agents/settings/instructionNavigati
 import { ProxyDialog } from "../settings/ProxyDialog";
 import { NotificationWatcher } from "../me/NotificationWatcher";
 import { useMyPreferences } from "../me/queries";
+import { isMacPlatform } from "../me/shortcuts";
 import { outlineStyle, readCachedTheme, useResolvedTheme } from "../me/theme";
 import { OrgIcon } from "../organization/OrgIcon";
 import { MembersNavigation } from "../agents/MembersPage";
@@ -113,6 +114,41 @@ export function OrgLayout() {
   const narrow = sidebar.availableWidth > 0 && sidebar.availableWidth < 700;
   const [navOpen, setNavOpen] = useState(false);
   useEffect(() => setNavOpen(false), [location.key, narrow]);
+  // ⌘\ / Ctrl+\ 快捷切换左侧导航侧栏（同步监听桌面端内置浏览器内按键透传）
+  useEffect(() => {
+    const toggleSidebar = () => {
+      if (narrow) {
+        setNavOpen((open) => !open);
+        return;
+      }
+      setCollapsed((prev) => {
+        const next = !prev;
+        writeLocal(localKeys.sidebarCollapsed, next ? "1" : null);
+        return next;
+      });
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.isComposing ||
+        !(event.metaKey || event.ctrlKey) ||
+        event.shiftKey ||
+        event.altKey
+      )
+        return;
+      if (event.key !== "\\" && event.code !== "Backslash") return;
+      event.preventDefault();
+      toggleSidebar();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    const unlisten = desktopBridge()?.onBrowserToggleSidebar?.((event) => {
+      if (event.side === "left") toggleSidebar();
+    });
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      unlisten?.();
+    };
+  }, [narrow]);
   const inSettings = location.pathname.startsWith(`/o/${orgId}/settings`);
   const inMembers = location.pathname.startsWith(`/o/${orgId}/members`);
   // 首页内打开对话仍保留首页侧栏，与主导航高亮使用同一规则。
@@ -261,6 +297,7 @@ export function OrgLayout() {
                     collapsed={collapsed}
                     onCollapse={() => changeCollapsed(true)}
                     onExpand={() => changeCollapsed(false)}
+                    onReset={sidebar.reset}
                     className="absolute inset-y-0 -right-2 w-2"
                   />
                 </div>
@@ -531,20 +568,23 @@ function Rail({
   const active = moduleOf(orgId, location.pathname, location.search);
   // 阶段 8f · 布局模式只改顺序、名称和图标，module 不变，主导航记忆照旧
   const railItems = railItemsFor(useLayoutMode());
+  const shortcut = isMacPlatform() ? "⌘\\" : "Ctrl+\\";
   return (
     <nav
       aria-label={t("shell.a11y.rail")}
-      className="flex w-[55px] shrink-0 flex-col items-center gap-1 border-r border-line-subtle py-3"
+      className="flex w-[55px] shrink-0 flex-col items-center gap-1.5 border-r border-line-subtle py-3"
     >
       <Icon name="brand-logo" size={28} label="OpenFox" />
-      <IconButton
-        label={t("shell.expand")}
-        icon={<Icon name="chevrons-left" size={18} className="rotate-180" />}
-        size="28"
-        onClick={onToggle}
-        className={collapsed ? undefined : "invisible"}
-        aria-controls="org-sidebar-panel"
-      />
+      {collapsed && (
+        <IconButton
+          label={t("shell.expand")}
+          title={`${t("shell.expand")} (${shortcut})`}
+          icon={<Icon name="chevrons-left" size={18} className="rotate-180" />}
+          size="28"
+          onClick={onToggle}
+          aria-controls="org-sidebar-panel"
+        />
+      )}
       {railItems.map((item) => (
         <Link
           key={item.label}

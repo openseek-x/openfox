@@ -51,6 +51,7 @@ import {
   useConversations,
 } from "./queries";
 import { elapsedMs, formatDuration } from "./steps";
+import { WorkspaceHeaderButtons } from "./WorkspaceHeaderButtons";
 import { useWorkspaceReviewMenu } from "./WorkspaceReviewMenu";
 
 /** 每秒刷新的当前时间（工作中计时） */
@@ -592,6 +593,7 @@ export function ConversationHeader({
           {t("chat.header.settings")}
         </span>
       </button>
+      <WorkspaceHeaderButtons conversationId={conversation?.id} />
       {conversation && (
         <>
           {sharing && (

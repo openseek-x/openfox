@@ -225,6 +225,15 @@ function createBrowserHost({
       }
       if (input.type !== "keyDown" || !(input.meta || input.control)) return;
       const key = input.key.toLowerCase();
+      // 支持在网页聚焦时透传侧边栏快捷键（⌘\ / ⌘⇧\）至主窗口
+      if (!input.alt && (key === "\\" || input.code === "Backslash")) {
+        event.preventDefault();
+        window.webContents.send("openfox:browser-toggle-sidebar", {
+          lease: group.lease,
+          side: input.shift ? "right" : "left",
+        });
+        return;
+      }
       if (!["l", "t", "w", "r"].includes(key)) return;
       event.preventDefault();
       if (key === "l") {
@@ -513,7 +522,9 @@ function createBrowserHost({
         return state(group);
       }
       if (
-        !["layout", "reveal-download"].includes(input.action) ||
+        !["layout", "reveal-download", "open-external"].includes(
+          input.action,
+        ) ||
         (input.action === "layout" && input.visible !== true)
       )
         group.control?.takeOver();
@@ -552,6 +563,14 @@ function createBrowserHost({
         if (!file?.savePath || file.state !== "completed")
           throw failure("UNAVAILABLE");
         shell.showItemInFolder(file.savePath);
+      } else if (input.action === "open-external") {
+        // 仅允许在系统默认浏览器中打开当前标签已加载的 http(s) 地址，不信任渲染进程任意传参
+        const tab = group.tabs.get(input.tabId || group.active);
+        if (!tab || tab.surface.contents.isDestroyed())
+          throw failure("TARGET_CLOSED");
+        const url = normalizeURL(tab.url);
+        if (url === "about:blank") throw failure("INVALID_URL");
+        await shell.openExternal(url);
       } else if (input.action === "allow-origin") {
         const url = new URL(normalizeURL(input.url));
         // The trusted policy, not a renderer-supplied URL, decides whether a

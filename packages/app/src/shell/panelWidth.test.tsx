@@ -63,6 +63,7 @@ function Panel({
           onCollapse();
           if (collapsible) setCollapsed(true);
         }}
+        onReset={sizing.reset}
         className=""
       />
     </div>
@@ -312,5 +313,15 @@ describe("panel resizing", () => {
       "aria-valuenow",
       "276",
     );
+  });
+
+  it("resets width to initial and clears persisted value on double click", () => {
+    localStorage.setItem("test:panel-width", "420");
+    render(<Panel collapsible />);
+    const handle = screen.getByRole("separator");
+    expect(handle).toHaveAttribute("aria-valuenow", "420");
+    fireEvent.doubleClick(handle);
+    expect(handle).toHaveAttribute("aria-valuenow", "260");
+    expect(localStorage.getItem("test:panel-width")).toBeNull();
   });
 });
