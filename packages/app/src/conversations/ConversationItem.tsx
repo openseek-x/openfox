@@ -259,6 +259,8 @@ export function ConversationItem({
               {label}
             </span>
             <AgentAvatar
+              agentId={conversation.agent.id}
+              spaceId={conversation.agent.space_id}
               name={conversation.agent.name}
               avatar={conversation.agent.avatar}
               size={20}

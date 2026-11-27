@@ -32,11 +32,12 @@ export function WeComPersonalSection({
   const [removing, setRemoving] = useState<Binding | null>(null);
   const bots = useFeishuBots(orgId);
   const personal = useWeComPersonal(orgId);
+  const refetchPersonal = personal.refetch;
   useEffect(() => {
     if (!code) return;
-    const timer = window.setInterval(() => void personal.refetch(), 5000);
+    const timer = window.setInterval(() => void refetchPersonal(), 5000);
     return () => window.clearInterval(timer);
-  }, [code, personal.refetch]);
+  }, [code, refetchPersonal]);
   const allBots = useMemo(() => {
     const found = new Map<string, { id: string; name: string }>();
     for (const bot of bots.data?.agents ?? [])
@@ -50,9 +51,9 @@ export function WeComPersonalSection({
     }
     return [...found.values()];
   }, [bots.data]);
-  const bindings = personal.data?.bindings ?? [];
+  const bindings = personal.data?.bindings;
   useEffect(() => {
-    if (code && bindings.some((binding) => binding.bot_id === code.bot_id))
+    if (code && bindings?.some((binding) => binding.bot_id === code.bot_id))
       setCode(null);
   }, [bindings, code]);
   const refresh = () =>
@@ -93,7 +94,7 @@ export function WeComPersonalSection({
             />
           )}
           {allBots.map((bot) => {
-            const binding = bindings.find((item) => item.bot_id === bot.id);
+            const binding = bindings?.find((item) => item.bot_id === bot.id);
             return (
               <SettingRow
                 key={bot.id}

@@ -293,6 +293,7 @@ export const chatEn: Messages["chat"] = {
     modelDefault: "Default model",
     system: "System message",
     agentBadge: "Agent",
+    unknownAuthor: "Unknown author",
     plainText: "Plain text",
     expandCode: "Show all {count} lines",
     collapseCode: "Collapse code",

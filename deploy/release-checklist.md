@@ -21,7 +21,7 @@ deployment script.
       `report.json`, `report.md`, and per-case logs as release evidence.
 - [ ] Confirm every required case is `pass`; `not-run` is a release blocker and
       cannot be converted to pass by a demo, unit test, or pseudo Runtime.
-- [ ] Review `docs/release/wp16-support-matrix.md`; list every unverified OS,
+- [ ] Review the [platform support notes](../docs/code-overview.md#平台和能力范围) and [WP-16 acceptance criteria](../tests/integration/wp16/README.md); list every unverified OS,
       Runtime, desktop path, and production-scale performance limitation.
 - [ ] Complete the real Runtime/real computer dual-link and live Web/API path
       before claiming the corresponding AC-1/4/11/15/16/21 evidence.

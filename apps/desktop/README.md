@@ -72,6 +72,21 @@ arm64 DMG. The URL order is `OPENFOX_DESKTOP_WEB_URL`, then `web_url` in
 signature (`identity: "-"`). Each stable GitHub Release includes the DMG, its detached Ed25519 signature and a PKG of the same app for existing clients.
 Installation is subject to the Mac’s policy for unidentified developers.
 
+### 内置 Pi
+
+macOS arm64 安装包随附 Pi 1.5.0。桌面端首次启动会将 OpenFox 私有目录中的
+`~/.local/share/openfox/desktop-pi` 链接到当前应用的 `Contents/Resources/pi`。
+移动应用后重新打开一次即可刷新位置。电脑的运行时列表会在下次清点时显示 Pi。
+已有的设备配置、`OPENFOX_PI_PATH` 和可用的外部 Pi 安装仍优先。
+
+可用 `openfox runtime probe --provider pi --json` 查看版本、实际入口和发现来源。
+需要登录模型服务时可运行 `~/.local/share/openfox/desktop-pi/pi` 并输入 `/login`，
+也可使用既有的 Pi 模型配置。程序随安装包提供，模型服务凭据由设备使用者提供。
+
+构建时校验上游 macOS arm64 归档的 SHA-256，再将完整目录和 MIT 许可证装入 app。
+离线构建可将 `OPENFOX_PI_ARCHIVE` 指向同一份已下载的归档。版本与摘要位于
+`build/bundle-pi.cjs`。[上游发行物](https://github.com/earendil-works/pi/releases/tag/v1.5.0)
+
 ## Desktop experience (stage 12h)
 
 - **Menu bar (macOS)**: the monochrome OpenFox icon opens a menu with the

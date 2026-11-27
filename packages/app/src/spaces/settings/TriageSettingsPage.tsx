@@ -78,12 +78,13 @@ export function TriageSettingsPage({
   const [disableOpen, setDisableOpen] = useState(false);
   const value = settings.data;
   const { hash } = useLocation();
+  const loaded = Boolean(value);
   useEffect(() => {
-    if (value && hash === "#triage-responsibility")
+    if (loaded && hash === "#triage-responsibility")
       document
         .getElementById("triage-responsibility")
         ?.scrollIntoView?.({ block: "start" });
-  }, [hash, !!value]);
+  }, [hash, loaded]);
   if (!value) return null;
   const editable = canManage && !retired && value.can_manage;
   const save = (patch: {

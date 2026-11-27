@@ -69,6 +69,7 @@ import {
 import { SearchLauncher } from "../search/SearchLauncher";
 import { DesktopNav } from "./DesktopNav";
 import { PanelResizeHandle } from "./PanelResizeHandle";
+import { RailIcon } from "./RailIcon";
 import { SidebarCollapseButton } from "./SidebarCollapseButton";
 import { usePanelWidth } from "./panelWidth";
 import {
@@ -562,7 +563,7 @@ function Rail({
               "bg-surface-sidebar-active text-fg-default",
           )}
         >
-          <Icon name={item.icon} size={19} />
+          <RailIcon name={item.icon} active={active === item.module} />
         </Link>
       ))}
       <div className="mt-auto flex flex-col items-center gap-1">
@@ -701,7 +702,7 @@ function Navigation({
         />
         <NavRow
           to={`${base}/agents`}
-          icon="briefcase"
+          icon="bot"
           label={t("shell.allAgents")}
           trailing={
             <span className="text-caption text-fg-muted">
@@ -711,7 +712,7 @@ function Navigation({
         />
         <NavRow
           to={`${base}/market`}
-          icon="blocks"
+          icon="store"
           label={t("shell.market")}
           trailing={
             <span className="truncate text-caption text-fg-muted">

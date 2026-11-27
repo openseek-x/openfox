@@ -1,0 +1,21 @@
+/* 深色封面用细等高线衬托头像，正文沿用工作台主题。 */
+.of-agent-profile[data-openfox-popover] {
+  border-radius: 18px;
+  padding: 0;
+  box-shadow:
+    0 16px 44px -12px rgb(10 35 30 / 24%),
+    0 2px 8px rgb(10 35 30 / 9%);
+}
+
+.of-agent-cover {
+  height: 64px;
+  background-color: #173a36;
+  background-image:
+    repeating-radial-gradient(
+      ellipse 80% 230% at 93% -84%,
+      transparent 0 8px,
+      rgb(193 230 207 / 19%) 8.5px 9px,
+      transparent 9.5px 15px
+    ),
+    linear-gradient(110deg, #142b2c, #24554a 65%, #668270);
+}

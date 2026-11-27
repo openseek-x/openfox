@@ -20,7 +20,12 @@ import { Button, Icon, Skeleton } from "@openfox/ui";
 import { NewChatButton } from "./NewChatPopover";
 import { AgentAvatar } from "../agents/AgentAvatar";
 import { useAgentSettingsParam } from "../agents/params";
-import { useAgent, useCrew, useDirectory } from "../agents/queries";
+import {
+  useAgent,
+  useCrew,
+  useDirectory,
+  useStandaloneAgent,
+} from "../agents/queries";
 import type { ComposerAgent } from "./Composer";
 import { conversationPath } from "./ChatPanel";
 import { conversationDestination, useChatNavigate } from "./chatNavigation";
@@ -360,11 +365,9 @@ function NewConversation({
   const api = useApi();
   const navigate = useChatNavigate();
   const queryClient = useQueryClient();
-  const directory = useDirectory(orgId);
+  const directory = useStandaloneAgent(orgId, agentId);
   const settings = useAgentSettingsParam();
-  const entry = directory.data?.entries.find(
-    (item) => item.type === "agent" && item.id === agentId && !item.archived_at,
-  );
+  const entry = directory.entry;
   const config = useAgentConfig(orgId, entry?.space_id, agentId);
   // 会话 id 由前端生成：第一条消息重试时不会重复创建会话
   const pendingId = useRef<string>(crypto.randomUUID());
@@ -443,7 +446,13 @@ function NewConversation({
         }
         empty={
           <div className="flex min-w-0 flex-col items-center gap-3 text-center">
-            <AgentAvatar name={entry.name} avatar={entry.avatar} size={40} />
+            <AgentAvatar
+              agentId={entry.id}
+              spaceId={entry.space_id}
+              name={entry.name}
+              avatar={entry.avatar}
+              size={40}
+            />
             <h1 className="min-w-0 break-words text-heading font-semibold tracking-tight">
               {t("chat.page.startWith", { name: entry.name })}
             </h1>

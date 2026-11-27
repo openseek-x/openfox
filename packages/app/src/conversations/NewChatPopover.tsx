@@ -80,6 +80,8 @@ export function NewChatPopover({
         <SmallCrewIcon />
       ) : (
         <AgentAvatar
+          agentId={entry.id}
+          spaceId={entry.space_id}
           name={entry.name}
           avatar={entry.avatar}
           size={20}

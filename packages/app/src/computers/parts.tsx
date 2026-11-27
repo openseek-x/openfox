@@ -421,9 +421,10 @@ function runtimeBadge(
   online: boolean,
 ): {
   tone: BadgeTone;
-  label: "ready" | "login" | "unavailable" | "offline" | "configuration";
+  label: keyof typeof runtimeBadgeKey;
 } {
   if (!online) return { tone: "muted", label: "offline" };
+  if (runtime.discovery_cached) return { tone: "muted", label: "checking" };
   if (
     (runtime.provider === "codebuddy" ||
       runtime.provider === "hermes" ||
@@ -432,6 +433,8 @@ function runtimeBadge(
     runtime.requires_run_configuration
   )
     return { tone: "warning", label: "configuration" };
+  if (runtime.discovery_only && runtime.install_path)
+    return { tone: "muted", label: "discovered" };
   if (runtime.status === "READY" && runtime.runnable)
     return { tone: "success", label: "ready" };
   if (runtime.status === "NEEDS_LOGIN")
@@ -440,6 +443,8 @@ function runtimeBadge(
 }
 
 const runtimeBadgeKey = {
+  checking: "computers.detail.runtimeChecking",
+  discovered: "computers.detail.runtimeDiscoveryOnly",
   configuration: "computers.detail.runtimeConfigurationRequired",
   ready: "computers.detail.runtimeReady",
   login: "computers.detail.runtimeNeedsLogin",
@@ -447,6 +452,18 @@ const runtimeBadgeKey = {
   offline: "computers.detail.runtimeOffline",
 } as const;
 
+function sourceLabel(source: string, t: ReturnType<typeof useT>) {
+  const labels = {
+    configured: "discoveryConfigured",
+    environment: "discoveryEnvironment",
+    path: "discoveryPath",
+    login_shell: "discoveryShell",
+    well_known_bin: "discoveryToolchain",
+    macos_app: "discoveryApp",
+  } as const;
+  const key = labels[source as keyof typeof labels];
+  return key ? t(`computers.detail.${key}`) : source;
+}
 function RuntimeCard({
   icon,
   title,
@@ -553,19 +570,25 @@ export function RuntimeList({ device }: { device: Device }) {
               </button>
               {expanded === runtime.provider && (
                 <div className="flex flex-col gap-2 border-t border-line-soft p-4">
-                  <RuntimeTestButton
-                    orgId={orgId}
-                    device={device}
-                    meId={me.data?.id}
-                    model=""
-                    provider={runtime.provider}
-                  />
-                  {runtime.provider === "codex" &&
+                  {!runtime.discovery_only && (
+                    <RuntimeTestButton
+                      orgId={orgId}
+                      device={device}
+                      meId={me.data?.id}
+                      model=""
+                      provider={runtime.provider}
+                    />
+                  )}
+                  {runtime.provider !== "hermes" &&
                     me.data?.id === device.owner_user_id && (
                       <div className="flex gap-2">
-                        {(["cli", "args"] as const).map((section) => (
+                        {(runtime.provider === "codex"
+                          ? (["cli", "args"] as const)
+                          : (["cli"] as const)
+                        ).map((section) => (
                           <DeviceSettingsEditor
                             key={section}
+                            provider={runtime.provider}
                             section={section}
                             orgId={orgId}
                             deviceId={device.id}
@@ -574,26 +597,35 @@ export function RuntimeList({ device }: { device: Device }) {
                         ))}
                       </div>
                     )}
-                  {me.data?.id === device.owner_user_id && (
-                    <RuntimeDefaultsEditor
-                      orgId={orgId}
-                      deviceId={device.id}
-                      runtime={runtime.provider}
-                    />
-                  )}
+                  {!runtime.discovery_only &&
+                    me.data?.id === device.owner_user_id && (
+                      <RuntimeDefaultsEditor
+                        orgId={orgId}
+                        deviceId={device.id}
+                        runtime={runtime.provider}
+                      />
+                    )}
                   <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-body-sm">
                     <dt>{t("shell.runtimeLogin")}</dt>
                     <dd>{runtime.login_status ?? "—"}</dd>
-                    {sameDevice &&
-                      local.data?.runtime.runtime === runtime.provider &&
-                      local.data.runtime.executable && (
-                        <>
-                          <dt>CLI</dt>
-                          <dd className="break-all">
-                            {local.data.runtime.executable}
-                          </dd>
-                        </>
-                      )}
+                    {(runtime.install_path ||
+                      (sameDevice &&
+                        local.data?.runtime.runtime === runtime.provider &&
+                        local.data.runtime.executable)) && (
+                      <>
+                        <dt>CLI</dt>
+                        <dd className="break-all">
+                          {runtime.install_path ||
+                            local.data?.runtime.executable}
+                        </dd>
+                      </>
+                    )}
+                    {runtime.discovery_source && (
+                      <>
+                        <dt>{t("computers.detail.discoverySource")}</dt>
+                        <dd>{sourceLabel(runtime.discovery_source, t)}</dd>
+                      </>
+                    )}
                     {!!runtime.models.length && (
                       <>
                         <dt>{t("shell.runtimeModels")}</dt>

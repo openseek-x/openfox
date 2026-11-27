@@ -298,6 +298,7 @@ func moveTasks(ctx context.Context, tx pgx.Tx, input moveTasksInput) (moveTasksR
 		       triage_entered_at = CASE WHEN $9 THEN NULL ELSE t.triage_entered_at END,
 		       triage_source = CASE WHEN $9 THEN NULL ELSE t.triage_source END,
 		       triage_snoozed_until = CASE WHEN $9 THEN NULL ELSE t.triage_snoozed_until END,
+			       duplicate_of_task_id = CASE WHEN (SELECT ns.category FROM openfox.task_statuses ns WHERE ns.organization_id = openfox_private.current_organization_id() AND ns.id = m.status_id) = 'DUPLICATE' THEN t.duplicate_of_task_id ELSE NULL END,
 		       version = t.version + 1, updated_at = clock_timestamp()
 		  FROM unnest($3::uuid[], $4::uuid[], $5::uuid[], $6::bigint[], $7::uuid[], $8::numeric[], $10::uuid[])
 		       AS m(task_id, type_id, status_id, sequence, parent_id, estimate, project_id)

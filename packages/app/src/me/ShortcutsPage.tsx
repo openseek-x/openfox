@@ -83,6 +83,7 @@ function ShortcutsBody({ prefs }: { prefs: UserPreferences }) {
   };
 
   // 录制期间拦截所有按键：单独的修饰键继续等待，其余按键按规则校验后保存或提示
+  const saveShortcut = update.mutate;
   useEffect(() => {
     if (!recording) return;
     const onKeyDown = (event: KeyboardEvent) => {
@@ -116,7 +117,7 @@ function ShortcutsBody({ prefs }: { prefs: UserPreferences }) {
         return;
       }
       setRecording(null);
-      update.mutate(
+      saveShortcut(
         { command_shortcuts: withShortcut(custom, recording, result.value) },
         {
           onSuccess: () => toast(t("me.shortcuts.saved")),
@@ -126,7 +127,7 @@ function ShortcutsBody({ prefs }: { prefs: UserPreferences }) {
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [recording, custom, t, toast, update.mutate]);
+  }, [recording, custom, t, toast, saveShortcut]);
 
   return (
     <SettingsColumn>

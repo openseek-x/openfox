@@ -44,7 +44,7 @@ import (
 	"openfox/internal/secrets"
 )
 
-const version = "dev"
+var version = "dev"
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {

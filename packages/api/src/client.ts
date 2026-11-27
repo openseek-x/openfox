@@ -44,14 +44,10 @@ export type Organization = S["Organization"];
 export type OrganizationRole = S["OrganizationRole"];
 export type Space = S["Space"];
 
-// 以下类型对应已有接口，契约尚未补进 contracts/openapi.yaml（阶段 1 补齐）。
-export interface TaskType {
-  id: string;
-  name: string;
-  is_default: boolean;
-  enabled: boolean;
-  version: number;
-}
+export type TaskType = Pick<
+  S["TaskType"],
+  "id" | "name" | "is_default" | "enabled" | "version"
+>;
 
 const org = (id: string) => `/v1/organizations/${encodeURIComponent(id)}`;
 const space = (orgId: string, spaceId: string) =>

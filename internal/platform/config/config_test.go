@@ -393,3 +393,16 @@ func TestAsanaRequiresSeparateCompleteApps(t *testing.T) {
 		t.Fatal("secret files not loaded")
 	}
 }
+
+func TestPreviewURL(t *testing.T) {
+	for _, value := range []string{"file:///tmp/a", "https://u:p@host", "https://host/path", "https://host?url=x", "http://"} {
+		if validatePreviewURL(value) == nil {
+			t.Errorf("accepted %s", value)
+		}
+	}
+	for _, value := range []string{"", "http://office-preview:3000", "https://renderer.internal/"} {
+		if err := validatePreviewURL(value); err != nil {
+			t.Error(err)
+		}
+	}
+}

@@ -6,23 +6,207 @@ The explicit migration runner records each committed filename and checksum
 in `openfox_meta.schema_migrations` before executing a later file. `serve` never
 runs migrations implicitly.
 
-## Current files
+## 当前执行顺序
 
-- `000121_task_completed_at.sql`: T02 adds nullable `tasks.completed_at` without historical backfill and extends the existing status projection trigger. Native creation supplies database time; historical/Issue/old-bundle imports without a source time remain NULL. Reopening clears time, actual transitions into DONE record time, and DONE-to-DONE preserves it, including status definition reclassification. Apply after 120 before the new API/import workers, then client. ALTER/CHECK briefly locks/scans tasks; assess persistent data volume and maintenance separately. Retain the additive column, constraint and trigger on application rollback; old writers omitting the field can create unknown-time DONE rows and old UI falls back from new range values to all. No new configuration or dependency. Only isolated migration/backup/restore verification was authorized. See the T02 development record for full SQL, compatibility and observed limits.
+中心按以下文件名排序并记录校验和。历史编号与发布编号的对应关系保存在[重编号清单](../hifox-live-migration-map.json)。第 174、175 项的运行记录见[本机电脑设置](../../docs/development-records/2026-11-24-local-computer-settings.md)。
 
-- `000120_share_snapshots.sql`: C03 selectively ports the conversation snapshot foundation (source commit `4c940e21`) and adds creator-only link recovery. Adds `organizations.allow_public_sharing=false`, immutable text-only `share_snapshots`, token hash plus AES-GCM ciphertext/nonce/key ID, forced tenant RLS, creator/org indexes, irreversible revocation trigger, and the bounded SECURITY DEFINER hash resolver. No backfill. Apply before the new server/client; the organization ALTER takes a short table lock, all other objects are new. Uses existing `OPENFOX_SECRETS_KEY_FILE`; no key generation or plaintext fallback. Retain all additive objects and ciphertext on application rollback. Only disposable isolated databases were authorized and exercised; never substitute this for the other branch's conflicting migration 118 or apply to its existing ledger.
+<!-- migration-index -->
+- [000001_db001_tenant_rls.sql](000001_db001_tenant_rls.sql)
+- [000002_db002_capacity.sql](000002_db002_capacity.sql)
+- [000003_wp02_identity_auth.sql](000003_wp02_identity_auth.sql)
+- [000004_wp02_membership.sql](000004_wp02_membership.sql)
+- [000005_wp02_invitations.sql](000005_wp02_invitations.sql)
+- [000006_wp03_device_auth.sql](000006_wp03_device_auth.sql)
+- [000007_wp04_collaboration.sql](000007_wp04_collaboration.sql)
+- [000008_wp04_trigger_rls.sql](000008_wp04_trigger_rls.sql)
+- [000009_wp05_device_management.sql](000009_wp05_device_management.sql)
+- [000010_wp06_agent_management.sql](000010_wp06_agent_management.sql)
+- [000011_wp09_execution.sql](000011_wp09_execution.sql)
+- [000012_wp10_conversations.sql](000012_wp10_conversations.sql)
+- [000013_wp12_event_results_artifacts.sql](000013_wp12_event_results_artifacts.sql)
+- [000014_wp13_reconciliation.sql](000014_wp13_reconciliation.sql)
+- [000015_wp14_limits_cleanup.sql](000015_wp14_limits_cleanup.sql)
+- [000016_wp17_email_login.sql](000016_wp17_email_login.sql)
+- [000017_wp18_email_signup_onboarding.sql](000017_wp18_email_signup_onboarding.sql)
+- [000018_wp18_email_code_window_index.sql](000018_wp18_email_code_window_index.sql)
+- [000019_center_run_dispatch.sql](000019_center_run_dispatch.sql)
+- [000020_dispatch_orphan_reservations.sql](000020_dispatch_orphan_reservations.sql)
+- [000021_home_inbox.sql](000021_home_inbox.sql)
+- [000022_home_my_tasks.sql](000022_home_my_tasks.sql)
+- [000023_home_agent_directory.sql](000023_home_agent_directory.sql)
+- [000024_home_assistant.sql](000024_home_assistant.sql)
+- [000025_task_core_fields.sql](000025_task_core_fields.sql)
+- [000026_task_configuration.sql](000026_task_configuration.sql)
+- [000027_api_idempotency_inbox.sql](000027_api_idempotency_inbox.sql)
+- [000028_agent_profile_crews.sql](000028_agent_profile_crews.sql)
+- [000029_org_events.sql](000029_org_events.sql)
+- [000030_device_settings.sql](000030_device_settings.sql)
+- [000031_conversation_nav_usage.sql](000031_conversation_nav_usage.sql)
+- [000032_device_connect_commands.sql](000032_device_connect_commands.sql)
+- [000033_space_settings.sql](000033_space_settings.sql)
+- [000034_iterations.sql](000034_iterations.sql)
+- [000035_projects_views.sql](000035_projects_views.sql)
+- [000036_triage.sql](000036_triage.sql)
+- [000037_organization_settings.sql](000037_organization_settings.sql)
+- [000038_user_profile_preferences.sql](000038_user_profile_preferences.sql)
+- [000039_tokens_notifications_beta.sql](000039_tokens_notifications_beta.sql)
+- [000040_automations.sql](000040_automations.sql)
+- [000041_documents.sql](000041_documents.sql)
+- [000042_skills.sql](000042_skills.sql)
+- [000043_market.sql](000043_market.sql)
+- [000044_task_agent_execution.sql](000044_task_agent_execution.sql)
+- [000045_integrations.sql](000045_integrations.sql)
+- [000046_imports.sql](000046_imports.sql)
+- [000047_imports_api.sql](000047_imports_api.sql)
+- [000048_github_integration.sql](000048_github_integration.sql)
+- [000049_github_issue_sync.sql](000049_github_issue_sync.sql)
+- [000050_feishu_app.sql](000050_feishu_app.sql)
+- [000051_feishu_bots.sql](000051_feishu_bots.sql)
+- [000052_account_bindings.sql](000052_account_bindings.sql)
+- [000053_space_clone.sql](000053_space_clone.sql)
+- [000054_task_exports.sql](000054_task_exports.sql)
+- [000055_attachments.sql](000055_attachments.sql)
+- [000056_quick_replies_crew_conversations.sql](000056_quick_replies_crew_conversations.sql)
+- [000057_task_favorites.sql](000057_task_favorites.sql)
+- [000058_lark_provider.sql](000058_lark_provider.sql)
+- [000059_dingtalk_provider.sql](000059_dingtalk_provider.sql)
+- [000060_wechat_binding.sql](000060_wechat_binding.sql)
+- [000061_git_providers.sql](000061_git_providers.sql)
+- [000062_conversation_overrides.sql](000062_conversation_overrides.sql)
+- [000063_reservation_agent_device_check.sql](000063_reservation_agent_device_check.sql)
+- [000064_task_move.sql](000064_task_move.sql)
+- [000065_task_quick_commands.sql](000065_task_quick_commands.sql)
+- [000066_task_trash.sql](000066_task_trash.sql)
+- [000067_invitation_expiry_rejection.sql](000067_invitation_expiry_rejection.sql)
+- [000068_document_revisions.sql](000068_document_revisions.sql)
+- [000069_human_direct_chat.sql](000069_human_direct_chat.sql)
+- [000070_conversation_status_mark.sql](000070_conversation_status_mark.sql)
+- [000071_task_comment_threads.sql](000071_task_comment_threads.sql)
+- [000072_comment_deletions.sql](000072_comment_deletions.sql)
+- [000073_conversation_offers.sql](000073_conversation_offers.sql)
+- [000074_triage_favorites.sql](000074_triage_favorites.sql)
+- [000075_assistant_message_action.sql](000075_assistant_message_action.sql)
+- [000076_task_invitation_assignees.sql](000076_task_invitation_assignees.sql)
+- [000077_task_invitation_lifecycle.sql](000077_task_invitation_lifecycle.sql)
+- [000078_conversation_workspaces.sql](000078_conversation_workspaces.sql)
+- [000079_conversation_work_directory_recents.sql](000079_conversation_work_directory_recents.sql)
+- [000080_agent_mcp_servers.sql](000080_agent_mcp_servers.sql)
+- [000081_agent_mcp_oauth.sql](000081_agent_mcp_oauth.sql)
+- [000082_mcp_authenticated_input.sql](000082_mcp_authenticated_input.sql)
+- [000083_private_mcp_inventory.sql](000083_private_mcp_inventory.sql)
+- [000084_agent_market_skill_installs.sql](000084_agent_market_skill_installs.sql)
+- [000085_inbox_notification_policy.sql](000085_inbox_notification_policy.sql)
+- [000086_agent_social_actions.sql](000086_agent_social_actions.sql)
+- [000087_direct_chat_inbox_notifications.sql](000087_direct_chat_inbox_notifications.sql)
+- [000088_preference_theme_palettes.sql](000088_preference_theme_palettes.sql)
+- [000089_provider_csv_imports.sql](000089_provider_csv_imports.sql)
+- [000090_device_settings_command.sql](000090_device_settings_command.sql)
+- [000091_tapd_excel_import.sql](000091_tapd_excel_import.sql)
+- [000092_project_api_imports.sql](000092_project_api_imports.sql)
+- [000093_zentao_import.sql](000093_zentao_import.sql)
+- [000094_teambition_api_import.sql](000094_teambition_api_import.sql)
+- [000095_gitlab_proxy_streams.sql](000095_gitlab_proxy_streams.sql)
+- [000096_import_project_sync.sql](000096_import_project_sync.sql)
+- [000097_import_sync_mapping.sql](000097_import_sync_mapping.sql)
+- [000098_import_project_items.sql](000098_import_project_items.sql)
+- [000099_import_sync_direction.sql](000099_import_sync_direction.sql)
+- [000100_import_sync_status.sql](000100_import_sync_status.sql)
+- [000101_import_sync_comments.sql](000101_import_sync_comments.sql)
+- [000102_import_api_projects.sql](000102_import_api_projects.sql)
+- [000103_repository_connections.sql](000103_repository_connections.sql)
+- [000104_import_comment_delivery.sql](000104_import_comment_delivery.sql)
+- [000105_hifox_reasoning_and_git_defaults.sql](000105_hifox_reasoning_and_git_defaults.sql)
+- [000106_git_default_sources.sql](000106_git_default_sources.sql)
+- [000107_ultra_reasoning.sql](000107_ultra_reasoning.sql)
+- [000108_user_interface_density.sql](000108_user_interface_density.sql)
+- [000109_workspace_path_command.sql](000109_workspace_path_command.sql)
+- [000110_assistant_conversation_transfer.sql](000110_assistant_conversation_transfer.sql)
+- [000111_runtime_session_export.sql](000111_runtime_session_export.sql)
+- [000112_email_notifications.sql](000112_email_notifications.sql)
+- [000113_wecom_bot_binding.sql](000113_wecom_bot_binding.sql)
+- [000114_comment_mention_kinds.sql](000114_comment_mention_kinds.sql)
+- [000115_lark_dingtalk_notification_channels.sql](000115_lark_dingtalk_notification_channels.sql)
+- [000116_agent_variants.sql](000116_agent_variants.sql)
+- [000117_quick_entry_favorites.sql](000117_quick_entry_favorites.sql)
+- [000118_share_snapshots.sql](000118_share_snapshots.sql)
+- [000119_run_result_git_summary.sql](000119_run_result_git_summary.sql)
+- [000120_run_failure_workdir_busy.sql](000120_run_failure_workdir_busy.sql)
+- [000121_device_multi_org_and_local_limit.sql](000121_device_multi_org_and_local_limit.sql)
+- [000122_audit_query_and_capacity_read.sql](000122_audit_query_and_capacity_read.sql)
+- [000123_space_creator.sql](000123_space_creator.sql)
+- [000124_message_reply_snapshot.sql](000124_message_reply_snapshot.sql)
+- [000125_notification_event_overrides.sql](000125_notification_event_overrides.sql)
+- [000126_independent_im_notification_channels.sql](000126_independent_im_notification_channels.sql)
+- [000127_task_type_order.sql](000127_task_type_order.sql)
+- [000128_task_type_commit.sql](000128_task_type_commit.sql)
+- [000129_share_snapshots.sql](000129_share_snapshots.sql)
+- [000130_task_completed_at.sql](000130_task_completed_at.sql)
+- [000131_task_references.sql](000131_task_references.sql)
+- [000132_space_default_view.sql](000132_space_default_view.sql)
+- [000133_doc_references.sql](000133_doc_references.sql)
+- [000134_agent_working_hours.sql](000134_agent_working_hours.sql)
+- [000135_conversation_forks.sql](000135_conversation_forks.sql)
+- [000136_cnb_git_work.sql](000136_cnb_git_work.sql)
+- [000137_device_runtime_defaults.sql](000137_device_runtime_defaults.sql)
+- [000138_wecom_group_authorizations.sql](000138_wecom_group_authorizations.sql)
+- [000139_codeup_mr_work.sql](000139_codeup_mr_work.sql)
+- [000140_codebuddy_runtime.sql](000140_codebuddy_runtime.sql)
+- [000141_tapd_personal_identity.sql](000141_tapd_personal_identity.sql)
+- [000142_teambition_personal_identity.sql](000142_teambition_personal_identity.sql)
+- [000143_yunxiao_workitems.sql](000143_yunxiao_workitems.sql)
+- [000144_asana_imports.sql](000144_asana_imports.sql)
+- [000145_azure_devops.sql](000145_azure_devops.sql)
+- [000146_hermes_runtime.sql](000146_hermes_runtime.sql)
+- [000147_shortcut_personal_identity.sql](000147_shortcut_personal_identity.sql)
+- [000148_gitcode.sql](000148_gitcode.sql)
+- [000149_gongfeng.sql](000149_gongfeng.sql)
+- [000150_bitbucket_cloud.sql](000150_bitbucket_cloud.sql)
+- [000151_bugly_inbound.sql](000151_bugly_inbound.sql)
+- [000152_codecommit.sql](000152_codecommit.sql)
+- [000153_slack.sql](000153_slack.sql)
+- [000154_telegram.sql](000154_telegram.sql)
+- [000155_qq.sql](000155_qq.sql)
+- [000156_discord.sql](000156_discord.sql)
+- [000157_teams.sql](000157_teams.sql)
+- [000158_gemini_runtime.sql](000158_gemini_runtime.sql)
+- [000159_zoho_bugtracker.sql](000159_zoho_bugtracker.sql)
+- [000160_message_file_contexts.sql](000160_message_file_contexts.sql)
+- [000161_conversation_input_lookup_indexes.sql](000161_conversation_input_lookup_indexes.sql)
+- [000162_browser_bindings.sql](000162_browser_bindings.sql)
+- [000163_message_browser_contexts.sql](000163_message_browser_contexts.sql)
+- [000164_artifact_content_versions.sql](000164_artifact_content_versions.sql)
+- [000165_workspace_comments.sql](000165_workspace_comments.sql)
+- [000166_workspace_proposals.sql](000166_workspace_proposals.sql)
+- [000167_anchor_resolutions.sql](000167_anchor_resolutions.sql)
+- [000168_device_challenge_cleanup.sql](000168_device_challenge_cleanup.sql)
+- [000169_task_creation_requests.sql](000169_task_creation_requests.sql)
+- [000170_standalone_task_drafts.sql](000170_standalone_task_drafts.sql)
+- [000171_draft_notifications_and_export_cleanup.sql](000171_draft_notifications_and_export_cleanup.sql)
+- [000172_result_confirmed_exit_evidence.sql](000172_result_confirmed_exit_evidence.sql)
+- [000173_device_registration_identity.sql](000173_device_registration_identity.sql)
+- [000174_device_workflow_permission.sql](000174_device_workflow_permission.sql)
+- [000175_default_device_max_runs.sql](000175_default_device_max_runs.sql)
+<!-- /migration-index -->
 
-- `000124_doc_references.sql`: D04 extends only `messages_payload_shape_valid` with a DOC/document-placeholder branch, retaining TASK and previous TEXT/action semantics. No table, column, index, data backfill, new grant, config or dependency. Source pointers contain only type and UUID; current per-reader space and personal-document access is enforced when resolving metadata. Apply after the coordinated 123 migration, then server/client. Replacing the CHECK scans messages under a DDL table lock. Only isolated databases were authorized; retain 124 and stored references when withdrawing DOC creation/UI, with DOC redaction/current ACL and all-REFERENCE Runtime exclusion preserved. Do not drop the CHECK back to TASK-only or delete existing DOC rows. See the D04 development record for exact SQL and backup/restore evidence.
+## 迁移设计与运维记录
 
-- `000122_task_references.sql`: T04 expands the two message CHECK constraints with passive USER `REFERENCE` messages. Payload is exactly a TASK UUID pointer; body is a fixed safe placeholder, with no reply, action, copied title or content. No new columns, data backfill, config, functions or grants. Apply after coordinated migration 121, before the server/client. Constraint replacement scans messages under DDL locks; only isolated databases were authorized. Retain constraints and rows on rollback, and retain server-side reference redaction/ACL and Runtime exclusion while withdrawing the UI/creation route. A full old-server rollback would expose stored UUID pointers and include safe placeholders in history, so it does not preserve this package's full behavior.
+下列说明保留了各批次实施时的背景和工作包编号。执行顺序以当前文件索引为准。
 
-- `000118_task_type_order.sql`: S04 adds nullable nonnegative `task_types.position`, backfills each tenant/space in `created_at,id` order, and adds the space-order index. Temporary migrator SELECT/UPDATE RLS policies exist only inside the migration transaction and are dropped before commit. Apply after the coordinated preceding migrations and before new API/import workers. The table ALTER and backfill/index build hold locks and touch all historical task types: assess production size and maintenance time separately; only isolated test databases were authorized here. Old SQL writers may omit the column; new writers append after legacy NULL rows. Roll back application code while retaining the additive column and saved order; there is no destructive down migration.
+- `000130_task_completed_at.sql`: T02 adds nullable `tasks.completed_at` without historical backfill and extends the existing status projection trigger. Native creation supplies database time; historical/Issue/old-bundle imports without a source time remain NULL. Reopening clears time, actual transitions into DONE record time, and DONE-to-DONE preserves it, including status definition reclassification. Apply after 120 before the new API/import workers, then client. ALTER/CHECK briefly locks/scans tasks; assess persistent data volume and maintenance separately. Retain the additive column, constraint and trigger on application rollback; old writers omitting the field can create unknown-time DONE rows and old UI falls back from new range values to all. No new configuration or dependency. Only isolated migration/backup/restore verification was authorized. See [the migration SQL](000130_task_completed_at.sql) for the timestamp and trigger definitions.
 
-- `000119_task_type_commit.sql`: S06 adds nullable `task_types.commit_type` with a 1–32 ASCII letter/digit/hyphen constraint starting with a letter. No backfill and no schema default. New task Runs snapshot `feat` when the type field is NULL; old Run snapshots remain unchanged. Apply before API/dispatch/import workers; adding the nullable column and CHECK briefly locks/scans task types. Roll back application code while retaining the column and optional Run JSON key. No new configuration or dependency. Persistent/production migration requires separate authorization.
+- `000129_share_snapshots.sql`: C03 selectively ports the conversation snapshot foundation (source commit `4c940e21`) and adds creator-only link recovery. Adds `organizations.allow_public_sharing=false`, immutable text-only `share_snapshots`, token hash plus AES-GCM ciphertext/nonce/key ID, forced tenant RLS, creator/org indexes, irreversible revocation trigger, and the bounded SECURITY DEFINER hash resolver. No backfill. Apply before the new server/client; the organization ALTER takes a short table lock, all other objects are new. Uses existing `OPENFOX_SECRETS_KEY_FILE`; no key generation or plaintext fallback. Retain all additive objects and ciphertext on application rollback. Only disposable isolated databases were authorized and exercised; never substitute this for the other branch's conflicting migration 118 or apply to its existing ledger.
 
-- `000115_message_reply_snapshot.sql`: adds nullable `messages.reply_snapshot` JSONB for C01. New quote replies retain a server-derived snapshot of at most 2,000 Unicode code points, with a 16 KiB JSONB text limit; the existing `reply_to_id` tenant/conversation FK is unchanged. Historical rows and old writers remain NULL and read through to the current original, explicitly marked as legacy. Apply after 114, before the new API/dispatch server, then the client. There is no backfill or new configuration. Adding the column/check briefly locks and scans `messages`; the migration runner commits it atomically and records its checksum. Roll back the application while retaining this additive schema and snapshots. Authorized and validated only in isolated test databases; persistent environments require separate authorization.
+- `000133_doc_references.sql`: D04 extends only `messages_payload_shape_valid` with a DOC/document-placeholder branch, retaining TASK and previous TEXT/action semantics. No table, column, index, data backfill, new grant, config or dependency. Source pointers contain only type and UUID; current per-reader space and personal-document access is enforced when resolving metadata. Apply after the coordinated 123 migration, then server/client. Replacing the CHECK scans messages under a DDL table lock. Only isolated databases were authorized; retain 124 and stored references when withdrawing DOC creation/UI, with DOC redaction/current ACL and all-REFERENCE Runtime exclusion preserved. Do not drop the CHECK back to TASK-only or delete existing DOC rows. See the [migration SQL](000133_doc_references.sql) and [document reference regression tests](../../tests/integration/stage2/doc_references_test.go).
 
-- `000114_space_creator.sql`: adds nullable `spaces.created_by` and a same-organization member foreign key with `ON DELETE SET NULL (created_by)`. Apply after 113 and before updating the API and import/clone workers. Only new spaces record their authenticated creator; historical rows are not backfilled and old writers continue to insert NULL. Member revocation retains the identity, while member deletion clears only this field. Adding the column/FK briefly locks `spaces` and validates the FK; it does not rewrite existing rows with inferred identities. No configuration or dependency changes. Roll back the application while retaining this additive schema and recorded data. Authorized and validated only in isolated test databases; do not run against persistent environments without separate authorization.
+- `000131_task_references.sql`: T04 expands the two message CHECK constraints with passive USER `REFERENCE` messages. Payload is exactly a TASK UUID pointer; body is a fixed safe placeholder, with no reply, action, copied title or content. No new columns, data backfill, config, functions or grants. Apply after coordinated migration 121, before the server/client. Constraint replacement scans messages under DDL locks; only isolated databases were authorized. Retain constraints and rows on rollback, and retain server-side reference redaction/ACL and Runtime exclusion while withdrawing the UI/creation route. A full old-server rollback would expose stored UUID pointers and include safe placeholders in history, so it does not preserve this package's full behavior.
+
+- `000127_task_type_order.sql`: S04 adds nullable nonnegative `task_types.position`, backfills each tenant/space in `created_at,id` order, and adds the space-order index. Temporary migrator SELECT/UPDATE RLS policies exist only inside the migration transaction and are dropped before commit. Apply after the coordinated preceding migrations and before new API/import workers. The table ALTER and backfill/index build hold locks and touch all historical task types: assess production size and maintenance time separately; only isolated test databases were authorized here. Old SQL writers may omit the column; new writers append after legacy NULL rows. Roll back application code while retaining the additive column and saved order; there is no destructive down migration.
+
+- `000128_task_type_commit.sql`: S06 adds nullable `task_types.commit_type` with a 1–32 ASCII letter/digit/hyphen constraint starting with a letter. No backfill and no schema default. New task Runs snapshot `feat` when the type field is NULL; old Run snapshots remain unchanged. Apply before API/dispatch/import workers; adding the nullable column and CHECK briefly locks/scans task types. Roll back application code while retaining the column and optional Run JSON key. No new configuration or dependency. Persistent/production migration requires separate authorization.
+
+- `000124_message_reply_snapshot.sql`: adds nullable `messages.reply_snapshot` JSONB for C01. New quote replies retain a server-derived snapshot of at most 2,000 Unicode code points, with a 16 KiB JSONB text limit; the existing `reply_to_id` tenant/conversation FK is unchanged. Historical rows and old writers remain NULL and read through to the current original, explicitly marked as legacy. Apply after 114, before the new API/dispatch server, then the client. There is no backfill or new configuration. Adding the column/check briefly locks and scans `messages`; the migration runner commits it atomically and records its checksum. Roll back the application while retaining this additive schema and snapshots. Authorized and validated only in isolated test databases; persistent environments require separate authorization.
+
+- `000123_space_creator.sql`: adds nullable `spaces.created_by` and a same-organization member foreign key with `ON DELETE SET NULL (created_by)`. Apply after 113 and before updating the API and import/clone workers. Only new spaces record their authenticated creator; historical rows are not backfilled and old writers continue to insert NULL. Member revocation retains the identity, while member deletion clears only this field. Adding the column/FK briefly locks `spaces` and validates the FK; it does not rewrite existing rows with inferred identities. No configuration or dependency changes. Roll back the application while retaining this additive schema and recorded data. Authorized and validated only in isolated test databases; do not run against persistent environments without separate authorization.
 
 - `000109_workspace_path_command.sql`: expands the device-command kind constraint with `workspace_path`. Apply after 108, then update the center and daemon before exposing the updated desktop entry. The center stores only an encrypted reply and request metadata; actual paths stay in the device journal and requesting desktop. No row rewrite or backfill. Retain the expanded constraint on application rollback. Authorized and validated only in disposable test databases, not persistent QA or production.
 
@@ -841,7 +1025,7 @@ unreviewed `DROP SCHEMA`. Future migrations must use an expand/migrate/contract
 sequence and document their own reversible SQL or recovery procedure.
 
 Migration files use six digits followed by a lowercase ASCII slug, for example
-`000001_db001_control_roles.sql`. `openfox-server migrate --check` rejects
+`000001_db001_tenant_rls.sql`. `openfox-server migrate --check` rejects
 duplicate numbers and does not execute SQL. `openfox-server migrate --apply
 --database-url-file <path>` is the explicit forward-only execution path; it
 serializes runners with a PostgreSQL advisory lock, rejects changed or
@@ -864,18 +1048,18 @@ to `SET ROLE openfox_migrator`. The metadata schema is not granted to
 - `000084_agent_market_skill_installs.sql`: stores each Agent's pinned market version and private file manifest separately from the space library. The tenant-scoped loadout view includes historical bindings and new installs; there is no backfill. Apply before the center upgrade.
 - Apply 000085 (inbox event policy), 000086 (Agent social actions) and 000087 (native direct message preference) before updating the center and workers. Historical deliveries are not backfilled; reverting a binary alone will not revert triggers.
 - Apply 000100–000104 in order before updating import workers and repository authorization. They add status baselines, stable comment IDs, API project mappings, explicit repository connections, and outbound comment delivery records. Historical repositories remain anonymous and historical comments are not replayed. Preserve delivery records and source mappings on rollback.
-- Apply `000105_reasoning_and_git_defaults.sql` before the updated center, daemon and client. It adds conversation reasoning overrides, immutable run Git snapshots, and tenant-isolated organization/space Git defaults. Existing Agent author modes remain unchanged. Retain the additive schema on rollback, but drain new-semantics runs and restore explicit Agent modes before reverting to an older center.
+- Apply `000105_hifox_reasoning_and_git_defaults.sql` before the updated center, daemon and client. It adds conversation reasoning overrides, immutable run Git snapshots, and tenant-isolated organization/space Git defaults. Existing Agent author modes remain unchanged. Retain the additive schema on rollback, but drain new-semantics runs and restore explicit Agent modes before reverting to an older center.
 - Apply `000106_git_default_sources.sql` after 105 and before the updated API/dispatcher. It adds organization/space author source modes, maps nonempty legacy values to MANUAL, and preserves old empty-value semantics and Run snapshots. Temporary migrator read/update policies are removed in the same transaction. Old clients may omit modes, but old/new writers must not run concurrently. Retain additive columns and restore old-expressible settings before application rollback.
 - Apply `000110_assistant_conversation_transfer.sql` after 109 and before enabling the updated conversation-transfer API. It replaces only `validate_conversation_scope`: a private built-in assistant belonging to the current conversation owner may reside in a different space; ordinary Agents and task scope remain unchanged. No columns, backfill, grants or historical Runs change. Retain this compatible function and accepted ownership on rollback; older binaries cannot safely resume cross-space transferred sessions without verification. Tested only in an isolated database, not permanent QA or production.
 - Apply `000111_runtime_session_export.sql` before enabling the updated API, device executor and client. It widens the device command kind and adds an RLS-protected export table for metadata, an RSA-wrapped AES key and a one-hour ciphertext object; session payloads are never stored in PostgreSQL. The cleanup function exposes only expired export rows to the context worker, which deletes objects before rows and retries failures. There is no backfill. Codex rollout JSONL staging stays local on the exporting computer for at most 24 hours. For application rollback, stop new exports and drain in-flight commands, then retain the additive schema; no production down migration is provided. The complete migration runner was applied twice in a fresh network-disabled PostgreSQL 16 container (111 then 0 migrations).
 - Apply `000112_email_notifications.sql` before starting the email notification worker. It broadens the account notification channel CHECK to include `email` and creates an empty tenant-isolated outbox with a unique notification key, a notification insert trigger, and a control-plane due-work scanner. Only users who explicitly enabled email are queued; old notifications are never backfilled. Pending mail expires after seven days; terminal rows are removed after 30 days. Without SMTP, the worker only expires and cleans up old items, leaving recent pending mail available if SMTP is restored. Changing the CHECK scans and briefly locks the account preference table; adding the trigger briefly locks `notifications`. No new environment key is needed; the worker uses the existing `SMTP_*` settings. To roll back the application, stop the worker and `DROP TRIGGER notifications_enqueue_email_delivery ON openfox.notifications`; retain the additive table and CHECK. Restoring the old CHECK additionally requires removing `email` preference rows, which loses those user choices and therefore needs explicit approval. Do not rewrite an applied migration.
 - Apply `000113_wecom_bot_binding.sql` after 112 and before deploying the WeCom API/workers. It adds tenant-isolated one-time code and personal notification-target tables, global uniqueness for an active WeCom Bot ID across organizations, scoped uniqueness for active WeCom personal user/member bindings, expands the notification channel CHECK to `wecom`, and replaces the IM connection scanner and notification enqueue function. No data backfill; old notification history is not replayed. The CHECK replacement scans and briefly locks the preferences table, and each new index scans its existing connection table. Existing EXECUTE grants on replaced functions are retained and the scanner grant is restated. On application rollback, stop WeCom bot creation and workers, retain bound data and the expanded CHECK; restoring the pre-WeCom trigger and scanner requires a forward migration after draining WeCom connections and outboxes. Do not alter an applied migration checksum.
-- `000116_notification_event_overrides.sql` (HiFox N01) adds `event_overrides={}`, `muted_groups={}`, and a sequence-backed positive `revision` to the existing account channel rows. The volatile revision default assigns distinct non-reused values to old rows and may rewrite/lock this table; measure its size before an authorized deployment. It creates the shared kind/leaf decision function and a tenant/outbox-constrained SECURITY DEFINER boolean accessor, retaining recipient-only notification RLS and comment tombstones. The snapshot trigger retains the four previously discarded off events only after an explicit enabled channel opts in; no history is replayed. Apply after 115, before policy-aware API/workers/client together; old workers must not consume alongside fine settings.
-- `000117_independent_im_notification_channels.sql` (HiFox N02) widens the existing CHECK for Lark/DingTalk and inserts only missing rows from saved Feishu choices. `direct_messages` is always initialized false; absent Feishu rows stay virtual defaults. The existing IM enqueue function accepts new-provider private messages only after their own explicit consent. Apply after 116. No environment keys/dependencies/new worker/outbox or historical delivery backfill. Preserve both migrations on application rollback: use the reviewed conservative shutdown projection in `docs/development-records/sql/2026-11-13-notification-conservative-rollback.sql` after backups and stopped writers/workers, or a policy-aware compatibility binary. Direct old-binary rollback ignores fine choices and is unsafe. The projection intentionally disables all channels for affected users, retains fine values, rejects unresolved SENDING rows and skips pending jobs. This batch only rehearsed isolated PostgreSQL 16; no production deployment is authorized.
+- `000125_notification_event_overrides.sql` (HiFox N01) adds `event_overrides={}`, `muted_groups={}`, and a sequence-backed positive `revision` to the existing account channel rows. The volatile revision default assigns distinct non-reused values to old rows and may rewrite/lock this table; measure its size before an authorized deployment. It creates the shared kind/leaf decision function and a tenant/outbox-constrained SECURITY DEFINER boolean accessor, retaining recipient-only notification RLS and comment tombstones. The snapshot trigger retains the four previously discarded off events only after an explicit enabled channel opts in; no history is replayed. Apply after 115, before policy-aware API/workers/client together; old workers must not consume alongside fine settings.
+- `000126_independent_im_notification_channels.sql` (HiFox N02) widens the existing CHECK for Lark/DingTalk and inserts only missing rows from saved Feishu choices. `direct_messages` is always initialized false; absent Feishu rows stay virtual defaults. The existing IM enqueue function accepts new-provider private messages only after their own explicit consent. Apply after 116. No environment keys/dependencies/new worker/outbox or historical delivery backfill. Preserve both migrations and their fine-grained preference values during an application rollback. The historical conservative projection script is absent from this repository. An application that ignores per-channel choices can send unintended notifications. Keep writers and workers stopped until the release can enforce these choices. Follow the [backup and recovery procedure](../../deploy/README.md#backup-and-recovery) for an isolated restore. This batch only rehearsed isolated PostgreSQL 16; no production deployment is authorized.
 
-- `000123_space_default_view.sql` (HiFox T03) adds nullable `spaces.default_view_id`, a same-organization/same-space composite FK to `views`, and its supporting unique key. The FK deletes only the pointer with `SET NULL (default_view_id)` (PostgreSQL 16). It extends the existing space UPDATE event trigger without duplicating events, preserving all previous columns. Apply after 122 before the new space/view API and client. Historical values stay NULL; no backfill, environment keys, dependencies, RLS or grants change. Unique index/FK creation and ALTERs require DDL locks: only isolated small-data migrations were rehearsed. On application rollback retain the additive schema, pointers, source filters/display and ledger; old clients ignore this new display baseline while existing task ACLs remain. Do not DROP data or rewrite applied checksums. Full SQL, concurrency tests, nullable-history/re-run checks and retained-data backup/restore rehearsal are recorded in `docs/development-records/2026-11-13-hifox-parity-t03.md`.
+- `000132_space_default_view.sql` (HiFox T03) adds nullable `spaces.default_view_id`, a same-organization/same-space composite FK to `views`, and its supporting unique key. The FK deletes only the pointer with `SET NULL (default_view_id)` (PostgreSQL 16). It extends the existing space UPDATE event trigger without duplicating events, preserving all previous columns. Apply after 122 before the new space/view API and client. Historical values stay NULL; no backfill, environment keys, dependencies, RLS or grants change. Unique index/FK creation and ALTERs require DDL locks: only isolated small-data migrations were rehearsed. On application rollback retain the additive schema, pointers, source filters/display and ledger; old clients ignore this new display baseline while existing task ACLs remain. Do not DROP data or rewrite applied checksums. See the [migration SQL](000132_space_default_view.sql) and [default-view integration tests](../../tests/integration/stage3/default_view_test.go).
 
-- `000126_conversation_forks.sql` (HiFox C04) adds nullable parent/message/prefix metadata with a consistency CHECK; no backfill, source FK, new grant or configuration. Apply the complete 114–126 chain in order before the new API; do not skip the separately owned 125 while this batch is being integrated. The tested 125 SHA256 is `99d55e8a18377b2830e2046b82e5fdf5802ecfd266054d0b5a58729b25e8a30b`. Fresh isolated 113→126 and a second zero-change run passed. ALTER TABLE requires a DDL lock; production scale/locks are unverified and execution is not authorized. Keep snapshot data, prefix metadata, read-only proposal gates, historical Run isolation and dynamic reference ACLs on rollback. Reverting directly to a pre-fork server could make copied pending actions executable and is unsafe. Full SQL and isolated backup/restore evidence (10 forks, 539 prefix messages) are in `docs/development-records/2026-11-13-hifox-parity-c04.md`.
+- `000135_conversation_forks.sql` (HiFox C04) adds nullable parent/message/prefix metadata with a consistency CHECK; no backfill, source FK, new grant or configuration. Apply the complete 114–126 chain in order before the new API; do not skip the separately owned 125 while this batch is being integrated. The tested 125 SHA256 is `99d55e8a18377b2830e2046b82e5fdf5802ecfd266054d0b5a58729b25e8a30b`. Fresh isolated 113→126 and a second zero-change run passed. ALTER TABLE requires a DDL lock; production scale/locks are unverified and execution is not authorized. Keep snapshot data, prefix metadata, read-only proposal gates, historical Run isolation and dynamic reference ACLs on rollback. Reverting directly to a pre-fork server could make copied pending actions executable and is unsafe. See the [migration SQL](000135_conversation_forks.sql) and [fork integration tests](../../tests/integration/stage2/conversation_forks_test.go).
 
 ### HiFox A04 / I03 / R06 增量（2026-11-13）
 
@@ -885,19 +1069,19 @@ to `SET ROLE openfox_migrator`. The metadata schema is not granted to
 
 ### HiFox I19 增量129（2026-11-13）
 
-`000129_wecom_group_authorizations.sql` SHA256 `e8054e410236bb6b889f35b3c2ddb969dafdb9ad052ba3f9c74deb6dbc311754`：一张群授权历史表、两列可空队列版本、发现索引及既有回复触发函数增量，无旧数据回填。主树隔离库113→129共16项、二跑0；备份恢复七表指纹一致。新服务/worker前先执行129。新增环境键/依赖无。
+`000138_wecom_group_authorizations.sql` SHA256 `e8054e410236bb6b889f35b3c2ddb969dafdb9ad052ba3f9c74deb6dbc311754`：一张群授权历史表、两列可空队列版本、发现索引及既有回复触发函数增量，无旧数据回填。主树隔离库113→129共16项、二跑0；备份恢复七表指纹一致。新服务/worker前先执行129。新增环境键/依赖无。
 
 完整SQL及回退门禁见 内部记录「I19 SQL」（独立源码包未附）。完整旧应用回退须先移除有群历史的机器人并排空运行/队列（同时影响该bot私聊/通知）；不能只关新字段后启动不理解它的旧应用。保留表/列/消息/任务，未执行生产。
 
 ### HiFox I08 增量130（2026-11-13）
 
-`000130_codeup_mr_work.sql` SHA256 `18d6cfee5bed604c36e3c58d36342c9d2587a7cb0de336de934dff87cdd9e876`：新增租户隔离的 Codeup MR 工作表、业务唯一键/租约/回链结果状态及扫描函数的 Codeup 分支，保留127的CNB分支。无历史回填。主树隔离库113→130共17项、二跑0；先迁移，再更新API/SyncWorker/UI，最后显式选库并手工配置平台webhook。
+`000139_codeup_mr_work.sql` SHA256 `18d6cfee5bed604c36e3c58d36342c9d2587a7cb0de336de934dff87cdd9e876`：新增租户隔离的 Codeup MR 工作表、业务唯一键/租约/回链结果状态及扫描函数的 Codeup 分支，保留127的CNB分支。无历史回填。主树隔离库113→130共17项、二跑0；先迁移，再更新API/SyncWorker/UI，最后显式选库并手工配置平台webhook。
 
 回退先取消Codeup选库并停止对应接收/执行，等待在途请求结束，再恢复迁移前扫描函数并回退应用；保留新表、Git链接、投递及密文，不重发未知评论。完整SQL和演练见内部记录「I08记录」（独立源码包未附）。新增环境配置/依赖无，仅隔离库执行，未操作生产或真实云效平台。
 
 ### HiFox R03 增量132（2026-11-14）
 
-`000132_codebuddy_runtime.sql` SHA256 `a0dbbeb64ed091d040c18abff92e5ae8f27ce6ef457a098888b6fc865d1681e6`：只扩展 conversations 与 device_runtime_defaults 的 Runtime CHECK，保留其他约束值，无数据回填/RLS/授权变更。131保留给未批准P03，没有占位。主树隔离113→114…130→132执行18项，二跑0；未来补入131时本次一次性库须重新克隆完整链，不能倒插历史。
+`000140_codebuddy_runtime.sql` SHA256 `a0dbbeb64ed091d040c18abff92e5ae8f27ce6ef457a098888b6fc865d1681e6`：只扩展 conversations 与 device_runtime_defaults 的 Runtime CHECK，保留其他约束值，无数据回填/RLS/授权变更。131保留给未批准P03，没有占位。主树隔离113→114…130→132执行18项，二跑0；未来补入131时本次一次性库须重新克隆完整链，不能倒插历史。
 
 先迁移再更新应用；回退先停止CodeBuddy新执行并排空/取消Run、显式归档或重配Agent，保留CHECK/密文/历史，不自动替换Runtime。完整SQL/配置/隔离回退与未验证边界见内部记录「R03」（独立源码包未附）和内部记录「主树验收」（独立源码包未附）。仅隔离库执行，未部署。
 
@@ -905,9 +1089,9 @@ to `SET ROLE openfox_migrator`. The metadata schema is not granted to
 
 仅隔离库执行；完整当前清单为1…130、132、133、134、135。131仍保留给未批准P03，无占位SQL。runner要求已应用历史是当前文件清单的前缀；验证必须从113模板新克隆，不能向已应用134/135的旧测试库倒插132/133。
 
-- `000133_tapd_personal_identity.sql`：同组织非断开TAPD身份ID与nick唯一索引，无回填。SHA256 `65499e4cf6e5d7ab3700196994db84aa64bb1ba24617b9d81bd85a1f6247e23e`。索引扫描已有连接，发现冲突即失败，不删数据。内部记录「P01完整SQL/演练」（独立源码包未附）。
-- `000134_teambition_personal_identity.sql`：企业主体唯一索引及个人身份无秘密形状CHECK，无回填。SHA256 `6886e033fcc60fe8c4f630e1cfcd92289fb39b290a8739f6f7edbd37d8f3c918`。内部记录「P02完整SQL/保留数据恢复」（独立源码包未附）。
-- `000135_yunxiao_workitems.sql`：导入source CHECK增加yunxiao_api，云效身份唯一与无秘密CHECK；保留全部原source值，无回填。SHA256 `9e4e4ade5bc3f3e7720ef83114f8789629e7c224adf2d180078fca975f936db4`。内部记录「I04完整SQL/停用回退」（独立源码包未附）。
+- `000141_tapd_personal_identity.sql`：同组织非断开TAPD身份ID与nick唯一索引，无回填。SHA256 `65499e4cf6e5d7ab3700196994db84aa64bb1ba24617b9d81bd85a1f6247e23e`。索引扫描已有连接，发现冲突即失败，不删数据。内部记录「P01完整SQL/演练」（独立源码包未附）。
+- `000142_teambition_personal_identity.sql`：企业主体唯一索引及个人身份无秘密形状CHECK，无回填。SHA256 `6886e033fcc60fe8c4f630e1cfcd92289fb39b290a8739f6f7edbd37d8f3c918`。内部记录「P02完整SQL/保留数据恢复」（独立源码包未附）。
+- `000143_yunxiao_workitems.sql`：导入source CHECK增加yunxiao_api，云效身份唯一与无秘密CHECK；保留全部原source值，无回填。SHA256 `9e4e4ade5bc3f3e7720ef83114f8789629e7c224adf2d180078fca975f936db4`。内部记录「I04完整SQL/停用回退」（独立源码包未附）。
 
 先应用迁移，再启动本版API、导入/同步worker和客户端。索引及CHECK验证需要扫描和DDL锁；只测了隔离小规模，不代表生产锁窗口。无新增环境变量/依赖；P02沿用PUBLIC_URL、密钥文件和已有企业应用，须另外登记回调与目录scope，真实应用配置未操作。
 
@@ -916,7 +1100,7 @@ to `SET ROLE openfox_migrator`. The metadata schema is not granted to
 
 ### HiFox I12 增量137（2026-11-14）
 
-`000137_azure_devops.sql` SHA256 `7750f4e67b83d9f049ff5ada3089de0a8825372e3e457f4157e05945d5d25582`：Azure 共享 OAuth grant、身份 claim、owned Hook、事件 work、PR 回链、Boards crawl/node 共七张租户隔离表；扩展连接引用、导入源、OAuth 密文上限、来源 revision 与 Git 展示名。组合外键、RLS、唯一约束及有界扫描函数随文件建立；无业务回填或远端调用，原 Git 来源唯一索引保留。完整 SQL、配置与锁影响见 内部记录「I12 交付记录」（独立源码包未附）。
+`000145_azure_devops.sql` SHA256 `7750f4e67b83d9f049ff5ada3089de0a8825372e3e457f4157e05945d5d25582`：Azure 共享 OAuth grant、身份 claim、owned Hook、事件 work、PR 回链、Boards crawl/node 共七张租户隔离表；扩展连接引用、导入源、OAuth 密文上限、来源 revision 与 Git 展示名。组合外键、RLS、唯一约束及有界扫描函数随文件建立；无业务回填或远端调用，原 Git 来源唯一索引保留。完整 SQL、配置与锁影响见 内部记录「I12 交付记录」（独立源码包未附）。
 
 先迁移，再更新 API/同步 worker/UI，最后配置两个独立 Entra 应用并显式授权。ALTER/CHECK/FK/generated 列涉及 DDL 锁与已有行验证，只在批准的隔离小库验证。根从113模板另建库，按114…130、132…138执行24项，总137条账本逐SHA匹配，二跑0；131仍未实施，不能向已应用更高号的旧私库倒插137。
 
@@ -924,41 +1108,41 @@ to `SET ROLE openfox_migrator`. The metadata schema is not granted to
 
 ### HiFox R05 增量138（2026-11-14，实施中）
 
-`000138_hermes_runtime.sql` SHA256 `37eb7bd78e25e3781f9574acd7204bce644c170eaebc783e06a0130e47e8afdd`：只扩展132的 conversations 与 device_runtime_defaults 两处Runtime CHECK以接受hermes，原值/其他条件保留；无数据回填、RLS、grant或新表列。先迁移再更新中心/daemon/UI。仅独占隔离库验证，113后应用23项（114…130、132…136、138）、二跑0；137属于并行I12，root集成后须从完整谱系重新克隆，不能向该一次性库倒插137。
+`000146_hermes_runtime.sql` SHA256 `37eb7bd78e25e3781f9574acd7204bce644c170eaebc783e06a0130e47e8afdd`：只扩展132的 conversations 与 device_runtime_defaults 两处Runtime CHECK以接受hermes，原值/其他条件保留；无数据回填、RLS、grant或新表列。先迁移再更新中心/daemon/UI。仅独占隔离库验证，113后应用23项（114…130、132…136、138）、二跑0；137属于并行I12，root集成后须从完整谱系重新克隆，不能向该一次性库倒插137。
 
 回退先停止新Hermes执行、取消/排空Run、显式归档/重配Agent，再回退应用，保留CHECK/密文/业务数据，不自动替换Runtime。ALTER/VALIDATE需要DDL锁与扫描，未验证生产规模且未授权生产执行。R05搜索及硬崩溃收尾仍有未完成边界，本迁移通过不等于工作包完成；完整SQL/配置/证据见内部记录「R05实施记录」（独立源码包未附）。
 
 
 ### HiFox P03 增量139（2026-11-14）
 
-`000139_shortcut_personal_identity.sql` SHA256 `9688f236d232411d13c4d4fa2655115de6374dd74cf0501b63d4aefe10817137`：Shortcut PERSONAL身份同组织/workspace/外部UUID部分唯一索引，及本人身份/默认无Token、显式评论授权才有密文的形状CHECK。无业务回填、新表/列、RLS或全局配置变化。131继续空缺，不再作为P03号；前文131预留仅是历史阶段记录。
+`000147_shortcut_personal_identity.sql` SHA256 `9688f236d232411d13c4d4fa2655115de6374dd74cf0501b63d4aefe10817137`：Shortcut PERSONAL身份同组织/workspace/外部UUID部分唯一索引，及本人身份/默认无Token、显式评论授权才有密文的形状CHECK。无业务回填、新表/列、RLS或全局配置变化。131继续空缺，不再作为P03号；前文131预留仅是历史阶段记录。
 
 先迁移139，再API/worker与UI。独占新库从113完整应用114…130、132…139共25项，账本138条逐SHA匹配，二跑0；两项DDL回退/原SQL恢复演练前后账本和6类业务摘要不变，未改迁移历史。索引和CHECK验证需扫描/DDL锁，仅验证隔离小库。应用回退先关闭个人评论并排空在途请求，停止不了解verified来源的旧worker，保留扩展schema/已导入副本和去重记录。完整SQL、配置、失败、回退及未验边界见内部记录「P03记录」（独立源码包未附）。未使用真实平台或生产环境。
 
 ### HiFox I09 增量140（2026-11-14）
 
-`000140_gitcode.sql` SHA256 `ae952f1fe5841f353fe1b08ad1abdedc5a2d6c1abfaa2f14d2c02c96205d3c73`：GitCode stable repository与durable work两表、复合租户FK/active repo唯一/RLS/lease/due索引，扫描函数仅追加GitCode、保留CNB/Codeup分支。PULL工作仅保存PR REST版本摘要。无业务回填、无个人身份/克隆或新全局配置。131保持空缺。
+`000148_gitcode.sql` SHA256 `ae952f1fe5841f353fe1b08ad1abdedc5a2d6c1abfaa2f14d2c02c96205d3c73`：GitCode stable repository与durable work两表、复合租户FK/active repo唯一/RLS/lease/due索引，扫描函数仅追加GitCode、保留CNB/Codeup分支。PULL工作仅保存PR REST版本摘要。无业务回填、无个人身份/克隆或新全局配置。131保持空缺。
 
 先140，再API/worker/UI；两独占新库自113完整应用26项、二跑0，139账本逐SHA一致。回退专库事务内恢复130 scanner、撤两表/index后ROLLBACK，账本/schema/scanner前后指纹一致；未执行生产或已提交破坏性down。实际运营回退先停用/处理owned Hook/断开，保留schema、本地副本、映射和UNKNOWN审计。DDL锁/扫描只在隔离小库验证。完整SQL顺序、失败和配置/回退/未验边界见内部记录「I09记录」（独立源码包未附）。
 
 
 ### HiFox I11 增量142（2026-11-15）
 
-`000142_bitbucket_cloud.sql` SHA256 `4d535fb4c1025d08d30ee4887f32111032a918eb461294496498b911848c632c`：Bitbucket runtime、仓库/空间选择、work/delivery/backlink/comment-source共七表，tenant FK/FORCE RLS、最小授权、身份形状/唯一及密文上限、QUEUED CHECK和有界scanner；保留140/141及其他provider扫描条件。不改公共GitLink索引，无业务回填。完整SQL/配置/风险见内部记录「I11交付」（独立源码包未附）。
+`000150_bitbucket_cloud.sql` SHA256 `4d535fb4c1025d08d30ee4887f32111032a918eb461294496498b911848c632c`：Bitbucket runtime、仓库/空间选择、work/delivery/backlink/comment-source共七表，tenant FK/FORCE RLS、最小授权、身份形状/唯一及密文上限、QUEUED CHECK和有界scanner；保留140/141及其他provider扫描条件。不改公共GitLink索引，无业务回填。完整SQL/配置/风险见内部记录「I11交付」（独立源码包未附）。
 
 先142，再API/worker/UI，再配置两个独立consumer及显式授权、手工Hook。主树独占113模板新库顺序应用114…130、132…142，首28/二0，141账本逐SHA匹配；131仍空缺，不向旧库倒插或改checksum。DDL锁/扫描仅验证隔离小库。回退先用当前版断开连接并停新接收/调度，保留UNKNOWN/历史关联/来源审计及扩展schema，再回退应用和配置；实际浏览器及Go覆盖停用保留数据。破坏性down SQL为无，未删表/库或生产迁移。
 
 
 ### HiFox I07 入站增量143（2026-11-15）
 
-`000143_bugly_inbound.sql` SHA256 `80182958bfb22b9d54fd52320cb21512216cba79d386903dee5b819ef2c120bf`：专属绑定/来源两表及唯一、复合租户FK、RLS/最小授权、秘密入口解析。没有业务回填、全局配置或扫描函数改动；完整语句、执行顺序和风险见内部记录「I07主树交付」（独立源码包未附）。
+`000151_bugly_inbound.sql` SHA256 `80182958bfb22b9d54fd52320cb21512216cba79d386903dee5b819ef2c120bf`：专属绑定/来源两表及唯一、复合租户FK、RLS/最小授权、秘密入口解析。没有业务回填、全局配置或扫描函数改动；完整语句、执行顺序和风险见内部记录「I07主树交付」（独立源码包未附）。
 
 先142再143，再API/UI。主树新私库从113应用114…130、132…143首29/二0，142账本项且131空，142143 SHA精确核对。回退使用当前版暂停/断开保留任务与来源，再回退应用；实际非破坏回退已演练。无破坏性down或生产执行。I07整包仍有外发协议缺口，迁移通过不代表全包完成。
 
 
 ### HiFox I13 增量144（2026-11-15）
 
-`000144_codecommit.sql` SHA256 `43d7687a0f56bbcdbf22a7a78b7e76fb2a2671600d477de4a8ad3241dc6f6df2`：新增 CodeCommit 仓库、引用水位、持久工作三表及 delivery 可空摘要列，组合租户外键、唯一、FORCE RLS/最小授权、租约与 due 索引；桥接解析函数及累积 scanner 保留142既有平台分支。无历史业务回填，不改公共 GitLink 唯一索引。完整 SQL 位于该迁移文件，行为与风险见内部记录「I13控制面记录」（独立源码包未附）及内部记录「I13最终交付」（独立源码包未附）。
+`000152_codecommit.sql` SHA256 `43d7687a0f56bbcdbf22a7a78b7e76fb2a2671600d477de4a8ad3241dc6f6df2`：新增 CodeCommit 仓库、引用水位、持久工作三表及 delivery 可空摘要列，组合租户外键、唯一、FORCE RLS/最小授权、租约与 due 索引；桥接解析函数及累积 scanner 保留142既有平台分支。无历史业务回填，不改公共 GitLink 唯一索引。完整 SQL 位于该迁移文件，行为与风险见内部记录「I13控制面记录」（独立源码包未附）及内部记录「I13最终交付」（独立源码包未附）。
 
 先144，再API/SyncWorker/UI，最后显式配置IAM、选仓并由操作者自行部署桥接。根两独占新库从113模板按114…130、132…144执行首30/二0；143条账本逐SHA匹配，131保持空缺。DDL锁/约束/扫描只在隔离小库验证，不代表生产规模或真实AWS部署。没有新OpenFox全局环境键，AWS桥接的四个配置键单独见[桥接说明](../../docs/integrations/codecommit/README.md)。
 
@@ -966,20 +1150,20 @@ to `SET ROLE openfox_migrator`. The metadata schema is not granted to
 
 ### HiFox I18 增量146（2026-11-15）
 
-`000146_telegram.sql` SHA256 `8526eeb82c33d259c36a68b50bd8a8997ecfcb7beabcab068be8e7e614370977`：Telegram控制、身份、群、不可变来源、回复等12张专属表及复合FK/唯一/FORCE RLS/最小GRANT；输入校验、队列预算、秘密路由与累积IM扫描函数。复用145真实source_run_id，无业务回填、依赖或新全局配置。完整语句与锁/权限见内部记录「I18服务记录」（独立源码包未附）。
+`000154_telegram.sql` SHA256 `8526eeb82c33d259c36a68b50bd8a8997ecfcb7beabcab068be8e7e614370977`：Telegram控制、身份、群、不可变来源、回复等12张专属表及复合FK/唯一/FORCE RLS/最小GRANT；输入校验、队列预算、秘密路由与累积IM扫描函数。复用145真实source_run_id，无业务回填、依赖或新全局配置。完整语句与锁/权限见内部记录「I18服务记录」（独立源码包未附）。
 
 先145再146，再API/worker/UI，最后显式连接。根新库自113首32/二0，145条账本逐文件SHA一致，131空缺；只在隔离PG16验证，未修改模板或已应用账本。逆DDL仅独占库事务内演练后ROLLBACK，12表及账本恢复。回退先断开、停专属入口/worker，保留schema、历史、固定Bot归属与UNKNOWN；不重发、不自动删除远端Webhook、不提交破坏性down。最终验收见内部记录「I18交付」（独立源码包未附）。
 
 
 ### HiFox R02 增量151（2026-11-15）
 
-`000151_gemini_runtime.sql` 仅扩展 conversations.runtime_override、device_runtime_defaults.runtime 两处 CHECK 加入 `gemini`，保留原有值及全部权限/版本条件；无新表、列、数据回填或 RLS 变更。SQL 全文及锁/验证顺序在迁移文件中。先按当前累计链执行151，再更新中心/daemon/UI；131、147保持空缺，不修改已执行文件或账本。
+`000158_gemini_runtime.sql` 仅扩展 conversations.runtime_override、device_runtime_defaults.runtime 两处 CHECK 加入 `gemini`，保留原有值及全部权限/版本条件；无新表、列、数据回填或 RLS 变更。SQL 全文及锁/验证顺序在迁移文件中。先按当前累计链执行151，再更新中心/daemon/UI；131、147保持空缺，不修改已执行文件或账本。
 
 新隔离库 `parity_r02_20261115` 从113模板首轮36项、二轮0项，149条账本逐文件SHA一致。仅验证隔离小库，DDL会获取两表锁并校验已有行，不代表生产规模。回退先取消/排空Gemini Run、显式归档或重配相关Agent，再回退应用；保留扩展CHECK、已有加密设置和运行记录，不自动切换Runtime，不执行收缩或删除SQL。整包实施状态与后续累计验证见内部记录「R02方案」（独立源码包未附）。
 
 ### HiFox I06 增量152（2026-11-15）
 
-`000152_zoho_bugtracker.sql` SHA256 `9e05e0590ebe870d1a37a56b170c2f60f9fa1f441161cbb8bc194a89b9dd49b3`：新增组织OAuth运行状态与一次导入抓取状态两张租户表，组合外键、FORCE RLS、最小GRANT、租约/数量约束；扩导入来源CHECK、个人身份唯一及无凭据约束。另建无租户/秘密数据的单行全局请求预算和两个最小授权函数；扩展已有OAuth维护扫描，保留Asana条件。没有业务回填、远端请求或新worker。
+`000159_zoho_bugtracker.sql` SHA256 `9e05e0590ebe870d1a37a56b170c2f60f9fa1f441161cbb8bc194a89b9dd49b3`：新增组织OAuth运行状态与一次导入抓取状态两张租户表，组合外键、FORCE RLS、最小GRANT、租约/数量约束；扩导入来源CHECK、个人身份唯一及无凭据约束。另建无租户/秘密数据的单行全局请求预算和两个最小授权函数；扩展已有OAuth维护扫描，保留Asana条件。没有业务回填、远端请求或新worker。
 
 执行顺序为当前累计链151→152→相应API/导入worker/UI→配置独立US双OAuth应用。根独占隔离库 `parity_r02_20261115` 已按顺序追加152，首轮1项、二轮0项，150条账本逐文件SHA一致；没有向owner旧库倒插151或修改历史checksum。DDL会获取相关表锁、验证CHECK并建立索引，只验证隔离小库；协议及完整SQL以该文件和内部记录「I06方案」（独立源码包未附）为准，迁移通过不代表整包验收完成。
 

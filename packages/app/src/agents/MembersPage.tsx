@@ -243,6 +243,8 @@ function ContactAvatar({ item, size }: { item: ContactItem; size: 28 | 64 }) {
     return <CrewAvatar name={item.name} members={[]} size={size} />;
   return (
     <AgentAvatar
+      agentId={item.id}
+      spaceId={item.space_id}
       name={item.name}
       avatar={item.avatar}
       size={size}

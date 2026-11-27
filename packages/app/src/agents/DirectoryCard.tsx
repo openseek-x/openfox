@@ -73,6 +73,8 @@ export function DirectoryCard({
         />
       ) : (
         <AgentAvatar
+          agentId={entry.id}
+          spaceId={entry.space_id}
           name={entry.name}
           avatar={entry.avatar}
           locked={entry.visibility === "PRIVATE"}

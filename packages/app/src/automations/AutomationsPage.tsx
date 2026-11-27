@@ -288,7 +288,15 @@ function AutomationCard({
       className="flex h-[143px] cursor-pointer flex-col gap-2 rounded-xl border border-line-soft bg-surface-card p-4 shadow-card transition-[border-color,background-color,box-shadow] duration-150 hover:border-line-strong hover:bg-surface-hover/50 motion-reduce:transition-none"
     >
       <div className="flex items-center gap-2">
-        <AgentAvatar name={automation.assignee.name} size={16} />
+        <AgentAvatar
+          agentId={
+            automation.assignee.kind === "AGENT"
+              ? automation.assignee.id
+              : undefined
+          }
+          name={automation.assignee.name}
+          size={16}
+        />
         <span className="min-w-0 flex-1 truncate font-medium">
           {automation.title}
         </span>

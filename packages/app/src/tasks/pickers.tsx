@@ -1,3 +1,4 @@
+import { AgentAvatar } from "../agents/AgentAvatar";
 import { useRef, useState, type ReactNode } from "react";
 
 import type {
@@ -145,7 +146,7 @@ export function assigneeGroups(
       options: agents.map((a) => ({
         value: `agent:${a.id}`,
         label: a.name,
-        icon: <Avatar name={a.name} kind="agent" size={20} />,
+        icon: <AgentAvatar agentId={a.id} name={a.name} size={20} />,
       })),
     });
   if (humans && people.length)

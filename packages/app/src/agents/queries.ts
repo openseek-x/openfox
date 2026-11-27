@@ -79,6 +79,30 @@ export function useDirectory(orgId: string, enabled = true) {
   });
 }
 
+/** 目录被截断时按 ID 核对独立条目，避免把排在上限之外的普通 Agent 当作专属成员。 */
+export function useStandaloneAgent(orgId: string, agentId: string) {
+  const api = useApi();
+  const directory = useDirectory(orgId);
+  const match = (entry: AgentDirectoryEntry) =>
+    entry.type === "agent" && entry.id === agentId && !entry.archived_at;
+  const listed = directory.data?.entries.find(match);
+  const needsLookup =
+    directory.isSuccess && directory.data.truncated && !listed;
+  const lookup = useQuery({
+    queryKey: [...keys.agentDirectory(orgId), "agent", agentId],
+    queryFn: () => api.agents.directory(orgId, false, agentId),
+    enabled: needsLookup,
+  });
+  const source = needsLookup ? lookup : directory;
+  return {
+    entry: source.isSuccess
+      ? (listed ?? source.data.entries.find(match))
+      : undefined,
+    isLoading: source.isLoading,
+    isError: source.isError,
+  };
+}
+
 export function useArchivedDirectory(orgId: string, enabled = true) {
   const api = useApi();
   return useQuery({
@@ -151,8 +175,9 @@ export function useEntitySpace(
     : undefined;
   const spaceId = known ?? fromActive ?? fromArchived;
   const settled =
-    (directory.isSuccess || directory.isError) &&
-    (Boolean(fromActive) || archived.isSuccess || archived.isError);
+    directory.isError ||
+    (directory.isSuccess &&
+      (Boolean(fromActive) || archived.isSuccess || archived.isError));
   return { spaceId, notFound: !spaceId && settled };
 }
 

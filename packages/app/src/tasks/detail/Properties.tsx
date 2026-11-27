@@ -1,3 +1,4 @@
+import { AgentAvatar } from "../../agents/AgentAvatar";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useRef, useState, type ReactNode } from "react";
 
@@ -748,11 +749,11 @@ export function FieldEditor({
               className={cn(trigger, !name && "text-fg-muted")}
             >
               {name ? (
-                <Avatar
-                  name={name}
-                  kind={member?.kind === "AGENT" ? "agent" : "user"}
-                  size={20}
-                />
+                member?.kind === "AGENT" ? (
+                  <AgentAvatar agentId={member.id} name={name} size={20} />
+                ) : (
+                  <Avatar name={name} size={20} />
+                )
               ) : (
                 <Icon name="user" />
               )}

@@ -275,6 +275,7 @@ export const chatZh = {
     modelDefault: "默认模型",
     system: "系统消息",
     agentBadge: "Agent",
+    unknownAuthor: "未知作者",
     plainText: "纯文本",
     expandCode: "展开全部 {count} 行",
     collapseCode: "收起代码",

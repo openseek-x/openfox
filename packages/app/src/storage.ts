@@ -56,6 +56,8 @@ export const localKeys = {
   sidebarWidth: "openfox:chat-sidebar-width",
   artifactPanelWidth: "openfox:artifact-panel-width",
   taskAiPanelWidth: "openfox:task-ai-panel-width",
+  /** OPE-17 · 任务详情宽布局下属性侧栏是否收起；值为 1 时收起，按设备存 */
+  taskPropertiesCollapsed: "openfox:task-properties-collapsed",
   /** 阶段 8f · 主导航布局模式：缺省为任务优先，值为 chat 时对话优先；按设备存，不按组织 */
   layoutMode: "openfox:layout-mode",
   onboarding: (orgId: string) => `openfox:onboarding:${orgId}`,

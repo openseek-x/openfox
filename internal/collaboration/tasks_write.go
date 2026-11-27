@@ -133,6 +133,9 @@ type TaskUpdateInput struct {
 	ProjectID   OptionalString
 	Version     uint64
 	RequestID   string
+	// DuplicateOfTaskID 仅供服务内部调用，接口层不暴露：把任务改到重复类别时的目标任务。
+	// 进入重复类别必须提供；已在重复类别内换状态时留空表示保持原目标。
+	DuplicateOfTaskID string
 	// AssignmentConversation（阶段 10b）：本次新增 Agent 处理人时用哪个运行对话。
 	// 空串或 reuse 沿用现有指派会话；new 先把现有的打开状态指派会话降级为普通会话，worker 会新建一个。其它情况忽略。
 	AssignmentConversation string
@@ -936,6 +939,12 @@ func (s Service) CreateTask(ctx context.Context, tx pgx.Tx, organizationID, spac
 	if !membership.ValidateUUID(statusID) || !flow.contains(statusID) {
 		return Task{}, ErrInvalidWorkflow
 	}
+	// 服务端不变量：新建任务没有可指向的重复目标，不能直接落在重复类别；要标重复请先建任务，再用 POST /duplicate。
+	if category, err := statusCategoryOf(ctx, tx, statusID); err != nil {
+		return Task{}, err
+	} else if category == "DUPLICATE" {
+		return Task{}, errInvalidDuplicate
+	}
 	var labelIDs []string
 	if input.LabelIDs != nil {
 		labelIDs, err = normalizeLabelIDs(*input.LabelIDs)
@@ -1167,6 +1176,11 @@ func (s Service) UpdateTask(ctx context.Context, tx pgx.Tx, organizationID, spac
 	if !flow.contains(statusID) {
 		return Task{}, ErrInvalidWorkflow
 	}
+	// 服务端不变量：进入重复类别必须带有效目标，离开重复类别时清空目标。
+	duplicateOf, err := s.resolveDuplicateTarget(ctx, tx, actor, taskID, statusID, current, input.DuplicateOfTaskID)
+	if err != nil {
+		return Task{}, err
+	}
 	title := current.Title
 	if input.Title != nil {
 		title = strings.TrimSpace(*input.Title)
@@ -1328,11 +1342,12 @@ func (s Service) UpdateTask(ctx context.Context, tx pgx.Tx, organizationID, spac
 		       priority = $8, start_date = NULLIF($9, '')::date, due_date = NULLIF($10, '')::date,
 		       parent_task_id = NULLIF($11, '')::uuid, rank = COALESCE(NULLIF($12, ''), rank),
 		       estimate = round($16::float8::numeric, 2), iteration_id = NULLIF($17, '')::uuid, project_id = NULLIF($18, '')::uuid,
+		       duplicate_of_task_id = NULLIF($19, '')::uuid,
 		       version = version + 1, updated_at = clock_timestamp()
 		 WHERE organization_id = openfox_private.current_organization_id()
 		   AND space_id = $13::uuid AND id = $14::uuid AND version = $15 AND deleted_at IS NULL
 		RETURNING version`, typeID, statusID, title, description, acceptance, assigneeProjection, agentProjection,
-		priority, startDate, dueDate, parentID, rank, spaceID, taskID, int64(input.Version), estimate, iterationID, projectID).Scan(&version)
+		priority, startDate, dueDate, parentID, rank, spaceID, taskID, int64(input.Version), estimate, iterationID, projectID, duplicateOf).Scan(&version)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Task{}, ErrVersionConflict
 	}

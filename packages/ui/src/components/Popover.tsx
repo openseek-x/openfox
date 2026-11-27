@@ -27,6 +27,8 @@ export interface PopoverProps {
   onEscape?: () => void;
   /** 定位参照元素 */
   anchorRef: RefObject<HTMLElement | null>;
+  /** Escape 后的焦点目标，默认回到定位元素。 */
+  returnFocusTo?: HTMLElement;
   placement?: Placement;
   /** 与参照元素的间距 */
   offset?: number;
@@ -113,6 +115,7 @@ export function Popover({
   onOpenChange,
   onEscape,
   anchorRef,
+  returnFocusTo,
   placement = "bottom-start",
   offset = 4,
   matchWidth = false,
@@ -163,7 +166,7 @@ export function Popover({
       event.stopPropagation();
       if (onEscape) onEscape();
       else onOpenChange(false);
-      anchorRef.current?.focus();
+      (returnFocusTo?.isConnected ? returnFocusTo : anchorRef.current)?.focus();
     };
     document.addEventListener("pointerdown", onPointer, true);
     document.addEventListener("keydown", onKey, true);
@@ -180,7 +183,7 @@ export function Popover({
       window.removeEventListener("resize", update);
       window.removeEventListener("scroll", update, true);
     };
-  }, [open, onOpenChange, onEscape, anchorRef, update]);
+  }, [open, onOpenChange, onEscape, anchorRef, returnFocusTo, update]);
 
   if (!open) return null;
   return createPortal(

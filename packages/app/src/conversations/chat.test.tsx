@@ -76,7 +76,10 @@ describe("对话页签 · 三种导航模式", () => {
       within(nav).getByRole("radio", { name: "多会话模式" }),
     );
     // 按 Agent 分组：组头可折叠
-    const group = await within(nav).findByRole("button", { name: /阿虎/ });
+    const group = await within(nav).findByRole("button", {
+      name: /阿虎/,
+      expanded: true,
+    });
     expect(within(nav).getByText("阿虎的会话")).toBeInTheDocument();
     await userEvent.click(group);
     expect(within(nav).queryByText("阿虎的会话")).not.toBeInTheDocument();
@@ -301,7 +304,7 @@ describe("对话页", () => {
           return json(200, {
             messages: [
               message(1),
-              message(2, { body: "第一条回复" }),
+              message(2, { body: "第一条回复", author_agent_id: "a2" }),
               message(3),
               message(4, { body: "第二条回复" }),
             ],
@@ -320,8 +323,15 @@ describe("对话页", () => {
     const last = screen
       .getByText("第二条回复")
       .closest('[data-slot="agent-turn"]') as HTMLElement;
-    expect(within(first).getByText("熊猫")).toBeInTheDocument();
+    expect(await within(first).findByText("阿虎")).toBeVisible();
     expect(within(first).getByText("Agent")).toBeInTheDocument();
+    await userEvent.click(
+      within(first).getByRole("button", { name: /查看.*信息/ }),
+    );
+    expect(
+      await screen.findByRole("dialog", { name: "查看 阿虎 的信息" }),
+    ).toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
     const firstActions = first.querySelector('[data-slot="message-actions"]')!;
     const lastActions = last.querySelector('[data-slot="message-actions"]')!;
     for (const actions of [firstActions, lastActions]) {

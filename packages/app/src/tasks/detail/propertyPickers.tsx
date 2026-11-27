@@ -24,6 +24,11 @@ import type { Priority } from "../primitives/PriorityIcon";
 import { useAgentDirectory, useUpdateTask, type Person } from "../queries";
 import { statusFields } from "../TaskMenu";
 import {
+  MarkDuplicateDialog,
+  isDuplicateStatus,
+  type DuplicateTarget,
+} from "./MarkDuplicateDialog";
+import {
   TaskAssigneeAvatar,
   isPersonAssignee,
   useInvitationAssignees,
@@ -109,7 +114,12 @@ export function AssigneePicker({
             value: `agent:${agent.id}`,
             label: agent.name,
             icon: (
-              <AgentAvatar name={agent.name} avatar={agent.avatar} size={20} />
+              <AgentAvatar
+                agentId={agent.id}
+                name={agent.name}
+                avatar={agent.avatar}
+                size={20}
+              />
             ),
           })),
       ],
@@ -187,6 +197,7 @@ export function AssigneeContent({
               className="flex min-w-0 items-center gap-2"
             >
               <TaskAssigneeAvatar
+                id={human.id}
                 kind={human.kind}
                 name={name}
                 src={person?.avatar_url}
@@ -229,6 +240,7 @@ export function AssigneeContent({
             className="shrink-0 text-fg-muted"
           />
           <AgentAvatar
+            agentId={agent.id}
             name={agent.name}
             avatar={agents.find((item) => item.id === agent.id)?.avatar}
             size={20}
@@ -254,22 +266,35 @@ export function StatusPicker({
 }) {
   const t = useT();
   const update = useUpdateTask(orgId);
+  const [duplicate, setDuplicate] = useState<DuplicateTarget | null>(null);
   return (
-    <Picker
-      label={t("tasks.fields.status")}
-      groups={statusGroups(workflow)}
-      selected={[task.status_id]}
-      onSelect={(id) => {
-        const status = workflow.find((s) => s.id === id);
-        if (status && id !== task.status_id)
-          update.mutate({
-            task,
-            patch: { status_id: id },
-            optimistic: statusFields(status),
-          });
-      }}
-      trigger={trigger}
-    />
+    <>
+      <Picker
+        label={t("tasks.fields.status")}
+        groups={statusGroups(workflow)}
+        selected={[task.status_id]}
+        onSelect={(id) => {
+          const status = workflow.find((s) => s.id === id);
+          if (!status || id === task.status_id) return;
+          // OPE-17 · 重复状态必须带目标任务：改走目标选择器
+          if (isDuplicateStatus(status)) setDuplicate({ task, statusId: id });
+          else
+            update.mutate({
+              task,
+              patch: { status_id: id },
+              optimistic: statusFields(status),
+            });
+        }}
+        trigger={trigger}
+      />
+      {duplicate && (
+        <MarkDuplicateDialog
+          orgId={orgId}
+          target={duplicate}
+          onClose={() => setDuplicate(null)}
+        />
+      )}
+    </>
   );
 }
 

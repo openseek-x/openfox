@@ -24,3 +24,29 @@
 ## 配置、数据与回退
 
 本轮纯前端样式与组件表现优化，无新增依赖、无配置文件/接口/SQL/数据迁移变更；回退直接回滚本分支提交即可。
+
+## 合并 develop 的冲突解决（提测后补记）
+
+提测后 PR #33 与 develop（`a27bfa5`）出现 6 个文件、11 处冲突。采用把 `origin/develop` 合入任务分支的方式处理，不改写已推送的历史，不需要强推。develop 上先改过这些文件的任务是 OPE-11、OPE-14、OPE-17。
+
+| 文件 | 冲突数 | 取舍 | 原因 |
+|---|---|---|---|
+| `packages/ui/src/tokens.css` | 5 | 全部取分支一侧 | 保住 app < sidebar < card 的三层层次；magic-blue 的 canvas 取 `#20233e`、classic-dark 的 canvas 取 `#141414`，避免与 card 同色；`of-board-lane` 取 `/55`，与泳道描边一起调整 |
+| `packages/app/src/tasks/board/Card.tsx` | 1 | 两边合并 | 采用 develop 的 `data-board-title`（`useBoardPosition.ts` 靠它定位看板标题），并保留分支的 `leading-snug` |
+| `packages/app/src/inbox/InboxPage.tsx` | 1 | 两边合并 | 保留分支的 `border-line-subtle` 与过渡动画，行高改用 develop 的窄宽度写法 `py-1.5 @3xl:h-[var(--density-table-row,40px)] @3xl:py-0` |
+| `packages/app/src/tasks/board/Board.tsx` | 1 | 取分支一侧 | 泳道使用 `of-board-lane` 加 `border-line-subtle` |
+| `packages/app/src/tasks/board/GroupedBoard.tsx` | 2 | 取分支一侧 | 同上 |
+| `packages/app/src/me/PreferencesPage.tsx` | 1 | 取分支一侧 | 四主题缩略图色板含 `sidebar`，与三层层次一致 |
+
+### 待人确认
+
+- `of-board-lane` 透明度取 `/55`（分支），develop 为 `/60`。
+- 浅色主题 `surface-canvas` 无冲突标记，合并后为分支值 `#fafafa`，develop 为 `#fcfcfd`。
+
+### 合并后验证
+
+- `pnpm lint`（Prettier、ESLint、全仓类型检查）通过。
+- `pnpm exec vitest run`：244 个文件、2396 项全部通过。
+- `pnpm --filter @openfox/desktop test`：129/129 通过。
+- `pnpm build` 通过。
+- 本次未重跑 Playwright E2E，也没有重新做浏览器截图验收，交测试侧在合并结果上复测。

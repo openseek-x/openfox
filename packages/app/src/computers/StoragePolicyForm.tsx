@@ -49,13 +49,14 @@ export function StoragePolicyForm({
       if (c.params.policy) toast(t("connect.devicePolicy.saved"));
     },
   });
+  const startCommand = cmd.start;
   const started = useRef(false);
   useEffect(() => {
     if (!started.current) {
       started.current = true;
-      cmd.start({ storage: true });
+      startCommand({ storage: true });
     }
-  }, [cmd.start]);
+  }, [startCommand]);
   return (
     <section className="grid gap-3 border-t border-line-soft pt-4">
       <h3 className="font-semibold">{t("connect.storage.autoPolicy")}</h3>
