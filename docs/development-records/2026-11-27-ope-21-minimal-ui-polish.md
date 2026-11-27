@@ -41,7 +41,7 @@
 ### 待人确认
 
 - `of-board-lane` 透明度取 `/55`（分支），develop 为 `/60`。
-- 浅色主题 `surface-canvas` 无冲突标记，合并后为分支值 `#fafafa`，develop 为 `#fcfcfd`。
+- 浅色主题 `surface-canvas` 也在 `tokens.css` 的冲突块内（第 1 块），取分支值 `#fafafa`，develop 为 `#fcfcfd`；暗色主题 canvas `#232326` 两边一致，无冲突。
 
 ### 合并后验证
 
