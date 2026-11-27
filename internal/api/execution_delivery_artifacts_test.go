@@ -1,6 +1,8 @@
 package api
 
 import (
+	"bytes"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -65,5 +67,38 @@ func TestArtifactDownloadHeaders(t *testing.T) {
 	setArtifactDownloadHeaders(header, executiondelivery.Artifact{Name: "结果.csv", MIMEType: "text/csv"})
 	if got := header.Get("Content-Disposition"); got != "attachment; filename*=utf-8''%E7%BB%93%E6%9E%9C.csv" {
 		t.Errorf("unicode Content-Disposition = %q", got)
+	}
+}
+
+// 视频产物上传：文件头必须与声明的视频类型一致；通过时完整保留原始字节。
+func TestVerifiedVideoReader(t *testing.T) {
+	webm := append([]byte{0x1A, 0x45, 0xDF, 0xA3, 0x9F, 0x42, 0x86, 0x81, 0x01, 0x42, 0xF7, 0x81, 0x01, 0x42, 0xF2, 0x81, 0x04,
+		0x42, 0xF3, 0x81, 0x08, 0x42, 0x82, 0x84, 'w', 'e', 'b', 'm'}, bytes.Repeat([]byte{0x55}, 2048)...)
+	mp4 := []byte{0, 0, 0, 0x20, 'f', 't', 'y', 'p', 'i', 's', 'o', 'm', 0, 0, 2, 0, 'i', 's', 'o', 'm', 'i', 's', 'o', '2',
+		'a', 'v', 'c', '1', 'm', 'p', '4', '1'}
+	cases := []struct {
+		name    string
+		content []byte
+		mime    string
+		ok      bool
+	}{
+		{"webm", webm, "video/webm", true},
+		{"short mp4", mp4, "video/mp4", true},
+		{"declared mp4 but webm", webm, "video/mp4", false},
+		{"html disguised", []byte("<html><script>alert(1)</script>"), "video/webm", false},
+		{"empty", nil, "video/webm", false},
+	}
+	for _, tc := range cases {
+		reader, ok := verifiedVideoReader(bytes.NewReader(tc.content), tc.mime)
+		if ok != tc.ok {
+			t.Fatalf("%s: ok = %v, want %v", tc.name, ok, tc.ok)
+		}
+		if !ok {
+			continue
+		}
+		got, err := io.ReadAll(reader)
+		if err != nil || !bytes.Equal(got, tc.content) {
+			t.Fatalf("%s: content changed (%d bytes, err %v)", tc.name, len(got), err)
+		}
 	}
 }

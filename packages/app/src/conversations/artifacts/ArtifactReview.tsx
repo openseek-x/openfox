@@ -322,7 +322,7 @@ export function ArtifactReview({
               )}
             </button>
           )}
-          {kind === "html" && !source && !large ? (
+          {kind === "html" && !source ? (
             <HtmlPreview
               text={text}
               name={artifact.name}

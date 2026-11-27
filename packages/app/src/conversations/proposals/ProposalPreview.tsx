@@ -75,7 +75,9 @@ function Review({
     [error, setError] = useState("");
   const [side, setSide] = useState<ProposalSide | "diff">("candidate");
   const kind = artifactPreviewKind(p.base);
-  const textDiff = !["office", "pdf", "image", "binary"].includes(kind);
+  const textDiff = !["office", "pdf", "image", "video", "binary"].includes(
+    kind,
+  );
   useEffect(() => {
     if (p.status !== "PENDING" && pending) {
       store.write(pendingKey, undefined);

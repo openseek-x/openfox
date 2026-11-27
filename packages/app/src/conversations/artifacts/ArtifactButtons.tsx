@@ -40,7 +40,9 @@ export function ArtifactButtons({
               name={
                 artifactPreviewKind(artifact) === "image"
                   ? "image"
-                  : "file-text"
+                  : artifactPreviewKind(artifact) === "video"
+                    ? "play"
+                    : "file-text"
               }
               size={14}
               className="shrink-0 text-fg-muted"

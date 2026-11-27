@@ -297,7 +297,7 @@ export const artifactsZh = {
       "拖选文字后，在选区旁输入修改意见。也可用 Tab 聚焦段落后按 Enter 选择整段。",
     htmlNoMapping: "当前页面没有可可靠映射的元素，请切换到源码选择。",
     htmlUnavailable:
-      "HTML 超过静态预览限制（512 KiB、10,000 个节点或 128 层嵌套），或无法解析。请切换到源码查看。",
+      "HTML 超过静态预览限制（20 MB、50,000 个节点或 128 层嵌套），或无法解析。请切换到源码查看。",
     rendered: "查看排版",
     textHint: "选中要修改的源码文字，再输入意见。选区最多 8 KiB。",
     sourceText: "可选择批注范围的源文件",
@@ -319,6 +319,8 @@ export const artifactsZh = {
     expiredHint: "这个产物已过保留期或已被删除，无法再预览或下载。",
     missing: "找不到这个产物",
     tooLarge: "文件较大，无法在这里预览，请下载后查看。",
+    videoTitle: "视频：{name}",
+    videoUnavailable: "当前环境无法播放这个视频，请下载后用本地播放器查看。",
     download: "下载",
     meta: "{type} · {size} · {time}",
   },

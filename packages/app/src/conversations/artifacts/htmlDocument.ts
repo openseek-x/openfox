@@ -30,8 +30,9 @@ const KEYBOARD_TARGETS = new Set(
   "p h1 h2 h3 h4 h5 h6 li pre td th img figcaption".split(" "),
 );
 const HTML_NS = "http://www.w3.org/1999/xhtml";
-export const HTML_MAX_BYTES = 512 * 1024;
-export const HTML_MAX_NODES = 10000;
+// 渲染上限：与单个产物上限（20 MB）一致，容纳内嵌步骤截图的单文件测试报告；节点上限按多用例报告放宽。
+export const HTML_MAX_BYTES = 20 * 1024 * 1024;
+export const HTML_MAX_NODES = 50000;
 export const HTML_MAX_DEPTH = 128;
 type Node = DefaultTreeAdapterMap["childNode"];
 export type HtmlTextTarget = { path: string; start: number; offsets: number[] };

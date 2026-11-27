@@ -23,7 +23,7 @@ import (
 
 const (
 	// MaxRunArtifacts 是每次 Run 最多登记的产物数；MaxConversationArtifacts 是会话产物列表的上限。
-	MaxRunArtifacts          = 10
+	MaxRunArtifacts          = 32
 	MaxConversationArtifacts = 200
 	// maxArtifactName 是文件名的字符上限（与 artifacts_name_valid 约束一致）。
 	maxArtifactName = 255
@@ -268,6 +268,12 @@ var previewMIMETypes = map[string]struct{}{
 	"application/pdf": {},
 	"text/plain":      {}, "text/markdown": {}, "text/csv": {},
 	"image/png": {}, "image/jpeg": {}, "image/gif": {}, "image/webp": {},
+	"video/webm": {}, "video/mp4": {},
+}
+
+// VideoMIME 判断规范化后的产物类型是否为可在线播放的视频（上传时需复核文件头）。
+func VideoMIME(value string) bool {
+	return value == "video/webm" || value == "video/mp4"
 }
 
 // NormalizeArtifactMIME 去掉参数、转小写；不在可预览白名单内的类型（包括 SVG、HTML）返回 application/octet-stream。

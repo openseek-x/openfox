@@ -9592,8 +9592,8 @@ export interface paths {
          * 执行设备上传一个 Run 产物（阶段 10d · openfox_publish_artifact 发布工具；请求体为文件原始字节）
          * @description 只有该 Run 的执行电脑可上传；Run 必须未结束，X-Run-Generation 必须等于当前代次（否则 409 DELIVERY_CONFLICT）。
          *     X-Artifact-Name 只取最后一个路径成分并清理控制字符；X-Artifact-MIME 只接受可预览白名单
-         *     （text/plain、text/markdown、text/csv、image/png、image/jpeg、image/gif、image/webp、application/pdf，以及经过包结构校验的 DOCX/XLSX/PPTX 对应 MIME），其余一律存为 application/octet-stream。
-         *     单个文件不超过 min(组织策略 artifact_file_max_bytes, 20 MB)，每次 Run 合计不超过 artifact_run_max_bytes、最多 10 个
+         *     （text/plain、text/markdown、text/csv、image/png、image/jpeg、image/gif、image/webp、application/pdf、video/webm、video/mp4，以及经过包结构校验的 DOCX/XLSX/PPTX 对应 MIME），其余一律存为 application/octet-stream。声明为 video/webm、video/mp4 时文件头嗅探结果必须一致，否则 400。
+         *     单个文件不超过 min(组织策略 artifact_file_max_bytes, 20 MB)，每次 Run 合计不超过 artifact_run_max_bytes、最多 32 个
          *     （超出 413 RESOURCE_LIMIT）。同一 Run 内 sha256 相同的内容不重复登记：返回已有产物（200），新写入的对象被删除。
          *     新登记的产物发组织事件 run.artifact。保留期沿用组织策略（artifact_retention_days，从创建时刻起算；随结果的 artifact_ids 关联后才会被清理）。
          */
