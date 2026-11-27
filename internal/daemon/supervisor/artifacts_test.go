@@ -260,7 +260,7 @@ func TestArtifactPublisherDedupLimitAndErrors(t *testing.T) {
 		}
 	}
 	writeFile(t, filepath.Join(out, "f.txt"), []byte("one too many"))
-	if text, ok := publisher.call(context.Background(), publishArgs(filepath.Join(out, "f.txt"), "")); ok || !strings.Contains(text, "limit of 32") {
+	if text, ok := publisher.call(context.Background(), publishArgs(filepath.Join(out, "f.txt"), "")); ok || !strings.Contains(text, "limit of 20") {
 		t.Fatalf("limit = %q", text)
 	}
 	if got := publisher.ids(); len(got) != maxRunArtifacts {
@@ -302,7 +302,7 @@ func TestArtifactPublisherUploadErrors(t *testing.T) {
 
 func TestBuildArtifactSectionMentionsDirectoryAndRule(t *testing.T) {
 	section := buildArtifactSection("/state/run-artifacts/run-1")
-	for _, want := range []string{"openfox_publish_artifact", "/state/run-artifacts/run-1", "does not deliver", "32 artifacts", "20 MB", "HTML reports", "WebM/MP4 videos"} {
+	for _, want := range []string{"openfox_publish_artifact", "/state/run-artifacts/run-1", "does not deliver", "20 artifacts", "20 MB", "HTML reports", "WebM/MP4 videos"} {
 		if !strings.Contains(section, want) {
 			t.Errorf("section missing %q", want)
 		}

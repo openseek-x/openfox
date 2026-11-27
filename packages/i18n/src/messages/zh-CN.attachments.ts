@@ -21,6 +21,7 @@ export const attachmentsZh = {
     pdf: "PDF 文档",
     image: "图片",
     archive: "压缩包",
+    video: "视频",
     text: "文本文件",
     file: "文件",
   },

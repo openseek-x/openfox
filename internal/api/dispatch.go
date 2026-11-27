@@ -289,6 +289,13 @@ func (h *Handler) callDeviceRunTool(w http.ResponseWriter, r *http.Request) {
 		h.callSpaceTool(w, r, principal.DeviceID, selection, tool, input)
 		return
 	}
+	// OPE-19：带 artifact_ids 的评论是正式报告评论，产物要先在事务外复制为附件。
+	if r.PathValue("tool") == "task_comment" {
+		if ids, present, problem := dispatch.ReportArtifactIDs(input.Arguments); problem == "" && present {
+			h.callReportComment(w, r, principal, selection, input, ids)
+			return
+		}
+	}
 	var result dispatch.ToolResult
 	err := h.runDeliveryDeviceTransaction(r, selection, func(ctx context.Context, tx pgx.Tx) error {
 		var err error

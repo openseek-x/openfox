@@ -38,7 +38,7 @@ import (
 const (
 	publishToolName = toolPrefix + "publish_artifact"
 	// maxRunArtifacts 与中心 executiondelivery.MaxRunArtifacts 一致；maxArtifactFileBytes 是单个产物的绝对上限（中心另按组织策略再校验）。
-	maxRunArtifacts      = 32
+	maxRunArtifacts      = 20
 	maxArtifactFileBytes = 20 << 20
 	maxArtifactPathBytes = 4096
 	maxArtifactTitle     = 100

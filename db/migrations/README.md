@@ -1018,3 +1018,16 @@ CREATE UNIQUE INDEX IF NOT EXISTS device_commands_rollback_unique
 ```
 
 再次升级时，先在停服窗口执行 `DROP INDEX IF EXISTS openfox.device_commands_rollback_unique;`，再启动新版中心，允许同一设备排队处理多个起草请求。
+
+## 000176 · 智能体正式报告评论带附件
+
+先应用 `000176_agent_report_comment_attachments.sql`，再升级中心、执行端和 Web 客户端。脚本只加列、约束和两个部分唯一索引：`attachments` 支持智能体上传者、所属评论和来源产物，`task_comments.run_report` 标记每次 Run 唯一的正式报告评论。已有数据无需回填，所有现存行直接满足新约束。附件对象仍按 `attachments/<组织>/<附件 ID>` 独占存储，智能体附件是从 Run 产物复制出的独立对象，产物过期清理不影响它。
+
+回退旧中心前，先停止派发测试智能体任务，再在部署库执行下列语句，删除智能体附件行，并按返回的 `file_key` 删除存储对象，最后恢复非空约束：
+
+```sql
+DELETE FROM openfox.attachments WHERE uploaded_by_agent_id IS NOT NULL RETURNING file_key;
+ALTER TABLE openfox.attachments ALTER COLUMN uploaded_by SET NOT NULL;
+```
+
+正式报告评论本身保留（旧版本把它当作普通智能体评论显示），新增列闲置即可。

@@ -10,18 +10,30 @@ import (
 )
 
 const columns = `a.id::text, a.owner_kind, a.space_id::text, COALESCE(a.task_id::text, ''), COALESCE(a.conversation_id::text, ''),
-	COALESCE(a.message_id::text, ''), a.name, a.file_key, a.content_type, a.size_bytes, a.uploaded_by::text,
-	COALESCE(NULLIF(u.full_name, ''), u.email, ''), a.created_at, COALESCE(a.comment_thread_id::text, '')`
+	COALESCE(a.message_id::text, ''), a.name, a.file_key, a.content_type, a.size_bytes, COALESCE(a.uploaded_by::text, ''),
+	COALESCE(a.uploaded_by_agent_id::text, ''),
+	CASE WHEN a.uploaded_by_agent_id IS NOT NULL THEN COALESCE(ag.name, '') ELSE COALESCE(NULLIF(u.full_name, ''), u.email, '') END,
+	a.created_at, COALESCE(a.comment_thread_id::text, ''), COALESCE(a.comment_id::text, '')`
 
 const fromClause = `
 	FROM openfox.attachments a
-	LEFT JOIN openfox.users u ON u.id = a.uploaded_by`
+	LEFT JOIN openfox.users u ON u.id = a.uploaded_by
+	LEFT JOIN openfox.agents ag ON ag.organization_id = a.organization_id AND ag.id = a.uploaded_by_agent_id`
+
+// visibleComment 排除所属评论已删除的智能体附件（task_comments 的 RLS 对已删除评论不可见）。
+const visibleComment = ` AND (a.comment_id IS NULL OR EXISTS (SELECT 1 FROM openfox.task_comments c
+	WHERE c.organization_id = a.organization_id AND c.id = a.comment_id))`
 
 func scan(row pgx.Row) (Attachment, error) {
 	var a Attachment
 	err := row.Scan(&a.ID, &a.OwnerKind, &a.SpaceID, &a.TaskID, &a.ConversationID, &a.MessageID, &a.Name, &a.FileKey,
-		&a.ContentType, &a.SizeBytes, &a.UploadedBy, &a.UploaderName, &a.CreatedAt, &a.CommentThreadID)
+		&a.ContentType, &a.SizeBytes, &a.UploadedBy, &a.UploadedByAgentID, &a.UploaderName, &a.CreatedAt, &a.CommentThreadID, &a.CommentID)
+	a.UploaderKind = UploaderUser
+	if a.UploadedByAgentID != "" {
+		a.UploaderKind = UploaderAgent
+	}
 	a.Previewable = Previewable(a.ContentType)
+	a.PreviewKind = PreviewKind(a.Name, a.ContentType, a.SizeBytes)
 	return a, err
 }
 
@@ -31,7 +43,7 @@ func Load(ctx context.Context, tx pgx.Tx, id string) (Attachment, error) {
 		return Attachment{}, ErrNotFound
 	}
 	a, err := scan(tx.QueryRow(ctx, `SELECT `+columns+fromClause+`
-		WHERE a.organization_id = openfox_private.current_organization_id() AND a.id = $1::uuid`, id))
+		WHERE a.organization_id = openfox_private.current_organization_id() AND a.id = $1::uuid`+visibleComment, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Attachment{}, ErrNotFound
 	}
@@ -98,7 +110,7 @@ func ListForMessages(ctx context.Context, tx pgx.Tx, messageIDs []string) (map[s
 
 func list(ctx context.Context, tx pgx.Tx, where string, arg any) ([]Attachment, error) {
 	rows, err := tx.Query(ctx, `SELECT `+columns+fromClause+`
-		WHERE a.organization_id = openfox_private.current_organization_id() AND `+where+`
+		WHERE a.organization_id = openfox_private.current_organization_id() AND `+where+visibleComment+`
 		ORDER BY a.created_at, a.id LIMIT 200`, arg)
 	if err != nil {
 		return nil, err
@@ -176,7 +188,8 @@ func Delete(ctx context.Context, tx pgx.Tx, id string) (string, error) {
 	var key string
 	err := tx.QueryRow(ctx, `
 		DELETE FROM openfox.attachments
-		 WHERE organization_id = openfox_private.current_organization_id() AND id = $1::uuid AND comment_thread_id IS NULL AND message_id IS NULL
+		 WHERE organization_id = openfox_private.current_organization_id() AND id = $1::uuid
+		   AND comment_thread_id IS NULL AND message_id IS NULL AND comment_id IS NULL
 		RETURNING file_key`, id).Scan(&key)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", ErrNotFound

@@ -548,10 +548,41 @@ test("test evidence: large HTML report renders and a recorded WebM plays under t
         },
       }),
   );
+  // 与服务端 http.ServeContent 一致：声明 Accept-Ranges，并按 Range 头返回 206 分段；视频直连下载地址，拖动依赖它。
+  const rangeRequests: string[] = [];
   for (const file of extra)
-    await page.route(`**${org}/runs/r1/artifacts/${file.id}`, (route) =>
-      route.fulfill({ body: file.body, contentType: file.mime_type }),
-    );
+    await page.route(`**${org}/runs/r1/artifacts/${file.id}`, (route) => {
+      const size = file.body.length;
+      const header = route.request().headers()["range"];
+      const range = header ? /^bytes=(\d*)-(\d*)$/.exec(header) : null;
+      const headers = { "Accept-Ranges": "bytes" };
+      if (!range || (!range[1] && !range[2]))
+        return route.fulfill({
+          body: file.body,
+          contentType: file.mime_type,
+          headers,
+        });
+      rangeRequests.push(header!);
+      const start = range[1]
+        ? Number(range[1])
+        : Math.max(size - Number(range[2]), 0);
+      const end =
+        range[1] && range[2] ? Math.min(Number(range[2]), size - 1) : size - 1;
+      if (start >= size || start > end)
+        return route.fulfill({
+          status: 416,
+          headers: { ...headers, "Content-Range": `bytes */${size}` },
+        });
+      return route.fulfill({
+        status: 206,
+        body: file.body.subarray(start, end + 1),
+        contentType: file.mime_type,
+        headers: {
+          ...headers,
+          "Content-Range": `bytes ${start}-${end}/${size}`,
+        },
+      });
+    });
   const csp = readFileSync("deploy/nginx-web.example.conf", "utf8").match(
     /Content-Security-Policy "([^"]+)"/,
   )![1]!;
@@ -602,6 +633,8 @@ test("test evidence: large HTML report renders and a recorded WebM plays under t
       }),
   );
   expect(seeked).toBeGreaterThan(0.5);
+  // 视频确实走了 Range 分段，而不是整段下载后再拖动。
+  expect(rangeRequests.length).toBeGreaterThan(0);
   await expect(page.getByRole("link", { name: "下载" })).toHaveAttribute(
     "download",
     "TC-03-弹窗.webm",

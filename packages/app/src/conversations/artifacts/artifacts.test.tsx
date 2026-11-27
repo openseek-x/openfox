@@ -429,10 +429,10 @@ describe("会话产物 · 预览规则", () => {
     expect(
       artifactPreviewable({ ...MD, size_bytes: 5 * 1024 * 1024 + 1 }),
     ).toBe(false);
-    // 测试报告与录像：HTML、视频上限与单个产物上限一致（20 MB）。
+    // 测试报告与录像：HTML 渲染上限 10 MB，视频播放上限与单个产物上限一致（20 MB）。
     expect(artifactPreviewable({ ...HTML, size_bytes: 7_447_186 })).toBe(true);
     expect(
-      artifactPreviewable({ ...HTML, size_bytes: 20 * 1024 * 1024 + 1 }),
+      artifactPreviewable({ ...HTML, size_bytes: 10 * 1024 * 1024 + 1 }),
     ).toBe(false);
     expect(artifactPreviewable({ ...WEBM, size_bytes: 20 * 1024 * 1024 })).toBe(
       true,
@@ -451,16 +451,18 @@ describe("会话产物 · 预览规则", () => {
   });
 
   it("视频产物在面板内播放，可下载原文件", async () => {
-    CONTENT["a-webm"] = () =>
-      new Response(new Uint8Array([0x1a, 0x45, 0xdf, 0xa3]), { status: 200 });
     const calls = open("/o/o1/chat/c1?artifact=a-webm", { list: [WEBM] });
     const aside = await panel();
     const video = await within(aside).findByLabelText("视频：TC-01-登录.webm");
     expect(video.tagName).toBe("VIDEO");
-    expect(video).toHaveAttribute("src", "blob:artifact");
+    // 视频直接指向下载地址由浏览器按 Range 分段播放，面板不再取回整段内容。
+    expect(video).toHaveAttribute(
+      "src",
+      "/api/v1/organizations/o1/runs/r1/artifacts/a-webm",
+    );
     expect(video).toHaveAttribute("controls");
     expect(calls.some((call) => call.path.endsWith("/artifacts/a-webm"))).toBe(
-      true,
+      false,
     );
     expect(within(aside).getByRole("link", { name: "下载" })).toHaveAttribute(
       "download",
@@ -532,7 +534,7 @@ describe("会话产物 · 预览规则", () => {
         ...HTML,
         id: "a-huge",
         name: "大文件.html",
-        size_bytes: 20 * 1024 * 1024 + 1,
+        size_bytes: 10 * 1024 * 1024 + 1,
       },
       { ...HTML, id: "a-denied", name: "不可读.html" },
     ];

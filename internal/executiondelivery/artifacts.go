@@ -23,7 +23,7 @@ import (
 
 const (
 	// MaxRunArtifacts 是每次 Run 最多登记的产物数；MaxConversationArtifacts 是会话产物列表的上限。
-	MaxRunArtifacts          = 32
+	MaxRunArtifacts          = 20
 	MaxConversationArtifacts = 200
 	// maxArtifactName 是文件名的字符上限（与 artifacts_name_valid 约束一致）。
 	maxArtifactName = 255

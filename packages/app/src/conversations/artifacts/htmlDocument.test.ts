@@ -73,8 +73,8 @@ describe("HTML source mapping and isolation", () => {
     expect(() =>
       htmlPreviewDocument("<div>".repeat(130) + "</div>".repeat(130)),
     ).toThrow();
-    expect(() => htmlPreviewDocument("<br>".repeat(50001))).toThrow();
-    expect(() => htmlPreviewDocument("<br>".repeat(20000))).not.toThrow();
+    expect(() => htmlPreviewDocument("<br>".repeat(20001))).toThrow();
+    expect(() => htmlPreviewDocument("<br>".repeat(19000))).not.toThrow();
     expect(
       htmlPreviewDocument("<p>" + "x".repeat(8192) + "</p>").targets,
     ).toHaveLength(0);

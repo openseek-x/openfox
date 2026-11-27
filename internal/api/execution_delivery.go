@@ -255,9 +255,7 @@ func (h *Handler) downloadArtifact(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 	setArtifactDownloadHeaders(w.Header(), artifact)
 	setFileTransferDeadline(w, artifact.SizeBytes, false)
-	if _, err := io.Copy(w, file); err != nil && !errors.Is(err, context.Canceled) {
-		return
-	}
+	serveStoredContent(w, r, file)
 }
 
 // streamEvents 是统一事件流：同一连接推送 Run 执行事件（event: run.event）与组织事件（event: <type>）。

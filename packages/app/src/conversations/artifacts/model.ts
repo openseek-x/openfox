@@ -22,9 +22,9 @@ export type ArtifactPreviewKind =
 export const ARTIFACT_TEXT_MAX_BYTES = 5 * 1024 * 1024;
 /** 图片预览上限（与市场一致：10 MB），超过只能下载。 */
 export const ARTIFACT_IMAGE_MAX_BYTES = IMAGE_MAX_BYTES;
-/** HTML 报告（测试报告常内嵌步骤截图）的渲染上限：与单个产物上限一致（20 MB）。 */
-export const ARTIFACT_HTML_MAX_BYTES = 20 * 1024 * 1024;
-/** 视频（测试录像）在面板内播放的上限：与单个产物上限一致（20 MB），整段取回为 Blob，可拖动。 */
+/** HTML 报告（测试报告常内嵌步骤截图）的渲染上限：10 MB，超过只能下载。 */
+export const ARTIFACT_HTML_MAX_BYTES = 10 * 1024 * 1024;
+/** 视频（测试录像）在面板内播放的上限：与单个产物上限一致（20 MB）；按 HTTP Range 分段播放，可拖动。 */
 export const ARTIFACT_VIDEO_MAX_BYTES = 20 * 1024 * 1024;
 /** 文本超过它时按大文件模式只显示前 500 行（与市场一致）。 */
 export const ARTIFACT_LARGE_TEXT_BYTES = LARGE_TEXT_BYTES;

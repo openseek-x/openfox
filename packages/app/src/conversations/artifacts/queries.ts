@@ -22,7 +22,7 @@ export function useConversationArtifacts(
   });
 }
 
-/** 预览内容：图片、PDF、视频返回 Blob，文本返回解码后的字符串。产物不可变，取一次即可。 */
+/** 预览内容：图片、PDF 返回 Blob，文本返回解码后的字符串（视频走下载地址分段播放，不取内容）。产物不可变，取一次即可。 */
 export function useArtifactContent(
   orgId: string,
   artifact: ArtifactReviewFile | undefined,
@@ -40,7 +40,7 @@ export function useArtifactContent(
     queryFn: async ({
       signal,
     }): Promise<{ blob: Blob | null; text: string; office?: OfficeView }> => {
-      const image = kind === "image" || kind === "pdf" || kind === "video";
+      const image = kind === "image" || kind === "pdf";
       if (!artifact?.run_id) throw new Error("Artifact run is missing");
       if (kind === "office") {
         const office = await api.artifactReviews.office(
@@ -82,7 +82,11 @@ export function useArtifactContent(
         ),
       };
     },
-    enabled: Boolean(orgId && artifact) && enabled && kind !== "binary",
+    enabled:
+      Boolean(orgId && artifact) &&
+      enabled &&
+      kind !== "binary" &&
+      kind !== "video",
     staleTime: Infinity,
     gcTime: 0, // Release decoded text/Blobs when the last preview unmounts.
     retry: false,

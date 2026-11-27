@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"time"
 
@@ -84,4 +85,16 @@ func (h *Handler) cleanupFailedAttachment(r *http.Request, selection tenancy.Org
 		})
 		return registered, err
 	})
+}
+
+// serveStoredContent 写出已打开的存储对象。对象可定位（本地存储是 *os.File）时交给 http.ServeContent，
+// 支持 HTTP Range（206 分段、Accept-Ranges: bytes），视频可以边下边播、拖动；否则整段写出。
+// 调用方先设置好 Content-Type 等响应头；Content-Length 由这里按实际返回的范围决定。
+func serveStoredContent(w http.ResponseWriter, r *http.Request, file io.Reader) {
+	if seeker, ok := file.(io.ReadSeeker); ok {
+		w.Header().Del("Content-Length")
+		http.ServeContent(w, r, "", time.Time{}, seeker)
+		return
+	}
+	_, _ = io.Copy(w, file)
 }

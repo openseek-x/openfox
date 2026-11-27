@@ -22,7 +22,7 @@ import {
 import { ChatMarkdown } from "../ChatMarkdown";
 import { fileKindOf, formatBytes } from "../steps/cards";
 import { HtmlPreview } from "./HtmlPreview";
-import { VideoBlob } from "./VideoPreview";
+import { VideoPlayer } from "./VideoPreview";
 import {
   ARTIFACT_LARGE_TEXT_BYTES,
   artifactAnnotatable,
@@ -56,7 +56,12 @@ export function ArtifactPreview({
   const capabilities = previewCapabilities(artifact);
   const historical = artifact.id !== artifact.head_artifact_id;
   const previewable = !expired && artifactPreviewable(artifact);
-  const content = useArtifactContent(orgId, artifact, previewable);
+  // 视频直接用下载地址分段播放，不取回内容。
+  const content = useArtifactContent(
+    orgId,
+    artifact,
+    previewable && kind !== "video",
+  );
   const downloadUrl = api.runs.artifactUrl(orgId, artifact.run_id, artifact.id);
   // 下载时中心返回 404（已被清理但列表还没刷新）也按失效显示
   const gone =
@@ -295,6 +300,8 @@ export function ArtifactPreview({
                 </a>
               </div>
             )
+          ) : kind === "video" ? (
+            <VideoPlayer src={downloadUrl} name={artifact.name} />
           ) : content.isError ? (
             <div>
               {kind === "office" && (
@@ -310,8 +317,6 @@ export function ArtifactPreview({
               <Skeleton className="h-4 w-full" />
               <Skeleton className="h-4 w-3/4" />
             </div>
-          ) : kind === "video" ? (
-            <VideoBlob blob={content.data.blob!} name={artifact.name} />
           ) : conversationId ? (
             <ArtifactReview
               key={artifact.id}

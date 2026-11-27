@@ -197,6 +197,8 @@ type TimelineComment struct {
 	Mentions          []TimelineMention `json:"mentions"`
 	Reactions         []ReactionSummary `json:"reactions"`
 	CreatedAt         time.Time         `json:"created_at"`
+	// Attachments 是智能体正式报告评论附带的任务附件（OPE-19），由 API 层按评论批量填写（attachments.Attachment）。
+	Attachments any `json:"attachments,omitempty"`
 }
 
 type TimelineItem struct {
