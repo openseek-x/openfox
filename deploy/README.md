@@ -52,6 +52,8 @@ assets with `pnpm --filter @openfox/web build` and publish `apps/web/dist`.
 
 ## Desktop updates
 
+同仓 `develop → master` 的发布 PR 运行静态部署测试，以及中心镜像的迁移和服务健康检查。其他 PR 还会并行运行 Go 回归和前端回归（含真实 API 浏览器测试）。每次推送到 `master`，发布工作流都会在最终提交上执行完整回归，随后验证实际打包的安装器和中心镜像。
+
 Every push to `master`, including a merged pull request, queues a release of the
 push's head commit. GitHub Actions takes the major and minor from
 `apps/desktop/package.json` and uses this workflow's run number for the patch.
