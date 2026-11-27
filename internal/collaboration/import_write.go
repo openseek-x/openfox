@@ -413,6 +413,11 @@ func (s Service) ImportUpdateTask(ctx context.Context, tx pgx.Tx, organizationID
 		       external_assignee_id = CASE WHEN $10::boolean THEN NULLIF($12, '')::uuid ELSE external_assignee_id END,
 		       iteration_id = COALESCE(NULLIF($13, '')::uuid, iteration_id),
 		       completed_at = COALESCE($14::timestamptz, completed_at),
+		       duplicate_of_task_id = CASE
+		           WHEN NULLIF($5, '') IS NULL THEN duplicate_of_task_id
+		           WHEN (SELECT ns.category FROM openfox.task_statuses ns
+		                  WHERE ns.organization_id = openfox_private.current_organization_id() AND ns.id = NULLIF($5, '')::uuid) = 'DUPLICATE' THEN duplicate_of_task_id
+		           ELSE NULL END,
 		       version = version + 1, updated_at = clock_timestamp()
 		 WHERE organization_id = openfox_private.current_organization_id() AND id = $1::uuid AND space_id = $2::uuid
 		RETURNING version`, taskID, spaceID, input.Title, input.Description, input.StatusID, priority,

@@ -30,6 +30,7 @@
 | `cmd/openfox`                     | 本地电脑注册、执行与管理命令                       |
 | `apps/web`、`packages/`           | Web 入口、共享 React 界面、国际化与 API 客户端     |
 | `apps/desktop`                    | Electron 桌面端，加载同源 Web 工作台并连接本地命令 |
+| [Chrome 侧边栏](apps/extension/README.md) | 在当前网页旁与空间里的 Agent 对话，可附带选中的文字 |
 | `db/migrations`、`contracts`      | PostgreSQL 前向迁移与版本化接口契约                |
 | `deploy`、`tests`                 | 部署示例、恢复说明与测试                           |
 

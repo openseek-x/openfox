@@ -24,6 +24,11 @@ import type { Priority } from "../primitives/PriorityIcon";
 import { useAgentDirectory, useUpdateTask, type Person } from "../queries";
 import { statusFields } from "../TaskMenu";
 import {
+  MarkDuplicateDialog,
+  isDuplicateStatus,
+  type DuplicateTarget,
+} from "./MarkDuplicateDialog";
+import {
   TaskAssigneeAvatar,
   isPersonAssignee,
   useInvitationAssignees,
@@ -261,22 +266,35 @@ export function StatusPicker({
 }) {
   const t = useT();
   const update = useUpdateTask(orgId);
+  const [duplicate, setDuplicate] = useState<DuplicateTarget | null>(null);
   return (
-    <Picker
-      label={t("tasks.fields.status")}
-      groups={statusGroups(workflow)}
-      selected={[task.status_id]}
-      onSelect={(id) => {
-        const status = workflow.find((s) => s.id === id);
-        if (status && id !== task.status_id)
-          update.mutate({
-            task,
-            patch: { status_id: id },
-            optimistic: statusFields(status),
-          });
-      }}
-      trigger={trigger}
-    />
+    <>
+      <Picker
+        label={t("tasks.fields.status")}
+        groups={statusGroups(workflow)}
+        selected={[task.status_id]}
+        onSelect={(id) => {
+          const status = workflow.find((s) => s.id === id);
+          if (!status || id === task.status_id) return;
+          // OPE-17 · 重复状态必须带目标任务：改走目标选择器
+          if (isDuplicateStatus(status)) setDuplicate({ task, statusId: id });
+          else
+            update.mutate({
+              task,
+              patch: { status_id: id },
+              optimistic: statusFields(status),
+            });
+        }}
+        trigger={trigger}
+      />
+      {duplicate && (
+        <MarkDuplicateDialog
+          orgId={orgId}
+          target={duplicate}
+          onClose={() => setDuplicate(null)}
+        />
+      )}
+    </>
   );
 }
 

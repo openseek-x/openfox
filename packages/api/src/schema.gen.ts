@@ -6833,6 +6833,30 @@ export interface paths {
         patch: operations["updateTask"];
         trace?: never;
     };
+    "/v1/organizations/{organizationID}/spaces/{spaceID}/tasks/{taskID}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationID: components["parameters"]["OrganizationID"];
+                spaceID: components["parameters"]["SpaceID"];
+                taskID: components["parameters"]["TaskID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 标记为重复任务
+         * @description 把任务改到「重复」类别的状态并记录重复目标，目标任务记一条 task.duplicate_marked 动态。 不要求任务在分拣台中（分拣台内的处理见 /triage/duplicate）。权限同更新任务；停用空间只读。 status_id 省略时取工作流里排序最前的重复类别状态；指定时须属于该任务的工作流且类别为 DUPLICATE，否则 400 INVALID_DUPLICATE_STATUS。 目标为自己、不存在、已删除或不可读时 400 INVALID_DUPLICATE；工作流没有重复类别状态时 409 STATUS_CATEGORY_MISSING；版本不符时 409 VERSION_CONFLICT。
+         */
+        post: operations["markTaskDuplicate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/organizations/{organizationID}/spaces/{spaceID}/tasks/{taskID}/restore": {
         parameters: {
             query?: never;
@@ -22951,6 +22975,16 @@ export interface components {
             subscribe?: boolean;
             comment?: string;
         };
+        TaskDuplicateRequest: {
+            version: number;
+            /** Format: uuid */
+            duplicate_of_task_id: string;
+            /**
+             * Format: uuid
+             * @description 省略时取工作流里排序最前的重复类别状态
+             */
+            status_id?: string;
+        };
         /** @enum {string} */
         AgentVariantGroup: "instructions" | "computer" | "runtime" | "directory" | "limits" | "repos" | "env" | "run_settings";
         AgentVariantLink: {
@@ -36776,6 +36810,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Task"];
+                };
+            };
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    markTaskDuplicate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationID: components["parameters"]["OrganizationID"];
+                spaceID: components["parameters"]["SpaceID"];
+                taskID: components["parameters"]["TaskID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskDuplicateRequest"];
+            };
+        };
+        responses: {
+            /** @description 任务 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskDetail"];
                 };
             };
             400: components["responses"]["Error"];

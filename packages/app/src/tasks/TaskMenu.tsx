@@ -17,12 +17,19 @@ import { StatusIcon } from "./primitives/StatusIcon";
 import { useTaskReadOnlyReason } from "../spaces/readonly";
 import { MoveTaskDialog } from "./detail/MoveTaskDialog";
 import {
+  MarkDuplicateDialog,
+  isDuplicateStatus,
+} from "./detail/MarkDuplicateDialog";
+import {
   MoveSpaceOptions,
   MoveToSpaceTrigger,
   useMovePermission,
 } from "./detail/moveToSpace";
 
-/** 卡片 / 行的「···」菜单：打开任务、移动到（状态）、复制链接、复制编号。 */
+/**
+ * 卡片 / 行的「···」菜单：打开任务、移动到（状态）、复制链接、复制编号。
+ * 移动到重复类别的状态时先选目标任务，由菜单自己提交（OPE-17），不经过 onMove。
+ */
 export function TaskMenu({
   orgId,
   task,
@@ -47,8 +54,24 @@ export function TaskMenu({
   // 阶段 9c-3 · 移动到空间：卡片上移动后不跳转，只刷新列表
   const movePermission = useMovePermission(orgId, task);
   const [moveTarget, setMoveTarget] = useState<SpaceDetail | null>(null);
+  const [duplicateStatus, setDuplicateStatus] = useState<string | null>(null);
   return (
     <>
+      {duplicateStatus && (
+        // 与移动对话框相同：截住经组件树冒泡到卡片的事件
+        <span
+          className="contents"
+          onClick={(event) => event.stopPropagation()}
+          onPointerDown={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          <MarkDuplicateDialog
+            orgId={orgId}
+            target={{ task, statusId: duplicateStatus }}
+            onClose={() => setDuplicateStatus(null)}
+          />
+        </span>
+      )}
       {moveTarget && (
         // 对话框经 portal 渲染，但 React 事件仍沿组件树冒泡到卡片：截住，避免点对话框时打开任务或开始拖动
         <span
@@ -160,7 +183,10 @@ export function TaskMenu({
                   }
                   selected={status.id === task.status_id}
                   onSelect={() => {
-                    if (status.id !== task.status_id) onMove(status);
+                    if (status.id === task.status_id) return;
+                    if (isDuplicateStatus(status))
+                      setDuplicateStatus(status.id);
+                    else onMove(status);
                   }}
                 >
                   {status.name}

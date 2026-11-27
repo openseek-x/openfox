@@ -695,6 +695,9 @@ export const enUS: Messages = {
       addLink: "Add link",
       createRelated: "Create related task",
       linkExisting: "Link existing task",
+      markDuplicate: "Mark as duplicate",
+      collapseProperties: "Collapse properties sidebar",
+      expandProperties: "Expand properties sidebar",
       copyBranch: "Copy git branch name",
       copyPrompt: "Copy as prompt",
       copyPromptPlain: "Markdown only (no comments)",
@@ -955,6 +958,7 @@ export const enUS: Messages = {
       linkRemoved: "{actor} removed a link",
       fieldChanged: "{actor} changed field {name}",
       deleted: "{actor} deleted this task",
+      duplicateMarked: "{actor} marked {task} as a duplicate of this task",
       unknown: "{actor} updated this task",
       someone: "Someone",
     },
@@ -982,6 +986,8 @@ export const enUS: Messages = {
       nameTaken: "That name is already taken",
       relationExists: "This relation already exists",
       linkExists: "This link has already been added",
+      invalidDuplicateStatus:
+        "Choose a duplicate status from this task's workflow",
       uncertain:
         "The connection is unstable. The change may have been applied; refresh to check.",
       forbidden: "You don't have permission to do that",
