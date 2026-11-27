@@ -884,7 +884,7 @@ export function LabelsPage({ space }: { space?: LabelSpaceScope } = {}) {
         <div
           role="toolbar"
           aria-label={t("settings.labels.bulk.bar")}
-          className="sticky bottom-4 mx-auto flex items-center gap-1.5 rounded-xl border border-line-default bg-surface-card py-1.5 pr-1.5 pl-3.5 shadow-popover"
+          className="sticky bottom-4 mx-auto flex items-center gap-1.5 rounded-xl border border-line-floating bg-surface-card py-1.5 pr-1.5 pl-3.5 shadow-popover"
         >
           <span className="pr-2 text-body text-fg-secondary">
             {t("settings.labels.bulk.selected", { count: selected.size })}

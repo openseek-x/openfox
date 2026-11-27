@@ -48,7 +48,7 @@ export function InviteLinkPage() {
 
   return (
     <AuthLayout aside={<AccountBar email={me.data?.email ?? ""} />}>
-      <div className="flex w-[420px] flex-col items-center gap-6 text-center">
+      <div className="flex w-full max-w-[420px] flex-col items-center gap-6 rounded-2xl border border-line-floating bg-surface-card p-8 text-center shadow-popover">
         {preview.isLoading ? (
           <div className="h-40" aria-busy="true" />
         ) : !data ? (
@@ -65,7 +65,7 @@ export function InviteLinkPage() {
           <>
             <OrgIcon org={data} size={64} />
             <div className="flex flex-col gap-2">
-              <h1 className="text-heading font-medium">
+              <h1 className="text-heading font-semibold tracking-[-0.015em] text-fg-default">
                 {t("organization.join.title", { name: data.name })}
               </h1>
               {data.inviter_email && (

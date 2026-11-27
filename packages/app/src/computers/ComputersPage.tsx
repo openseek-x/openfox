@@ -150,14 +150,14 @@ function ComputerSection({
       {loading ? (
         <ListSkeleton rows={2} label={title} />
       ) : devices.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-line-default px-4 py-3 text-body-sm text-fg-muted">
+        <p className="rounded-xl border border-dashed border-line-soft bg-surface-muted/35 px-4 py-3 text-body-sm text-fg-muted">
           {empty}
         </p>
       ) : (
         <div className="overflow-x-auto">
           <Table>
             <TableHead>
-              <tr className="bg-surface-muted">
+              <tr className="bg-surface-muted/60">
                 <TableHeaderCell className="w-[38%] rounded-l-lg pl-14">
                   {t("computers.columns.name")}
                 </TableHeaderCell>

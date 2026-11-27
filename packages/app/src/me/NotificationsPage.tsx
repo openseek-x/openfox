@@ -473,7 +473,7 @@ function DetailHeader({
         <span>{t("me.notifications.back")}</span>
       </button>
       <header className="flex items-center gap-4">
-        <h1 className="min-w-0 flex-1 text-[24px] leading-8 font-medium text-fg-default">
+        <h1 className="min-w-0 flex-1 text-heading font-semibold tracking-[-0.015em] text-fg-default">
           {title}
         </h1>
         {action}
@@ -783,7 +783,7 @@ function IntegrationDetail({
   return (
     <div className="flex flex-col gap-6">
       <DetailHeader title={name} onBack={onBack} />
-      <div className="flex flex-col gap-3 rounded-xl border border-line-default bg-surface-card p-4">
+      <div className="flex flex-col gap-3 rounded-xl border border-line-soft bg-surface-card p-4 shadow-card">
         <span className="text-body font-medium text-fg-default">
           {t(
             feishu || wecom

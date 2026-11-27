@@ -10,16 +10,16 @@
    - 任务页 `SpaceTasksPage` 将默认视图来源与管理操作合并至 `min-h-11` 单层页头右侧，消除顶部双横线割裂。
    - 看板卡片 `Card` 按条件渲染元信息与底栏容器，消除无标签/无日期任务的多余底部留白。
    - 收件箱 `InboxPage` 将 `h-15` 大块 Tab 重构为与全站对齐的 `h-11` 轻量水平页签栏，完整保留 `role="tab"`、`aria-selected` 与分区计数。
-   - 统一全站二级页面与设置页 `<h1>` 字阶与 `h-11` 页头基线；登录页 `LoginPage` / `AuthLayout` 升级为居中轻阴影卡片焦点容器；桌面端离线页 `apps/desktop/renderer/offline.css` 与 `apps/web/index.html` `theme-color` 同步新版中性色阶。
+   - 统一全站二级页面、引导/独立页（`JoinPage`、`InviteLinkPage`、`OAuthCompletePage`、`SharedSnapshotPage`）、个人设置子页（`GetStartedPage`、`NotificationsPage`、`InboxNotificationSettings`、`ShortcutsPage`、`TokensPage`）、我的任务与电脑管理（`MyTasksPage`、`ComputersPage`、`LocalComputerCard`、`AgentSettingsPages`）及全局/空间配置页（`CustomFieldsPage`、`LabelsPage`、`RelationTypesPage`、`StatusesPage`、`TaskTypesPage`、`EstimatesPage`、`IterationSettingsPage`、`TriageSettingsPage`）的 `<h1>` 字阶、卡片圆角与柔和描边，实现全站 61 个路由页面 100% 视觉对齐；桌面端离线页 `apps/desktop/renderer/offline.css` 与 `apps/web/index.html` `theme-color` 同步新版中性色阶。
 4. **技术债清理**：清零全站 5 处无效表面类名（`bg-surface-default / panel / subtle`）、1 处无效 `bg-brand`（`DirectChat.tsx:106` 修复为 `bg-danger text-fg-inverse`）及 19 处原生 Tailwind `shadow-sm/md/lg`，未新增任何依赖、字体、图片或第三方素材。
 
 ## 验证
 
 - **格式、类型检查与构建**：`pnpm lint`（Prettier + 全仓 TypeScript）与 `pnpm build` 全部通过。
-- **单元测试（Vitest）**：覆盖 `packages/ui`（新增 `Segmented` 切换测试）、`packages/app/src/tasks/board/card.test.tsx`（新增 2 项空行消除与密度钩子测试）以及收件箱、偏好、Agent、市场、自动化、迭代、专项、视图、对话、组织与设置共 51 个测试文件，**519 / 519 全部通过**。
+- **单元测试（Vitest）**：首轮覆盖 51 个测试文件（519/519 通过，含新增 `Segmented` 与 `card.test.tsx`）；全站补齐 15 组低频/设置/引导子页后追加覆盖 `me/`、`onboarding/`、`my-tasks/`、`computers/`、`settings/`、`spaces/`、`integrations/`、`share/`、`agents/`、`automations/` 共 84 个测试文件，**956 / 956 全部通过**。
   - 注：`packages/app/src/shell/navMemory.test.tsx` 的「切换组织后记录不串」在基线 `master` 即存在既有失败（17/18 通过，参见 `2026-11-24-workspace-reading-chat.md`），本轮未改动导航记忆与外部点击关闭逻辑。
-- **Playwright E2E（模拟 API）**：运行 `OPENFOX_WEB_PORT=4191 pnpm test:e2e density.spec.ts scroll-containment.spec.ts`：`density.spec.ts` 中英文深浅主题双密度同步与甘特背景色 2/2 全部通过；`scroll-containment.spec.ts` 11/12 通过（唯一失败为基线提交 `d420ae3` 将窄屏文档目录改为抽屉所致，本轮未改动文档布局逻辑）。
-- **实机浏览器视觉验证（模拟 API，DPR 2，CSS 像素归一化）**：覆盖 `light`、`dark`、`classic-dark`、`magic-blue` 四套主题，以及 1440×900 看板/收件箱/偏好设置/登录、960×680 深色收件箱、680×860 窄屏看板共 9 组场景；全部 `overflowX: false`、0 条 console/page error，逐张目视核对五项视觉标准通过。
+- **Playwright E2E（模拟 API）**：运行 `OPENFOX_WEB_PORT=4191 pnpm test:e2e density.spec.ts` 中英文深浅主题双密度同步与甘特背景色 2/2 全部通过；另首轮 `scroll-containment.spec.ts` 11/12 通过（唯一失败为基线提交 `d420ae3` 将窄屏文档目录改为抽屉所致，本轮未改动文档布局逻辑）。
+- **实机浏览器视觉验证（模拟 API，DPR 2，CSS 像素归一化）**：覆盖 `light`、`dark`、`classic-dark`、`magic-blue` 四套主题，以及 1440×900 看板/收件箱/偏好设置/登录/开始使用/任务状态/加入组织、960×680 深色收件箱、680×860 窄屏看板共 12 组场景；全部 `overflowX: false`、0 条 console/page error，逐张目视核对五项视觉标准通过。
 
 ## 配置、数据与回退
 
