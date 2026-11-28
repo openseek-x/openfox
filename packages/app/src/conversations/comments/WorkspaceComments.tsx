@@ -10,6 +10,7 @@ import {
   type WorkspaceCommentPost,
 } from "@openfox/api";
 import { useT } from "@openfox/i18n";
+import { Button, Icon, cn } from "@openfox/ui";
 import { useApi, keys } from "../../context";
 import { useMe } from "../../agents/queries";
 import {
@@ -20,6 +21,7 @@ import {
 } from "../drafts";
 import { workspaceStore } from "../workspaceStorage";
 import { useOpenArtifactList, BROWSER_PANEL } from "../artifacts/params";
+import { requestFileLocation } from "../artifacts/fileLocation";
 import { requestBrowserLocation } from "../browser/BrowserReferences";
 
 const commentKey = (org: string, conversation: string) => [
@@ -117,13 +119,17 @@ export function WorkspaceComments({
   orgId,
   conversationId,
   disabled,
+  embedded = false,
 }: {
   orgId: string;
   conversationId: string;
   disabled: boolean;
+  /** 嵌入右侧工作区标签页时占满剩余高度，不限制 60vh。 */
+  embedded?: boolean;
 }) {
   const api = useApi(),
     t = useT();
+  const [filter, setFilter] = useState<"ALL" | "OPEN" | "RESOLVED">("ALL");
   const query = useInfiniteQuery({
     queryKey: commentKey(orgId, conversationId),
     initialPageParam: "",
@@ -133,54 +139,122 @@ export function WorkspaceComments({
     refetchInterval: 15000,
     retry: false,
   });
+  const allThreads = query.data?.pages.flatMap((page) => page.threads) ?? [];
+  const openCount = allThreads.filter((item) => item.status === "OPEN").length;
+  const resolvedCount = allThreads.length - openCount;
+  const visibleThreads =
+    filter === "ALL"
+      ? allThreads
+      : allThreads.filter((item) => item.status === filter);
+  const filterBar =
+    !query.isPending && !query.isError && allThreads.length > 0 ? (
+      <div
+        role="group"
+        aria-label={t("artifacts.comments.saved")}
+        className="inline-flex shrink-0 items-center gap-0.5 rounded-lg border border-line-subtle bg-surface-muted p-0.5 text-caption"
+      >
+        {(
+          [
+            ["ALL", t("artifacts.comments.all"), allThreads.length],
+            ["OPEN", t("artifacts.comments.open"), openCount],
+            ["RESOLVED", t("artifacts.comments.resolved"), resolvedCount],
+          ] as const
+        ).map(([value, label, count]) => (
+          <button
+            key={value}
+            type="button"
+            aria-pressed={filter === value}
+            onClick={() => setFilter(value)}
+            className={cn(
+              "rounded-md px-2 py-0.5 transition-colors",
+              filter === value
+                ? "bg-surface-card font-medium text-fg-default shadow-card"
+                : "text-fg-muted hover:text-fg-default",
+            )}
+          >
+            {label} · {count}
+          </button>
+        ))}
+      </div>
+    ) : null;
+  const content = query.isError ? (
+    <div
+      role="alert"
+      className="flex items-center justify-between gap-2 rounded-xl border border-line-subtle bg-surface-card p-3 text-body-sm shadow-card"
+    >
+      <span className="text-danger">{t("artifacts.comments.loadFailed")}</span>
+      <Button size="28" variant="outline" onClick={() => void query.refetch()}>
+        {t("common.retry")}
+      </Button>
+    </div>
+  ) : query.isPending ? (
+    <p className="py-6 text-center text-caption text-fg-muted">
+      {t("artifacts.review.loading")}
+    </p>
+  ) : (
+    <>
+      {allThreads.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-line-subtle bg-surface-card text-fg-muted shadow-card">
+            <Icon name="message-circle" size={16} />
+          </span>
+          <p className="text-caption text-fg-muted">
+            {t("artifacts.comments.empty")}
+          </p>
+        </div>
+      ) : visibleThreads.length === 0 ? (
+        <p className="py-8 text-center text-caption text-fg-muted">
+          {t(
+            filter === "OPEN"
+              ? "artifacts.comments.emptyOpen"
+              : "artifacts.comments.emptyResolved",
+          )}
+        </p>
+      ) : null}
+      {visibleThreads.map((thread) => (
+        <Thread
+          key={thread.id}
+          thread={thread}
+          orgId={orgId}
+          conversationId={conversationId}
+          disabled={disabled}
+        />
+      ))}
+      {query.hasNextPage && (
+        <div className="pt-1 text-center">
+          <Button
+            size="28"
+            variant="ghost"
+            disabled={query.isFetchingNextPage}
+            onClick={() => void query.fetchNextPage()}
+          >
+            {t("artifacts.comments.more")}
+          </Button>
+        </div>
+      )}
+    </>
+  );
+  if (embedded)
+    return (
+      <div className="flex min-h-0 flex-1 flex-col bg-surface-canvas/40 text-body-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line-subtle bg-surface-canvas px-3 py-2">
+          <p className="text-caption text-fg-muted">
+            {t("artifacts.comments.hint")}
+          </p>
+          {filterBar}
+        </div>
+        <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto p-3">
+          {content}
+        </div>
+      </div>
+    );
   return (
-    <div className="max-h-[60vh] space-y-2 overflow-auto text-body-sm">
+    <div className="max-h-[60vh] space-y-2.5 overflow-y-auto text-body-sm">
       <p className="text-caption text-fg-muted">
         {t("artifacts.comments.hint")}
       </p>
-      {query.isError ? (
-        <p role="alert">
-          {t("artifacts.comments.loadFailed")}{" "}
-          <button
-            type="button"
-            className={actionClass}
-            onClick={() => void query.refetch()}
-          >
-            {t("common.retry")}
-          </button>
-        </p>
-      ) : query.isPending ? (
-        <p>{t("artifacts.review.loading")}</p>
-      ) : (
-        <>
-          {!query.data.pages.some((page) => page.threads.length) && (
-            <p className="text-caption text-fg-muted">
-              {t("artifacts.comments.empty")}
-            </p>
-          )}
-          {query.data.pages
-            .flatMap((page) => page.threads)
-            .map((thread) => (
-              <Thread
-                key={thread.id}
-                thread={thread}
-                orgId={orgId}
-                conversationId={conversationId}
-                disabled={disabled}
-              />
-            ))}
-          {query.hasNextPage && (
-            <button
-              type="button"
-              className={actionClass}
-              disabled={query.isFetchingNextPage}
-              onClick={() => void query.fetchNextPage()}
-            >
-              {t("artifacts.comments.more")}
-            </button>
-          )}
-        </>
-      )}
+      {filterBar}
+      {content}
     </div>
   );
 }
@@ -346,155 +420,206 @@ function Thread({
       setBusy(false);
     }
   };
+  const isOpen = thread.status === "OPEN";
   return (
     <details
-      className="rounded-lg border border-line-default px-2 py-1.5"
+      className="group overflow-hidden rounded-xl border border-line-subtle bg-surface-card shadow-card transition-colors open:border-line-default"
       aria-label={thread.comments[0]!.body}
     >
-      <summary className="cursor-pointer">
-        <span className="text-caption text-fg-muted">
-          {thread.source.name} ·{" "}
-          {t(
-            thread.status === "OPEN"
-              ? "artifacts.comments.open"
-              : "artifacts.comments.resolved",
+      <summary className="flex cursor-pointer list-none items-start gap-2.5 px-3 py-2.5 transition-colors hover:bg-surface-hover/40 [&::-webkit-details-marker]:hidden">
+        <span
+          aria-hidden="true"
+          className={cn(
+            "mt-1.5 size-2 shrink-0 rounded-full",
+            isOpen ? "bg-accent" : "bg-fg-subtle",
           )}
-        </span>
-        <span className="block truncate">{thread.comments[0]!.body}</span>
+        />
+        <div className="min-w-0 flex-1 space-y-0.5">
+          <div className="flex items-center gap-1.5 text-caption text-fg-muted">
+            <Icon
+              name={thread.source.browser ? "globe" : "file-text"}
+              size={12}
+              className="shrink-0"
+            />
+            <span className="min-w-0 truncate font-medium text-fg-secondary">
+              {thread.source.name}
+            </span>
+            <span
+              className={cn(
+                "shrink-0 rounded-full px-1.5 py-px text-[11px]",
+                isOpen
+                  ? "bg-accent-soft text-accent"
+                  : "bg-surface-muted text-fg-muted",
+              )}
+            >
+              {t(
+                isOpen
+                  ? "artifacts.comments.open"
+                  : "artifacts.comments.resolved",
+              )}
+            </span>
+          </div>
+          <span className="block truncate text-body-sm text-fg-default">
+            {thread.comments[0]!.body}
+          </span>
+        </div>
+        <Icon
+          name="chevron-right"
+          size={14}
+          className="mt-1 shrink-0 text-fg-muted transition-transform group-open:rotate-90"
+        />
       </summary>
-      <blockquote className="my-2 max-h-20 overflow-auto border-l-2 border-line-default pl-2 text-caption text-fg-muted">
-        {thread.source.file?.comments[0]?.anchor.quote ||
-          thread.source.browser?.comments[0]?.anchor.snapshot.quote}
-      </blockquote>
-      <div className="flex gap-3">
-        {(thread.source.file?.artifact_id || thread.source.browser) && (
-          <button
-            type="button"
-            className={actionClass}
-            onClick={() =>
-              thread.source.browser
-                ? requestBrowserLocation(
+      <div className="space-y-2 border-t border-line-subtle px-3 py-2.5">
+        <blockquote className="max-h-20 overflow-auto rounded-r-md border-l-2 border-line-strong bg-surface-muted/50 py-1 pl-2.5 pr-2 text-caption text-fg-muted">
+          {thread.source.file?.comments[0]?.anchor.quote ||
+            thread.source.browser?.comments[0]?.anchor.snapshot.quote}
+        </blockquote>
+        <div className="flex gap-3">
+          {(thread.source.file?.artifact_id || thread.source.browser) && (
+            <button
+              type="button"
+              className={actionClass}
+              onClick={() => {
+                if (thread.source.browser) {
+                  requestBrowserLocation(
                     conversationId,
                     thread.source.browser.comments[0]!.anchor.live,
                     openBrowser,
-                  )
-                : openFile()
-            }
+                  );
+                } else if (
+                  thread.source.file?.artifact_id &&
+                  thread.source.file.comments[0]
+                ) {
+                  requestFileLocation(
+                    conversationId,
+                    thread.source.file.artifact_id,
+                    thread.source.file.sha256,
+                    thread.source.file.comments[0].anchor,
+                    openFile,
+                  );
+                } else {
+                  openFile();
+                }
+              }}
+            >
+              {t("artifacts.comments.locate")}
+            </button>
+          )}
+          <button
+            type="button"
+            className={actionClass}
+            disabled={disabled || busy || Boolean(pending)}
+            onClick={() => void mutate(isOpen ? "resolve" : "reopen")}
           >
-            {t("artifacts.comments.locate")}
+            {t(
+              isOpen
+                ? "artifacts.comments.resolve"
+                : "artifacts.comments.reopen",
+            )}
+          </button>
+        </div>
+        <ResolutionActions
+          orgId={orgId}
+          conversationId={conversationId}
+          thread={thread}
+          resolution={resolution}
+          disabled={disabled || busy}
+        />
+        {thread.comments.map((post) => (
+          <div key={post.id} className="border-t border-line-subtle pt-2">
+            <span className="text-caption text-fg-muted">
+              {t(
+                post.author_id === me?.id
+                  ? "artifacts.comments.you"
+                  : "artifacts.comments.member",
+              )}
+            </span>
+            <p className="whitespace-pre-wrap break-words text-body-sm text-fg-default">
+              {post.body}
+            </p>
+            <div className="mt-1 flex gap-3">
+              <button
+                type="button"
+                className={actionClass}
+                disabled={
+                  disabled ||
+                  busy ||
+                  Boolean(resolution && resolution.status !== "exact")
+                }
+                onClick={() => void queue(post)}
+              >
+                {t("artifacts.comments.agent")}
+              </button>
+              {post.author_id === me?.id && (
+                <button
+                  type="button"
+                  className={actionClass}
+                  disabled={disabled || busy || Boolean(pending)}
+                  onClick={() => edit(post.body, post.id)}
+                >
+                  {t("artifacts.comments.edit")}
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+        {(isOpen || editId) && (
+          <fieldset
+            disabled={disabled || busy || Boolean(pending)}
+            className="space-y-1.5"
+          >
+            <textarea
+              aria-label={t(
+                editId
+                  ? "artifacts.comments.editBody"
+                  : "artifacts.comments.replyBody",
+              )}
+              className="min-h-16 w-full resize-y rounded-lg border border-line-default bg-surface-muted/50 p-2 text-body-sm outline-none focus:border-line-strong"
+              value={body}
+              onChange={(e) => edit(e.target.value)}
+              maxLength={8192}
+            />
+            <div className="flex gap-3">
+              <button
+                type="button"
+                className={actionClass}
+                disabled={!body.trim()}
+                onClick={() => void mutate(editId ? "edit" : "reply")}
+              >
+                {t(
+                  editId
+                    ? "artifacts.comments.saveEdit"
+                    : "artifacts.comments.reply",
+                )}
+              </button>
+              {editId && (
+                <button
+                  type="button"
+                  className={actionClass}
+                  onClick={() => edit("", "")}
+                >
+                  {t("common.cancel")}
+                </button>
+              )}
+            </div>
+          </fieldset>
+        )}
+        {pending && (
+          <button
+            type="button"
+            className={actionClass}
+            disabled={disabled || busy}
+            onClick={() => void mutate(pending.action)}
+          >
+            {t("artifacts.comments.retryUpdate")}
           </button>
         )}
-        <button
-          type="button"
-          className={actionClass}
-          disabled={disabled || busy || Boolean(pending)}
-          onClick={() =>
-            void mutate(thread.status === "OPEN" ? "resolve" : "reopen")
-          }
-        >
-          {t(
-            thread.status === "OPEN"
-              ? "artifacts.comments.resolve"
-              : "artifacts.comments.reopen",
-          )}
-        </button>
+        {error && (
+          <p role="alert" className="text-caption text-danger">
+            {error}
+          </p>
+        )}
       </div>
-      <ResolutionActions
-        orgId={orgId}
-        conversationId={conversationId}
-        thread={thread}
-        resolution={resolution}
-        disabled={disabled || busy}
-      />
-      {thread.comments.map((post) => (
-        <div key={post.id} className="my-2 border-t border-line-default pt-2">
-          <span className="text-caption text-fg-muted">
-            {t(
-              post.author_id === me?.id
-                ? "artifacts.comments.you"
-                : "artifacts.comments.member",
-            )}
-          </span>
-          <p className="whitespace-pre-wrap break-words">{post.body}</p>
-          <div className="mt-1 flex gap-3">
-            <button
-              type="button"
-              className={actionClass}
-              disabled={
-                disabled ||
-                busy ||
-                Boolean(resolution && resolution.status !== "exact")
-              }
-              onClick={() => void queue(post)}
-            >
-              {t("artifacts.comments.agent")}
-            </button>
-            {post.author_id === me?.id && (
-              <button
-                type="button"
-                className={actionClass}
-                disabled={disabled || busy || Boolean(pending)}
-                onClick={() => edit(post.body, post.id)}
-              >
-                {t("artifacts.comments.edit")}
-              </button>
-            )}
-          </div>
-        </div>
-      ))}
-      {(thread.status === "OPEN" || editId) && (
-        <fieldset disabled={disabled || busy || Boolean(pending)}>
-          <textarea
-            aria-label={t(
-              editId
-                ? "artifacts.comments.editBody"
-                : "artifacts.comments.replyBody",
-            )}
-            className="min-h-16 w-full resize-y rounded-lg border border-line-default bg-transparent p-2 outline-none focus:border-line-strong"
-            value={body}
-            onChange={(e) => edit(e.target.value)}
-            maxLength={8192}
-          />
-          <div className="flex gap-3">
-            <button
-              type="button"
-              className={actionClass}
-              disabled={!body.trim()}
-              onClick={() => void mutate(editId ? "edit" : "reply")}
-            >
-              {t(
-                editId
-                  ? "artifacts.comments.saveEdit"
-                  : "artifacts.comments.reply",
-              )}
-            </button>
-            {editId && (
-              <button
-                type="button"
-                className={actionClass}
-                onClick={() => edit("", "")}
-              >
-                {t("common.cancel")}
-              </button>
-            )}
-          </div>
-        </fieldset>
-      )}
-      {pending && (
-        <button
-          type="button"
-          className={actionClass}
-          disabled={disabled || busy}
-          onClick={() => void mutate(pending.action)}
-        >
-          {t("artifacts.comments.retryUpdate")}
-        </button>
-      )}
-      {error && (
-        <p role="alert" className="text-caption text-danger">
-          {error}
-        </p>
-      )}
     </details>
   );
 }

@@ -1,4 +1,4 @@
-const { session, dialog, shell } = require("electron");
+const { session, dialog, shell, systemPreferences } = require("electron");
 const { createHash, randomUUID } = require("node:crypto");
 const path = require("node:path");
 const { createBrowserSurface, validateBounds } = require("./surface.cjs");
@@ -108,6 +108,7 @@ function createBrowserHost({
     if (mounted) {
       mounted.control?.takeOver();
       mounted.visible = false;
+      mounted.occluded = false;
       show(mounted);
     }
     mounted = null;
@@ -225,6 +226,15 @@ function createBrowserHost({
       }
       if (input.type !== "keyDown" || !(input.meta || input.control)) return;
       const key = input.key.toLowerCase();
+      // 支持在网页聚焦时透传侧边栏快捷键（⌘\ / ⌘⇧\）至主窗口
+      if (!input.alt && (key === "\\" || input.code === "Backslash")) {
+        event.preventDefault();
+        window.webContents.send("openfox:browser-toggle-sidebar", {
+          lease: group.lease,
+          side: input.shift ? "right" : "left",
+        });
+        return;
+      }
       if (!["l", "t", "w", "r"].includes(key)) return;
       event.preventDefault();
       if (key === "l") {
@@ -352,9 +362,22 @@ function createBrowserHost({
     await Promise.all(tabs.map((tab) => tab.surface.close()));
     await group.network.dispose();
   };
-  const revokeHidden = () => mounted?.control?.takeOver();
-  window.on("hide", revokeHidden);
-  window.on("minimize", revokeHidden);
+  const revokeControl = () => mounted?.control?.takeOver();
+  const onWindowHide = () => {
+    // macOS 在窗口被其他应用完全遮挡时也会发出 hide，此时窗口仍然可见。
+    if (process.platform !== "darwin" || !window.isVisible()) revokeControl();
+  };
+  // 已经被遮挡的窗口，主动隐藏应用或关闭到菜单栏时可能不会再发出 hide。
+  const appHideSubscription =
+    process.platform === "darwin"
+      ? systemPreferences.subscribeLocalNotification(
+          "NSApplicationWillHideNotification",
+          revokeControl,
+        )
+      : null;
+  window.on("hide", onWindowHide);
+  window.on("minimize", revokeControl);
+  window.on("close", revokeControl);
   return {
     suspend() {
       suspended = true;
@@ -433,6 +456,7 @@ function createBrowserHost({
             active: null,
             bounds: null,
             visible: false,
+            occluded: false,
             downloads: [],
           };
           group.annotations = createAnnotations({
@@ -451,15 +475,21 @@ function createBrowserHost({
               open: (url) => openTab(group, url),
               focus: (id) => setActive(group, id),
               closeTab: (id) => removeTab(group, id),
-              visible: () =>
-                Boolean(
+              visible: () => {
+                const active = group.tabs.get(group.active);
+                return Boolean(
                   mounted === group &&
+                  !suspended &&
                   window.isVisible() &&
                   !window.isMinimized() &&
-                  group.visible &&
                   group.bounds &&
-                  group.tabs.get(group.active)?.surface.view.getVisible(),
-                ),
+                  active &&
+                  !active.error &&
+                  active.url !== "about:blank" &&
+                  (group.occluded ||
+                    (group.visible && active.surface.view.getVisible())),
+                );
+              },
               changed: () => {
                 show(group);
                 emit(group);
@@ -512,13 +542,23 @@ function createBrowserHost({
         emit(group);
         return state(group);
       }
+      const transientOcclusion =
+        input.action === "layout" &&
+        input.visible !== true &&
+        input.occluded === true &&
+        Boolean(group.bounds);
       if (
-        !["layout", "reveal-download"].includes(input.action) ||
-        (input.action === "layout" && input.visible !== true)
+        !["layout", "reveal-download", "open-external"].includes(
+          input.action,
+        ) ||
+        (input.action === "layout" &&
+          input.visible !== true &&
+          !transientOcclusion)
       )
         group.control?.takeOver();
       if (input.action === "layout") {
         group.visible = input.visible === true;
+        group.occluded = transientOcclusion;
         if (input.bounds) {
           const zoom = window.webContents.getZoomFactor();
           const bounds = Object.fromEntries(
@@ -532,6 +572,7 @@ function createBrowserHost({
         show(group);
       } else if (input.action === "hide") {
         group.visible = false;
+        group.occluded = false;
         show(group);
       } else if (input.action === "open") openTab(group, input.url);
       else if (input.action === "focus") setActive(group, input.tabId);
@@ -552,6 +593,14 @@ function createBrowserHost({
         if (!file?.savePath || file.state !== "completed")
           throw failure("UNAVAILABLE");
         shell.showItemInFolder(file.savePath);
+      } else if (input.action === "open-external") {
+        // 仅允许在系统默认浏览器中打开当前标签已加载的 http(s) 地址，不信任渲染进程任意传参
+        const tab = group.tabs.get(input.tabId || group.active);
+        if (!tab || tab.surface.contents.isDestroyed())
+          throw failure("TARGET_CLOSED");
+        const url = normalizeURL(tab.url);
+        if (url === "about:blank") throw failure("INVALID_URL");
+        await shell.openExternal(url);
       } else if (input.action === "allow-origin") {
         const url = new URL(normalizeURL(input.url));
         // The trusted policy, not a renderer-supplied URL, decides whether a
@@ -618,8 +667,11 @@ function createBrowserHost({
     },
     async dispose() {
       disposed = true;
-      window.removeListener("hide", revokeHidden);
-      window.removeListener("minimize", revokeHidden);
+      window.removeListener("hide", onWindowHide);
+      window.removeListener("minimize", revokeControl);
+      window.removeListener("close", revokeControl);
+      if (appHideSubscription !== null)
+        systemPreferences.unsubscribeLocalNotification(appHideSubscription);
       await this.reset();
     },
   };

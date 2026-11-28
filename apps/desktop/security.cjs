@@ -189,6 +189,8 @@ function buildCsp() {
     "worker-src 'self'",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:",
+    // 测试录像等视频产物以鉴权取回的 Blob 播放
+    "media-src 'self' blob:",
     "font-src 'self' data:",
     "connect-src 'self'",
     "object-src 'none'",

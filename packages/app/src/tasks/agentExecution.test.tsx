@@ -93,6 +93,91 @@ describe("Agent 作者评论", () => {
     const userRow = screen.getByText("收到").closest("li")!;
     expect(within(userRow).queryByText("Agent")).toBeNull();
   });
+
+  it("智能体正式报告评论：正文下列出附件，视频可点开预览，且不提供单独删除", async () => {
+    const file = (
+      id: string,
+      name: string,
+      content_type: string,
+      preview_kind: string,
+    ) => ({
+      id,
+      owner_kind: "TASK",
+      task_id: "task-1",
+      comment_id: "c1",
+      name,
+      content_type,
+      size_bytes: 2048,
+      uploader_kind: "AGENT",
+      uploaded_by_agent_id: "a1",
+      uploader_name: "熊猫",
+      created_at: TS,
+      previewable: preview_kind === "image",
+      preview_kind,
+      can_delete: false,
+    });
+    renderAt(drawer, (call) =>
+      call.path.endsWith("/tasks/task-1/timeline")
+        ? json(200, {
+            items: [
+              {
+                type: "comment",
+                comment: {
+                  organization_id: ORG,
+                  space_id: SPACE,
+                  task_id: "task-1",
+                  id: "c1",
+                  author_kind: "AGENT",
+                  author_agent_id: "a1",
+                  author_name: "熊猫",
+                  body: "测试报告已生成",
+                  created_at: TS,
+                  reactions: [],
+                  attachments: [
+                    file(
+                      "r1",
+                      "report.html",
+                      "text/plain; charset=utf-8",
+                      "html",
+                    ),
+                    file("r2", "TC-01.webm", "video/webm", "video"),
+                    file("r3", "step-01.png", "image/png", "image"),
+                    file("r4", "evidence.zip", "application/zip", "none"),
+                  ],
+                },
+              },
+            ],
+            next_cursor: null,
+          })
+        : undefined,
+    );
+    const row = (await screen.findByText("测试报告已生成")).closest("li")!;
+    const list = within(row).getByRole("list", { name: "附件" });
+    expect(
+      within(list).getByRole("button", { name: "预览 report.html" }),
+    ).toBeVisible();
+    expect(
+      within(list).getByRole("button", { name: "预览 step-01.png" }),
+    ).toBeVisible();
+    // 不可预览的类型只有下载链接，且指向附件下载地址
+    const zip = within(list).getByRole("link", { name: "evidence.zip" });
+    expect(zip.getAttribute("href")).toContain(
+      "/v1/organizations/o1/attachments/r4",
+    );
+    expect(
+      within(list).queryByRole("button", { name: "预览 evidence.zip" }),
+    ).toBeNull();
+    // 报告附件随评论存在，不提供单独删除
+    expect(within(row).queryByRole("button", { name: /^删除 / })).toBeNull();
+    await userEvent.click(
+      within(list).getByRole("button", { name: "预览 TC-01.webm" }),
+    );
+    const video = await screen.findByLabelText("视频：TC-01.webm");
+    expect(video.tagName).toBe("VIDEO");
+    expect(video.getAttribute("src")).toContain(
+      "/v1/organizations/o1/attachments/r2",
+    );
+  });
 });
 
 describe("执行区块", () => {

@@ -122,7 +122,7 @@ func TestSpaceTools(t *testing.T) {
 		t.Fatalf("task priority=%s due=%s assignee=%s creator=%s via=%s", priority, due, assignee, creator, via)
 	}
 	// 同一个 call_id 重放返回同一结果，不再建任务。
-	if replay := b.mustCall(run, "space_task_create", "c1", map[string]any{"title": "完全不同的标题"}); replay != created {
+	if replay := b.mustCall(run, "space_task_create", "c1", map[string]any{"title": "完全不同的标题"}); replay.OK != created.OK || replay.Text != created.Text {
 		t.Fatalf("replay = %+v", replay)
 	}
 	if n := b.count(`SELECT count(*) FROM openfox.tasks WHERE organization_id = $1::uuid AND title = '完全不同的标题'`, b.org); n != 0 {

@@ -15,6 +15,12 @@ contextBridge.exposeInMainWorld("openfoxDesktop", {
     return () =>
       ipcRenderer.removeListener("openfox:browser-focus-address", listener);
   },
+  onBrowserToggleSidebar: (callback) => {
+    const listener = (_event, value) => callback(value);
+    ipcRenderer.on("openfox:browser-toggle-sidebar", listener);
+    return () =>
+      ipcRenderer.removeListener("openfox:browser-toggle-sidebar", listener);
+  },
   copyWorkDirectory: (input) =>
     ipcRenderer.invoke("openfox:copy-work-directory", input),
   cancelWorkDirectoryCopy: (requestId) =>

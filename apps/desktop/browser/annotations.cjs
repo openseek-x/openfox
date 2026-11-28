@@ -14,6 +14,8 @@ function createAnnotations({ window, active, changed }) {
     error = null;
   let overlay = null,
     bounds = null,
+    overlayBounds = null,
+    overlayVisible = false,
     shown = false,
     closed = false,
     start = null,
@@ -276,6 +278,12 @@ function createAnnotations({ window, active, changed }) {
         start = null;
         ++serial;
         clearHover();
+        if (enabled && !selection) {
+          enabled = false;
+          frozen = false;
+          error = null;
+          notify();
+        }
       }
     });
     contents.ipc.on("openfox:annotation-wheel", (_event, input) => {
@@ -400,21 +408,45 @@ function createAnnotations({ window, active, changed }) {
       );
       if (shown) {
         ensureOverlay();
-        overlay.setBounds(bounds);
-        window.contentView.removeChildView(overlay);
-        window.contentView.addChildView(overlay);
-        overlay.setVisible(true);
-      } else overlay?.setVisible(false);
+        // 仅在几何变化或叠层刚切为可见时更新边界与层级，避免流式输出期间重复重排闪烁
+        const boundsChanged =
+          !overlayBounds ||
+          !bounds ||
+          overlayBounds.x !== bounds.x ||
+          overlayBounds.y !== bounds.y ||
+          overlayBounds.width !== bounds.width ||
+          overlayBounds.height !== bounds.height;
+        if (boundsChanged) {
+          overlay.setBounds(bounds);
+          overlayBounds = { ...bounds };
+        }
+        const onTop =
+          Array.isArray(window.contentView.children) &&
+          window.contentView.children.at(-1) === overlay;
+        if (!overlayVisible || !onTop) {
+          window.contentView.removeChildView(overlay);
+          window.contentView.addChildView(overlay);
+          overlay.setVisible(true);
+          overlayVisible = true;
+        }
+      } else if (overlayVisible) {
+        overlay?.setVisible(false);
+        overlayVisible = false;
+      }
     },
     async command(input) {
       if (input.action === "annotate") {
-        if (!["element", "text", "region"].includes(input.mode))
+        const enabledNext = input.enabled === true;
+        if (
+          (enabledNext || input.mode !== undefined) &&
+          !["element", "text", "region"].includes(input.mode)
+        )
           throw failure("INVALID_REQUEST");
         start = null;
         clearHover();
         ++serial;
-        enabled = input.enabled === true;
-        mode = input.mode;
+        enabled = enabledNext;
+        if (input.mode) mode = input.mode;
         error = null;
         if (!enabled) {
           selection = null;
@@ -482,6 +514,8 @@ function createAnnotations({ window, active, changed }) {
       for (const control of pages.values()) control.close();
       pages.clear();
       regionHashes.clear();
+      overlayVisible = false;
+      overlayBounds = null;
       overlay?.setVisible(false);
     },
     remove(id) {

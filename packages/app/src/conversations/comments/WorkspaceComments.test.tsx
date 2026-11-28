@@ -291,3 +291,17 @@ for (const resolutionStatus of ["approximate", "ambiguous", "orphaned"])
     expect(readDraft("c1")?.fileContexts ?? []).toHaveLength(0);
     expect(f.getThread()!.source).toEqual(source);
   });
+
+it("filters threads by open and resolved status", async () => {
+  const f = fixture();
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: "保存为评论" }));
+  await screen.findByText("原始意见", { selector: "summary span" });
+  await user.click(screen.getByRole("button", { name: /已解决 · 0/ }));
+  expect(screen.getByText("暂无已解决的评论")).toBeVisible();
+  await user.click(screen.getByRole("button", { name: /未解决 · 1/ }));
+  expect(
+    screen.getByText("原始意见", { selector: "summary span" }),
+  ).toBeVisible();
+  expect(f.getThread()?.status).toBe("OPEN");
+});

@@ -1,5 +1,5 @@
 import { useViewState, usePreviewScroll } from "./viewState";
-import { Icon, IconButton } from "@openfox/ui";
+import { Button, Icon, IconButton, cn } from "@openfox/ui";
 import { PreviewNavigation } from "./PreviewNavigation";
 import {
   useEffectEvent,
@@ -14,8 +14,7 @@ import type { SelectionRect } from "./selection";
 import { useT } from "@openfox/i18n";
 import { displayedRegion, regionFromPoints, type Point } from "./regions";
 const PDFPage = lazy(() => import("./PDFPage"));
-const button =
-  "rounded border border-line-default px-2 py-1 text-body-sm disabled:opacity-50";
+const ZOOM_STEPS = [0.5, 1, 1.5, 2] as const;
 
 export function VisualReview({
   blob,
@@ -113,48 +112,76 @@ export function VisualReview({
           />
         </PreviewNavigation>
       )}
-      <div className="order-last flex shrink-0 flex-wrap items-center gap-2 border-t border-line-default px-3 py-1.5 text-caption text-fg-muted">
+      <div className="order-last flex shrink-0 flex-wrap items-center gap-2 border-t border-line-subtle bg-surface-card px-3 py-1.5 text-caption text-fg-muted">
         {controls}
         {pdf && editable && allowTextSelection && (
-          <button className={button} onClick={() => setTextMode(!textMode)}>
+          <Button
+            size="28"
+            variant="outline"
+            onClick={() => setTextMode(!textMode)}
+          >
             {t(
               textMode
                 ? "artifacts.review.pdfRegionMode"
                 : "artifacts.review.pdfTextMode",
             )}
-          </button>
+          </Button>
         )}
         {pdf && (
-          <>
-            <button
-              className={button}
-              onClick={() => {
-                setReady(false);
-                setRotation((rotation + 90) % 360);
-              }}
-            >
-              {t("artifacts.review.rotate")}
-            </button>
-          </>
+          <Button
+            size="28"
+            variant="outline"
+            onClick={() => {
+              setReady(false);
+              setRotation((rotation + 90) % 360);
+            }}
+          >
+            <Icon name="rotate-cw" size={14} />
+            {t("artifacts.review.rotate")}
+          </Button>
         )}
-        <label className="text-body-sm">
-          {t("artifacts.review.zoom")}{" "}
+        <div className="inline-flex items-center gap-0.5 rounded-full border border-line-subtle bg-surface-muted p-0.5">
+          <IconButton
+            label={t("artifacts.review.zoomOut")}
+            icon={<Icon name="minus" size={14} />}
+            size="28"
+            className="size-6 rounded-full!"
+            disabled={zoom <= ZOOM_STEPS[0]}
+            onClick={() => {
+              const prev = [...ZOOM_STEPS].reverse().find((z) => z < zoom);
+              if (prev) setZoom(prev);
+            }}
+          />
           <select
             aria-label={t("artifacts.review.zoom")}
             value={zoom}
             onChange={(e) => setZoom(Number(e.target.value))}
+            className="h-6 cursor-pointer rounded-full bg-transparent px-1.5 text-caption font-medium text-fg-default outline-none"
           >
-            {[0.5, 1, 1.5, 2].map((z) => (
+            {ZOOM_STEPS.map((z) => (
               <option key={z} value={z}>
                 {z * 100}%
               </option>
             ))}
           </select>
-        </label>
+          <IconButton
+            label={t("artifacts.review.zoomIn")}
+            icon={<Icon name="plus" size={14} />}
+            size="28"
+            className="size-6 rounded-full!"
+            disabled={zoom >= ZOOM_STEPS[ZOOM_STEPS.length - 1]!}
+            onClick={() => {
+              const next = ZOOM_STEPS.find((z) => z > zoom);
+              if (next) setZoom(next);
+            }}
+          />
+        </div>
         {onSelect && (
-          <button
-            className={button}
+          <Button
+            size="28"
+            variant="outline"
             disabled={!editable || !ready}
+            className={cn(!editable && "opacity-50")}
             onClick={(e) => {
               const a = regionFromPoints(
                 { x: 0, y: 0 },
@@ -167,7 +194,7 @@ export function VisualReview({
             }}
           >
             {t("artifacts.review.wholePage")}
-          </button>
+          </Button>
         )}
       </div>
       {failed && <p role="alert">{t("artifacts.review.unavailable")}</p>}

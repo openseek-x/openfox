@@ -1,5 +1,6 @@
 import {
   cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -251,6 +252,26 @@ describe("自定义导航", () => {
     localStorage.setItem("openfox:layout-mode", "chat");
     renderAt("/o/o1", handler());
     await waitFor(() => expect(probe).toBe("/o/o1/inbox"));
+  });
+
+  it("⌘\\ 快捷键切换左侧导航栏收起与展开并持久化", async () => {
+    renderAt("/o/o1/inbox", handler());
+    await screen.findByRole("navigation", { name: "页面导航" });
+    expect(
+      screen.queryByRole("button", { name: "展开侧边栏" }),
+    ).not.toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "\\", code: "Backslash", metaKey: true });
+    await waitFor(() =>
+      expect(localStorage.getItem("openfox:sidebar-collapsed")).toBe("1"),
+    );
+    expect(screen.getByRole("button", { name: "展开侧边栏" })).toBeVisible();
+    fireEvent.keyDown(window, { key: "\\", code: "Backslash", metaKey: true });
+    await waitFor(() =>
+      expect(localStorage.getItem("openfox:sidebar-collapsed")).toBeNull(),
+    );
+    expect(
+      screen.queryByRole("button", { name: "展开侧边栏" }),
+    ).not.toBeInTheDocument();
   });
 });
 

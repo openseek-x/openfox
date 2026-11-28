@@ -30,8 +30,9 @@ const KEYBOARD_TARGETS = new Set(
   "p h1 h2 h3 h4 h5 h6 li pre td th img figcaption".split(" "),
 );
 const HTML_NS = "http://www.w3.org/1999/xhtml";
-export const HTML_MAX_BYTES = 512 * 1024;
-export const HTML_MAX_NODES = 10000;
+// 渲染上限 10 MB / 20,000 个节点：容纳内嵌步骤截图的单文件测试报告（OPE-18 样本 7.4 MB）。
+export const HTML_MAX_BYTES = 10 * 1024 * 1024;
+export const HTML_MAX_NODES = 20000;
 export const HTML_MAX_DEPTH = 128;
 type Node = DefaultTreeAdapterMap["childNode"];
 export type HtmlTextTarget = { path: string; start: number; offsets: number[] };

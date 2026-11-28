@@ -28,6 +28,8 @@ var (
 	textClass   = class{sniff: []string{"text/plain", "text/html", "text/xml"}, stored: typeText}
 	markupClass = textClass
 	zipClass    = class{sniff: []string{"application/zip"}, stored: typeZip}
+	// 视频（测试录像）：文件头必须是对应容器，落库为嗅探结果，可在线播放（OPE-19）。
+	videoClass  = func(sniff string) class { return class{sniff: []string{sniff}} }
 	legacyClass = class{stored: typeBinary}
 )
 
@@ -38,6 +40,7 @@ var extensionClasses = map[string]class{
 	".txt": textClass, ".md": textClass, ".csv": textClass, ".tsv": textClass, ".json": textClass,
 	".log": textClass, ".yaml": textClass, ".yml": textClass, ".toml": textClass, ".ini": textClass,
 	".svg": markupClass, ".html": markupClass, ".htm": markupClass, ".xml": markupClass,
+	".webm": videoClass("video/webm"), ".mp4": videoClass("video/mp4"),
 	".zip": zipClass, ".docx": zipClass, ".xlsx": zipClass, ".pptx": zipClass,
 	".doc": legacyClass, ".xls": legacyClass, ".ppt": legacyClass,
 }
@@ -79,6 +82,33 @@ func Previewable(contentType string) bool {
 		return true
 	}
 	return false
+}
+
+// 预览方式（契约 Attachment.preview_kind）。
+const (
+	PreviewImage = "image"
+	PreviewVideo = "video"
+	PreviewHTML  = "html"
+	PreviewNone  = "none"
+)
+
+// MaxHTMLPreviewBytes 是 HTML 附件在页面内渲染的上限（与产物 HTML 报告一致，10 MB），超过只能下载。
+const MaxHTMLPreviewBytes = 10 << 20
+
+// PreviewKind 返回附件在页面内的预览方式：图片 inline；视频按 Range 分段播放；
+// 以纯文本落库的 .html/.htm 由前端做隔离静态渲染（无脚本、仅内嵌位图），且不超过 MaxHTMLPreviewBytes。
+func PreviewKind(name, contentType string, size int64) string {
+	switch {
+	case Previewable(contentType):
+		return PreviewImage
+	case contentType == "video/webm" || contentType == "video/mp4":
+		return PreviewVideo
+	case contentType == typeText && size <= MaxHTMLPreviewBytes:
+		if ext := strings.ToLower(path.Ext(name)); ext == ".html" || ext == ".htm" {
+			return PreviewHTML
+		}
+	}
+	return PreviewNone
 }
 
 // StorageKey 返回对象键：每个附件独占一个对象，删除附件即删除对象。

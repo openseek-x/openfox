@@ -1,5 +1,5 @@
 import { useViewState, usePreviewScroll } from "./viewState";
-import { Icon, IconButton } from "@openfox/ui";
+import { Icon, IconButton, cn } from "@openfox/ui";
 import { PreviewNavigation } from "./PreviewNavigation";
 import {
   useEffectEvent,
@@ -25,8 +25,14 @@ import type {
 import { textAnchor, utf8Length } from "./anchors";
 import { displayedRegion, regionFromPoints } from "./regions";
 
-const button =
-  "rounded border border-line-default px-2 py-1 text-body-sm disabled:opacity-50";
+const OFFICE_ZOOM_STEPS = [0.5, 0.75, 1, 1.25, 1.5] as const;
+const segmentBtn = (active: boolean) =>
+  cn(
+    "rounded-md px-2 py-0.5 text-caption transition-colors disabled:opacity-50",
+    active
+      ? "border border-line-subtle bg-surface-card font-medium text-fg-default"
+      : "border border-transparent text-fg-secondary hover:text-fg-default",
+  );
 export function OfficePages({
   blob,
   view,
@@ -302,57 +308,90 @@ export function OfficePages({
           icon={<Icon name="chevron-right" size={15} />}
         />
       </PreviewNavigation>
-      <div className="order-last flex shrink-0 flex-wrap items-center gap-2 border-t border-line-default px-3 py-1.5 text-caption text-fg-muted">
-        <select
-          className={button}
-          aria-label={t("artifacts.review.zoom")}
-          value={zoom}
-          onChange={(e) =>
-            setZoom(e.target.value === "fit" ? "fit" : Number(e.target.value))
-          }
-        >
-          <option value="fit">{t("artifacts.review.fitWidth")}</option>
-          {[0.5, 0.75, 1, 1.25, 1.5].map((v) => (
-            <option key={v} value={v}>
-              {v * 100}%
-            </option>
-          ))}
-        </select>
-        <button
-          className={button}
-          disabled={!editable || !ready}
-          aria-pressed={!region && !objects}
-          onClick={() => {
-            setRegion(false);
-            setObjects(false);
-          }}
-        >
-          {t("artifacts.review.officeSelectText")}
-        </button>
-        {view.kind === "pptx" && (
-          <button
-            className={button}
-            disabled={!editable || !ready}
-            aria-pressed={objects}
+      <div className="order-last flex shrink-0 flex-wrap items-center gap-2 border-t border-line-subtle bg-surface-card px-3 py-1.5 text-caption text-fg-muted">
+        <div className="inline-flex items-center gap-0.5 rounded-full border border-line-subtle bg-surface-muted p-0.5">
+          <IconButton
+            label={t("artifacts.review.zoomOut")}
+            icon={<Icon name="minus" size={14} />}
+            size="28"
+            className="size-6 rounded-full!"
+            disabled={zoom === OFFICE_ZOOM_STEPS[0]}
             onClick={() => {
-              setObjects(true);
+              const current = zoom === "fit" ? scale : zoom;
+              const prev = [...OFFICE_ZOOM_STEPS]
+                .reverse()
+                .find((v) => v < current - 0.01);
+              setZoom(prev ?? OFFICE_ZOOM_STEPS[0]);
+            }}
+          />
+          <select
+            className="h-6 cursor-pointer rounded-full bg-transparent px-1.5 text-caption font-medium text-fg-default outline-none"
+            aria-label={t("artifacts.review.zoom")}
+            value={zoom}
+            onChange={(e) =>
+              setZoom(e.target.value === "fit" ? "fit" : Number(e.target.value))
+            }
+          >
+            <option value="fit">{t("artifacts.review.fitWidth")}</option>
+            {OFFICE_ZOOM_STEPS.map((v) => (
+              <option key={v} value={v}>
+                {v * 100}%
+              </option>
+            ))}
+          </select>
+          <IconButton
+            label={t("artifacts.review.zoomIn")}
+            icon={<Icon name="plus" size={14} />}
+            size="28"
+            className="size-6 rounded-full!"
+            disabled={zoom === OFFICE_ZOOM_STEPS[OFFICE_ZOOM_STEPS.length - 1]}
+            onClick={() => {
+              const current = zoom === "fit" ? scale : zoom;
+              const next = OFFICE_ZOOM_STEPS.find((v) => v > current + 0.01);
+              setZoom(next ?? OFFICE_ZOOM_STEPS[OFFICE_ZOOM_STEPS.length - 1]!);
+            }}
+          />
+        </div>
+        <div className="inline-flex items-center gap-0.5 rounded-lg border border-line-subtle bg-surface-muted p-0.5">
+          <button
+            type="button"
+            className={segmentBtn(!region && !objects)}
+            disabled={!editable || !ready}
+            aria-pressed={!region && !objects}
+            onClick={() => {
               setRegion(false);
+              setObjects(false);
             }}
           >
-            {t("artifacts.review.officeSelectObject")}
+            {t("artifacts.review.officeSelectText")}
           </button>
-        )}
-        <button
-          className={button}
-          disabled={!editable || !ready}
-          aria-pressed={region}
-          onClick={() => {
-            setRegion(true);
-            setObjects(false);
-          }}
-        >
-          {t("artifacts.browser.region")}
-        </button>
+          {view.kind === "pptx" && (
+            <button
+              type="button"
+              className={segmentBtn(objects)}
+              disabled={!editable || !ready}
+              aria-pressed={objects}
+              onClick={() => {
+                setObjects(true);
+                setRegion(false);
+              }}
+            >
+              {t("artifacts.review.officeSelectObject")}
+            </button>
+          )}
+          <button
+            type="button"
+            className={segmentBtn(region)}
+            disabled={!editable || !ready}
+            aria-pressed={region}
+            onClick={() => {
+              setRegion(true);
+              setObjects(false);
+            }}
+          >
+            {t("artifacts.browser.region")}
+          </button>
+        </div>
       </div>
       {error && (
         <p role="alert" className="text-body-sm">

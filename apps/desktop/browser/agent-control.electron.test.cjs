@@ -6,7 +6,7 @@ const os = require("node:os");
 const net = require("node:net");
 const http = require("node:http");
 const { once } = require("node:events");
-const { _electron } = require("@playwright/test");
+const { _electron, expect } = require("@playwright/test");
 
 test(
   "BrowserHost authorizes one Run, serves native tools through the socket and revokes on human input",
@@ -139,7 +139,9 @@ test(
     await fs.writeFile(
       entry,
       `
-    const {app,BrowserWindow}=require('electron');
+    const {app,BrowserWindow,shell}=require('electron');
+    const openedExternal=[];
+    shell.openExternal=async(url)=>{openedExternal.push(url)};
     const {createBrowserHost}=require(${JSON.stringify(path.join(__dirname, "host.cjs"))});
     app.setName('OpenFox Agent Browser Test'); app.setPath('userData',${JSON.stringify(root)});
     app.whenReady().then(async()=>{
@@ -148,9 +150,9 @@ test(
       const host=createBrowserHost({window,authorize:async()=>({center:'https://center.example.test',userId:${JSON.stringify(ids.owner)},deviceId:${JSON.stringify(ids.device)}}),networkOptions:()=>({allowedOrigins:[${JSON.stringify(origin)}]}),
         connectControl:async(_input,_identity,control)=>({root:${JSON.stringify(browserRoot)},socketPath:${JSON.stringify(socketPath)},claim:{organization_id:${JSON.stringify(ids.org)},binding_id:${JSON.stringify(ids.binding)},claim_secret:'fixture-claim',host_instance_id:control.hostInstanceID,host_epoch:control.hostEpoch,revision:1}})});
       const mounted=await host.mount({orgId:${JSON.stringify(ids.org)},conversationId:${JSON.stringify(ids.conversation)}});
-      let state=await host.command({lease:mounted.lease,action:'open',url:${JSON.stringify(origin)}});
+      let state=await host.command({lease:mounted.lease,action:'open',url:${JSON.stringify(origin + "/review/panel-b?case=ope23#sample")}});
       state=await host.command({lease:state.lease,action:'layout',visible:true,bounds:{x:0,y:0,width:900,height:650}});
-      globalThis.fixture={window,host,state};
+      globalThis.fixture={window,host,state,openedExternal};
     });
   `,
     );
@@ -260,6 +262,70 @@ test(
     );
     // Agent screenshot focus must not lose the grant through a layout/hide loop.
     assert.equal((await call("tabs", { action: "list" })).ok, true);
+    // 瞬时菜单遮挡（occluded: true）隐藏原生视图但保留活动共用，且系统外开与恢复布局后同一运行仍可操作
+    const occludedState = await command({
+      action: "layout",
+      visible: false,
+      occluded: true,
+    });
+    assert.equal(occludedState.control.active, true);
+    assert.equal(
+      await application.evaluate(
+        () =>
+          globalThis.fixture.window.contentView.children.filter((v) =>
+            v.getVisible(),
+          ).length,
+      ),
+      0,
+    );
+    assert.equal((await call("tabs", { action: "list" })).ok, true);
+    const externalState = await command({
+      action: "open-external",
+      tabId: tab,
+    });
+    assert.equal(externalState.control.active, true);
+    assert.deepEqual(
+      await application.evaluate(() => globalThis.fixture.openedExternal),
+      [origin + "/review/panel-b?case=ope23#sample"],
+    );
+    if (process.platform === "darwin") {
+      // 系统外开的替身未改变前台窗口，补发实机覆盖窗口时的 hide 事件。
+      await application.evaluate(() => {
+        globalThis.fixture.window.emit("hide");
+      });
+    }
+    const restoredState = await command({
+      action: "layout",
+      visible: true,
+      bounds: { x: 0, y: 0, width: 900, height: 650 },
+    });
+    assert.equal(restoredState.control.active, true);
+    assert.equal(restoredState.control.epoch, state.control.epoch);
+    assert.equal(
+      (await call("observe", { action: "snapshot", tab_id: tab })).ok,
+      true,
+    );
+    // 非瞬时隐藏（无 occluded: true，如打开模态框或视口坍缩）仍立即撤权
+    const hiddenLayoutState = await command({
+      action: "layout",
+      visible: false,
+    });
+    assert.equal(hiddenLayoutState.control.active, false);
+    assert.equal(
+      (await call("tabs", { action: "list" })).text,
+      "CONTROL_REVOKED",
+    );
+    await command({
+      action: "layout",
+      visible: true,
+      bounds: { x: 0, y: 0, width: 900, height: 650 },
+    });
+    await command({
+      action: "allow-control",
+      runId: ids.run,
+      generation: 1,
+      origins: [origin],
+    });
     await application.evaluate(({ webContents }, origin) => {
       const contents = webContents
         .getAllWebContents()
@@ -305,6 +371,54 @@ test(
       generation: 1,
       origins: [origin],
     });
+    if (process.platform === "darwin") {
+      // 每次恢复窗口后才尝试使用旧授权，避免由隐藏期间的工具调用代为撤权。
+      const assertRevokedAndRegrant = async () => {
+        assert.equal(
+          (await call("tabs", { action: "list" })).text,
+          "CONTROL_REVOKED",
+        );
+        await command({
+          action: "allow-control",
+          runId: ids.run,
+          generation: 1,
+          origins: [origin],
+        });
+      };
+      await application.evaluate(({ app }) => app.hide());
+      await expect
+        .poll(() => application.evaluate(({ app }) => app.isHidden()))
+        .toBe(true);
+      await application.evaluate(({ app }) => {
+        app.show();
+        globalThis.fixture.window.show();
+      });
+      await assertRevokedAndRegrant();
+      await application.evaluate(async () => {
+        const { window } = globalThis.fixture;
+        const hidden = new Promise((resolve) => {
+          window.once("close", (event) => {
+            event.preventDefault();
+            window.hide();
+            resolve();
+          });
+        });
+        window.close();
+        await hidden;
+        window.show();
+      });
+      await assertRevokedAndRegrant();
+      await application.evaluate(async () => {
+        const { window } = globalThis.fixture;
+        const minimized = new Promise((r) => window.once("minimize", r));
+        window.minimize();
+        await minimized;
+        const restored = new Promise((r) => window.once("restore", r));
+        window.restore();
+        await restored;
+      });
+      await assertRevokedAndRegrant();
+    }
     await application.evaluate(() => globalThis.fixture.host.suspend());
     assert.equal(
       (await call("tabs", { action: "list" })).text,
