@@ -19,7 +19,6 @@ import { useFavoriteEntry } from "../agents/actions";
 import { useAgentSettingsParam } from "../agents/params";
 import { useDirectory, useMe } from "../agents/queries";
 import { localKeys, readLocal, writeLocal } from "../storage";
-import { SidebarCollapseButton } from "../shell/SidebarCollapseButton";
 import { LoadMore } from "../tasks/parts";
 import { formatRelativeTime } from "../tasks/primitives/dates";
 import {
@@ -88,13 +87,7 @@ export function useOpenRunHistory() {
  * 「对话」页签的侧栏面板（Figma 页 12）：顶部「对话」+ 新建；
  * 三种导航模式（微信 / Slack / 多会话），底部 ModeFooter 切换，选择存本机。
  */
-export function ChatPanel({
-  orgId,
-  onCollapse,
-}: {
-  orgId: string;
-  onCollapse: () => void;
-}) {
+export function ChatPanel({ orgId }: { orgId: string }) {
   const t = useT();
   const [mode, setMode] = useState<ChatMode>(readChatMode);
   const change = (next: ChatMode) => {
@@ -105,13 +98,12 @@ export function ChatPanel({
     <nav
       id="chat-sidebar"
       aria-label={t("chat.title")}
-      className="group/panel flex min-w-0 flex-1 flex-col px-1.5 pt-1.5"
+      className="flex min-w-0 flex-1 flex-col px-1.5 pt-1.5"
     >
       <div className="flex h-11 shrink-0 items-center gap-1 pr-1 pl-2.5">
         <h2 className="min-w-0 flex-1 truncate text-body font-semibold tracking-[-0.01em] text-fg-default">
           {t("chat.title")}
         </h2>
-        <SidebarCollapseButton onClick={onCollapse} />
         <NewChatButton orgId={orgId} />
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto pb-2">

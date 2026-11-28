@@ -1049,7 +1049,7 @@ for (const locale of ["zh-CN", "en-US"] as const) {
     const contentWidth = await artifacts.evaluate(
       (element) => element.parentElement!.clientWidth,
     );
-    const initialWidth = Math.min(960, contentWidth - 360);
+    const initialWidth = Math.min(640, contentWidth - 360);
     await expect(artifacts).toHaveCSS("width", `${initialWidth}px`);
     await dragHandle(page, artifactHandle, 100);
     await expect(artifacts).toHaveCSS("width", `${initialWidth - 100}px`);
@@ -1117,7 +1117,12 @@ for (const locale of ["zh-CN", "en-US"] as const) {
     const sidebar = page.getByRole("complementary", {
       name: t("shell.a11y.sidebar"),
     });
-    const expand = page.getByRole("button", {
+    const titleBar = page.getByRole("banner");
+    const collapse = titleBar.getByRole("button", {
+      name: t("shell.collapse"),
+      exact: true,
+    });
+    const expand = titleBar.getByRole("button", {
       name: t("shell.expand"),
       exact: true,
     });
@@ -1161,15 +1166,25 @@ for (const locale of ["zh-CN", "en-US"] as const) {
         .boundingBox())!.width;
       await expect(railLinks).toHaveCount(4);
       const expandedTops = await linkTops();
-      await page
-        .getByRole("button", { name: t("shell.collapse"), exact: true })
-        .click();
+      await expect(collapse).toHaveAttribute("aria-expanded", "true");
+      await expect(collapse).toHaveAttribute(
+        "aria-controls",
+        "org-sidebar-panel",
+      );
+      await expect(
+        page.getByRole("button", { name: t("shell.collapse"), exact: true }),
+      ).toHaveCount(1);
+      const toggleBounds = await collapse.boundingBox();
+      await collapse.press("Enter");
       await expect(panel).toHaveCSS("width", "0px");
       await expect(panel).toHaveAttribute("inert", "");
       await expect(sidebar).toHaveCSS("width", "55px");
       await expect(rail).toBeVisible();
       await expect(rail.getByRole("img", { name: "OpenFox" })).toBeVisible();
       expect(await linkTops()).toEqual(expandedTops);
+      await expect(expand).toBeFocused();
+      await expect(expand).toHaveAttribute("aria-expanded", "false");
+      expect(await expand.boundingBox()).toEqual(toggleBounds);
       await expect(handle).toHaveAttribute("aria-valuenow", "0");
       expect((await page.locator("[data-org-main]").boundingBox())!.width).toBe(
         expandedMain + 340,
@@ -1210,9 +1225,7 @@ for (const locale of ["zh-CN", "en-US"] as const) {
       .click();
     await expect(page).toHaveURL(/\/o\/o1\/inbox$/);
     await expect(panel).toHaveCSS("width", "340px");
-    await page
-      .getByRole("button", { name: t("shell.collapse"), exact: true })
-      .click();
+    await collapse.click();
     await rail
       .getByRole("link", { name: t("shell.chat"), exact: true })
       .click();
@@ -1226,6 +1239,19 @@ for (const locale of ["zh-CN", "en-US"] as const) {
     await expect(panel).toHaveCSS("width", "340px");
     await page.emulateMedia({ reducedMotion: "reduce" });
     await expect(panel).toHaveCSS("transition-property", "none");
+    await page.setViewportSize({ width: 640, height: 900 });
+    await expect(expand).toHaveAttribute("aria-haspopup", "dialog");
+    await expand.press("Enter");
+    const drawer = page.getByRole("dialog", { name: t("shell.a11y.sidebar") });
+    await expect(drawer).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath("sidebar-drawer.png") });
+    await drawer
+      .getByRole("button", { name: t("common.close"), exact: true })
+      .click();
+    await expect(drawer).toHaveCount(0);
+    await expect(expand).toBeFocused();
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await expect(panel).toHaveCSS("width", "340px");
     expect(errors).toEqual([]);
   });
 }

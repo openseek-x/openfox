@@ -2,7 +2,13 @@ import { resetDrafts } from "../conversations/drafts";
 import { WorkspacePersistence } from "../conversations/WorkspacePersistence";
 import { DirectChatList } from "../conversations/DirectChat";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   Link,
   NavLink,
@@ -71,7 +77,6 @@ import { SearchLauncher } from "../search/SearchLauncher";
 import { DesktopNav } from "./DesktopNav";
 import { PanelResizeHandle } from "./PanelResizeHandle";
 import { RailIcon } from "./RailIcon";
-import { SidebarCollapseButton } from "./SidebarCollapseButton";
 import { usePanelWidth } from "./panelWidth";
 import {
   NavRejectContext,
@@ -115,18 +120,18 @@ export function OrgLayout() {
   const [navOpen, setNavOpen] = useState(false);
   useEffect(() => setNavOpen(false), [location.key, narrow]);
   // ⌘\ / Ctrl+\ 快捷切换左侧导航侧栏（同步监听桌面端内置浏览器内按键透传）
+  const toggleSidebar = useCallback(() => {
+    if (narrow) {
+      setNavOpen((open) => !open);
+      return;
+    }
+    setCollapsed((prev) => {
+      const next = !prev;
+      writeLocal(localKeys.sidebarCollapsed, next ? "1" : null);
+      return next;
+    });
+  }, [narrow]);
   useEffect(() => {
-    const toggleSidebar = () => {
-      if (narrow) {
-        setNavOpen((open) => !open);
-        return;
-      }
-      setCollapsed((prev) => {
-        const next = !prev;
-        writeLocal(localKeys.sidebarCollapsed, next ? "1" : null);
-        return next;
-      });
-    };
     const onKeyDown = (event: KeyboardEvent) => {
       if (
         event.defaultPrevented ||
@@ -148,7 +153,7 @@ export function OrgLayout() {
       window.removeEventListener("keydown", onKeyDown);
       unlisten?.();
     };
-  }, [narrow]);
+  }, [toggleSidebar]);
   const inSettings = location.pathname.startsWith(`/o/${orgId}/settings`);
   const inMembers = location.pathname.startsWith(`/o/${orgId}/members`);
   // 首页内打开对话仍保留首页侧栏，与主导航高亮使用同一规则。
@@ -209,28 +214,23 @@ export function OrgLayout() {
     writeLocal(localKeys.sidebarCollapsed, next ? "1" : null);
     setCollapsed(next);
   };
-  const toggle = () => changeCollapsed(!collapsed);
   const sidebarHidden = collapsed || sidebar.width === 0;
 
-  const closeNavigation = narrow ? () => setNavOpen(false) : toggle;
   const navigation = inSettings ? (
-    <SettingsNavigation orgId={orgId} onCollapse={closeNavigation} />
+    <SettingsNavigation orgId={orgId} />
   ) : inMembers ? (
-    <MembersNavigation orgId={orgId} onCollapse={closeNavigation} />
+    <MembersNavigation orgId={orgId} />
   ) : inChat ? (
-    <ChatPanel orgId={orgId} onCollapse={closeNavigation} />
+    <ChatPanel orgId={orgId} />
   ) : (
     // 按组织重新挂载，侧栏的本机折叠状态随组织切换
     <Navigation
       key={orgId}
       orgId={orgId}
-      onCollapse={closeNavigation}
       showNewTask={narrow || !sidebarHidden}
     />
   );
-  const rail = (
-    <Rail orgId={orgId} collapsed={!narrow && collapsed} onToggle={toggle} />
-  );
+  const rail = <Rail orgId={orgId} />;
 
   return (
     <WorkspacePersistence key={orgId} orgId={orgId}>
@@ -244,7 +244,9 @@ export function OrgLayout() {
               org={org}
               organizations={organizations.data ?? []}
               showNewTask={narrow || sidebarHidden}
-              openNavigation={narrow ? () => setNavOpen(true) : undefined}
+              navigationOpen={narrow ? navOpen : !sidebarHidden}
+              navigationIsDrawer={narrow}
+              onToggleNavigation={toggleSidebar}
             />
             <div
               ref={sidebar.containerRef}
@@ -333,12 +335,16 @@ function TitleBar({
   org,
   organizations,
   showNewTask,
-  openNavigation,
+  navigationOpen,
+  navigationIsDrawer,
+  onToggleNavigation,
 }: {
   org: Organization;
   organizations: Organization[];
   showNewTask: boolean;
-  openNavigation?: () => void;
+  navigationOpen: boolean;
+  navigationIsDrawer: boolean;
+  onToggleNavigation: () => void;
 }) {
   const t = useT();
   const api = useApi();
@@ -347,6 +353,7 @@ function TitleBar({
   const me = useQuery({ queryKey: keys.me, queryFn: api.me.get });
   const desktop = isDesktop();
   const macDesktop = isMacDesktop();
+  const navigationLabel = t(navigationOpen ? "shell.collapse" : "shell.expand");
   const bridge = desktopBridge();
   const [proxyOpen, setProxyOpen] = useState(false);
   const [accountMenu, setAccountMenu] = useState(false);
@@ -383,16 +390,18 @@ function TitleBar({
         macDesktop && "pl-[92px]",
       )}
     >
-      {openNavigation && (
-        <IconButton
-          label={t("shell.expand")}
-          icon={<Icon name="panel-left" />}
-          size="28"
-          variant="ghost"
-          aria-haspopup="dialog"
-          onClick={openNavigation}
-        />
-      )}
+      <IconButton
+        label={navigationLabel}
+        title={`${navigationLabel} (${isMacPlatform() ? "⌘\\" : "Ctrl+\\"})`}
+        icon={
+          <Icon name={navigationOpen ? "panel-left-close" : "panel-left"} />
+        }
+        size="28"
+        aria-expanded={navigationOpen}
+        aria-controls={navigationIsDrawer ? undefined : "org-sidebar-panel"}
+        aria-haspopup={navigationIsDrawer ? "dialog" : undefined}
+        onClick={onToggleNavigation}
+      />
       <Menu
         label={t("shell.switchOrg")}
         trigger={({ ref, toggle, open }) => (
@@ -553,38 +562,19 @@ function TitleBar({
   );
 }
 
-function Rail({
-  orgId,
-  collapsed,
-  onToggle,
-}: {
-  orgId: string;
-  collapsed: boolean;
-  onToggle: () => void;
-}) {
+function Rail({ orgId }: { orgId: string }) {
   const t = useT();
   const location = useLocation();
   const current = location.pathname + location.search;
   const active = moduleOf(orgId, location.pathname, location.search);
   // 阶段 8f · 布局模式只改顺序、名称和图标，module 不变，主导航记忆照旧
   const railItems = railItemsFor(useLayoutMode());
-  const shortcut = isMacPlatform() ? "⌘\\" : "Ctrl+\\";
   return (
     <nav
       aria-label={t("shell.a11y.rail")}
       className="flex w-[55px] shrink-0 flex-col items-center gap-1.5 border-r border-line-subtle py-3"
     >
       <Icon name="brand-logo" size={28} label="OpenFox" />
-      {collapsed && (
-        <IconButton
-          label={t("shell.expand")}
-          title={`${t("shell.expand")} (${shortcut})`}
-          icon={<Icon name="chevrons-left" size={18} className="rotate-180" />}
-          size="28"
-          onClick={onToggle}
-          aria-controls="org-sidebar-panel"
-        />
-      )}
       {railItems.map((item) => (
         <Link
           key={item.label}
@@ -670,11 +660,9 @@ function readCollapsedSpaces(orgId: string): string[] {
 
 function Navigation({
   orgId,
-  onCollapse,
   showNewTask,
 }: {
   orgId: string;
-  onCollapse: () => void;
   showNewTask: boolean;
 }) {
   const t = useT();
@@ -706,13 +694,12 @@ function Navigation({
   return (
     <nav
       aria-label={t("shell.a11y.navigation")}
-      className="group/panel relative flex min-w-0 flex-1 flex-col overflow-y-auto px-1.5 pt-1.5 pb-3"
+      className="relative flex min-w-0 flex-1 flex-col overflow-y-auto px-1.5 pt-1.5 pb-3"
     >
       <div className="flex h-11 shrink-0 items-center gap-1 pr-1 pl-2.5">
         <h2 className="min-w-0 flex-1 truncate text-body font-semibold tracking-[-0.01em] text-fg-default">
           {t("shell.home")}
         </h2>
-        <SidebarCollapseButton onClick={onCollapse} />
         {showNewTask && <NewTaskButton orgId={orgId} />}
       </div>
       <div className="flex flex-col gap-0.5">
