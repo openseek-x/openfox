@@ -132,6 +132,7 @@ export function DisplayMenu({
       <IconButton
         ref={anchor}
         label={t("tasks.display")}
+        tooltip
         icon={<Icon name="sliders-horizontal" />}
         variant="round"
         active={open}

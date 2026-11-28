@@ -62,8 +62,13 @@ it.each([
         return json(200, { jobs: [], next_cursor: "" });
       return undefined;
     });
+    const section = await screen.findByRole(
+      "region",
+      { name: "我的 Jira 账号" },
+      { timeout: 5000 },
+    );
     await user.click(
-      await screen.findByRole("button", { name: "绑定我的账号" }),
+      within(section).getByRole("button", { name: "绑定我的账号" }),
     );
     const dialog = screen.getByRole("dialog");
     await user.type(
@@ -123,7 +128,14 @@ it("binds a personal ZenTao account for comment sync", async () => {
       return json(200, { jobs: [], next_cursor: "" });
     return undefined;
   });
-  await user.click(await screen.findByRole("button", { name: "绑定我的账号" }));
+  const section = await screen.findByRole(
+    "region",
+    { name: "我的 禅道 账号" },
+    { timeout: 5000 },
+  );
+  await user.click(
+    within(section).getByRole("button", { name: "绑定我的账号" }),
+  );
   const dialog = screen.getByRole("dialog");
   await user.type(within(dialog).getByLabelText("账号或邮箱"), "lin");
   await user.type(within(dialog).getByLabelText("密码"), "fixture-password");

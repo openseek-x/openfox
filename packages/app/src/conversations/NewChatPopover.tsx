@@ -44,7 +44,7 @@ export function NewChatPopover({
   const t = useT();
   const navigate = useNavigate();
   const directory = useDirectory(orgId, open);
-  const contacts = useContacts(orgId);
+  const contacts = useContacts(orgId, open);
   const me = useMe();
   const people =
     contacts.data?.groups
@@ -205,10 +205,13 @@ export function NewChatButton({
   orgId,
   className,
   landing = false,
+  variant = "default",
 }: {
   orgId: string;
   className?: string;
   landing?: boolean;
+  /** section：侧栏分组标题右侧紧凑「+」按钮 */
+  variant?: "default" | "section";
 }) {
   const t = useT();
   const ref = useRef<HTMLButtonElement | null>(null);
@@ -227,11 +230,18 @@ export function NewChatButton({
         className={cn(
           landing
             ? "flex min-h-12 w-full items-center gap-3 rounded-xl border border-line-default bg-surface-card px-4 text-left text-body text-fg-secondary shadow-card transition-[border-color,background-color] duration-150 hover:border-line-strong hover:bg-surface-hover motion-reduce:transition-none"
-            : "flex size-7 items-center justify-center rounded-lg text-fg-secondary hover:bg-surface-muted",
+            : variant === "section"
+              ? "flex size-5 items-center justify-center rounded-md text-fg-muted transition-colors duration-100 not-aria-expanded:hover:bg-surface-sidebar-hover hover:text-fg-default aria-expanded:bg-surface-sidebar-active aria-expanded:text-fg-default motion-reduce:transition-none"
+              : "flex size-7 items-center justify-center rounded-lg text-fg-secondary hover:bg-surface-muted",
           className,
         )}
       >
-        <Icon name={landing ? "users" : "circle-plus"} size={18} />
+        <Icon
+          name={
+            landing ? "users" : variant === "section" ? "plus" : "circle-plus"
+          }
+          size={variant === "section" && !landing ? 14 : 18}
+        />
         {landing && (
           <>
             <span className="flex-1">{label}</span>

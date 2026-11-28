@@ -48,40 +48,81 @@ export function TaskList(props: TaskViewProps) {
   const groups = applyGroupOrder(columns, display.groupOrder?.status).filter(
     (c) => display.showEmptyColumns || (counts.get(c.id) ?? 0) > 0,
   );
+  const showProp = (p: DisplaySettings["properties"][number]) =>
+    display.properties.includes(p);
+  const hasDateHeader =
+    showProp("start") ||
+    showProp("due") ||
+    showProp("created") ||
+    showProp("updated");
   return (
     <div
       role="region"
       aria-label={t("tasks.list.label")}
-      className="min-h-0 flex-1 overflow-y-auto pb-4"
+      className="flex min-h-0 flex-1 flex-col"
     >
-      <TaskSelectionContext.Provider value={selection}>
-        {groups.map((column) => {
-          const collapsed =
-            column.collapsed_by_default !== toggled.has(column.id);
-          return (
-            <Group
-              key={column.id}
-              {...props}
-              column={column}
-              count={counts.get(column.id) ?? 0}
-              collapsed={collapsed}
-              onToggle={() =>
-                setToggled((prev) => {
-                  const next = new Set(prev);
-                  if (next.has(column.id)) next.delete(column.id);
-                  else next.add(column.id);
-                  return next;
-                })
-              }
-            />
-          );
-        })}
-      </TaskSelectionContext.Provider>
-      <BulkActionBar
-        orgId={props.orgId}
-        selection={selection}
-        people={props.people}
-      />
+      {hasDateHeader && groups.length > 0 && (
+        <div
+          aria-hidden
+          className="flex h-7 shrink-0 items-center gap-2 border-b border-line-soft px-4 text-caption text-fg-muted"
+        >
+          <span className="min-w-0 flex-1">{t("tasks.fields.task")}</span>
+          <span className="flex shrink-0 items-center gap-1.5">
+            {showProp("start") && (
+              <span className="w-16 shrink-0 text-right">
+                {t("tasks.fields.startDate")}
+              </span>
+            )}
+            {showProp("due") && (
+              <span className="w-[92px] shrink-0 text-right">
+                {t("tasks.fields.dueDate")}
+              </span>
+            )}
+            {showProp("created") && (
+              <span className="w-16 shrink-0 text-right">
+                {t("tasks.fields.created")}
+              </span>
+            )}
+            {showProp("updated") && (
+              <span className="w-16 shrink-0 text-right">
+                {t("tasks.fields.updated")}
+              </span>
+            )}
+          </span>
+          {/* 为行尾更多操作按钮留出等宽占位，保证列头与单元格垂直对齐 */}
+          <span className="w-7 shrink-0" />
+        </div>
+      )}
+      <div className="min-h-0 flex-1 overflow-y-auto pb-4">
+        <TaskSelectionContext.Provider value={selection}>
+          {groups.map((column) => {
+            const collapsed =
+              column.collapsed_by_default !== toggled.has(column.id);
+            return (
+              <Group
+                key={column.id}
+                {...props}
+                column={column}
+                count={counts.get(column.id) ?? 0}
+                collapsed={collapsed}
+                onToggle={() =>
+                  setToggled((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(column.id)) next.delete(column.id);
+                    else next.add(column.id);
+                    return next;
+                  })
+                }
+              />
+            );
+          })}
+        </TaskSelectionContext.Provider>
+        <BulkActionBar
+          orgId={props.orgId}
+          selection={selection}
+          people={props.people}
+        />
+      </div>
     </div>
   );
 }
@@ -237,6 +278,33 @@ const Row = memo(function Row({
   const checked = Boolean(selection?.has(task.id));
   const show = (p: DisplaySettings["properties"][number]) =>
     display.properties.includes(p);
+  const displayId = displayIdOf(task);
+  const startFormatted = task.start_date
+    ? formatMonthDay(task.start_date, locale)
+    : "";
+  const createdFormatted = formatMonthDay(new Date(task.created_at), locale);
+  const updatedFormatted = formatMonthDay(new Date(task.updated_at), locale);
+  const startTip = startFormatted
+    ? t("tasks.list.dateTip", {
+        label: t("tasks.fields.startDate"),
+        date: startFormatted,
+      })
+    : t("tasks.fields.startDate");
+  const createdTip = t("tasks.list.dateTip", {
+    label: t("tasks.fields.created"),
+    date: createdFormatted,
+  });
+  const updatedTip = t("tasks.list.dateTip", {
+    label: t("tasks.fields.updated"),
+    date: updatedFormatted,
+  });
+  const priorityTip =
+    task.priority === "NONE"
+      ? t("tasks.priorityNone")
+      : t("tasks.list.fieldTip", {
+          label: t("tasks.fields.priority"),
+          value: t(`tasks.priority.${task.priority}`),
+        });
   return (
     <li
       aria-selected={selection ? checked : undefined}
@@ -249,11 +317,11 @@ const Row = memo(function Row({
         type="button"
         onClick={() => onOpen(task)}
         className="absolute inset-0 z-0 outline-none focus-visible:shadow-focus"
-        aria-label={`${displayIdOf(task)} ${task.title}`}
+        aria-label={`${displayId} ${task.title}`}
       />
       {selection && (
         <SelectBox
-          label={t("tasks.bulk.select", { task: displayIdOf(task) })}
+          label={t("tasks.bulk.select", { task: displayId })}
           checked={checked}
           onToggle={(on, range) =>
             selection.toggle(task.id, on, { range, order })
@@ -265,10 +333,43 @@ const Row = memo(function Row({
         />
       )}
       <span className="pointer-events-none relative flex min-w-0 flex-1 items-center gap-2 [&_[aria-haspopup=dialog]]:pointer-events-auto">
-        {show("priority") && <PriorityIcon priority={task.priority} labelled />}
+        {show("priority") && (
+          <span
+            title={priorityTip}
+            onClick={() => onOpen(task)}
+            className="pointer-events-auto inline-flex size-4 shrink-0 cursor-pointer items-center justify-center"
+          >
+            {task.priority === "NONE" ? (
+              <svg
+                viewBox="0 0 16 16"
+                width={16}
+                height={16}
+                role="img"
+                aria-label={t("tasks.priorityNone")}
+                focusable="false"
+                className="shrink-0"
+              >
+                <rect
+                  x="3"
+                  y="11"
+                  width="10"
+                  height="2"
+                  rx="1"
+                  className="fill-line-strong"
+                />
+              </svg>
+            ) : (
+              <PriorityIcon priority={task.priority} labelled />
+            )}
+          </span>
+        )}
         {show("id") && (
-          <span className="w-20 shrink-0 truncate whitespace-nowrap text-caption text-fg-muted">
-            {displayIdOf(task)}
+          <span
+            title={displayId}
+            onClick={() => onOpen(task)}
+            className="pointer-events-auto w-24 shrink-0 cursor-pointer truncate whitespace-nowrap text-caption text-fg-muted tabular-nums"
+          >
+            {displayId}
           </span>
         )}
         {show("status") && (
@@ -288,12 +389,6 @@ const Row = memo(function Row({
         <span className="ml-auto flex shrink-0 items-center gap-1.5">
           {show("labels") && <LabelPills task={task} max={2} />}
           {show("assignee") && <AssigneeStack task={task} />}
-          {show("start") && task.start_date && (
-            <span className="text-caption text-fg-muted">
-              {formatMonthDay(task.start_date, locale)}
-            </span>
-          )}
-          {show("due") && <DueChip date={task.due_date} />}
           {show("estimate") && <EstimateChip value={task.estimate} />}
           {show("iteration") && task.iteration_id && (
             <span className="max-w-28 truncate text-caption text-fg-muted">
@@ -305,14 +400,55 @@ const Row = memo(function Row({
               {refNames?.get(task.project_id)}
             </span>
           )}
+          {show("start") && (
+            <span
+              title={startTip}
+              aria-label={startTip}
+              onClick={() => onOpen(task)}
+              className={cn(
+                "pointer-events-auto w-16 shrink-0 cursor-pointer text-right text-caption tabular-nums",
+                startFormatted ? "text-fg-muted" : "text-fg-subtle",
+              )}
+            >
+              {startFormatted || "—"}
+            </span>
+          )}
+          {show("due") && (
+            <span
+              onClick={() => onOpen(task)}
+              className="pointer-events-auto flex w-[92px] shrink-0 cursor-pointer justify-end"
+            >
+              {task.due_date ? (
+                <DueChip date={task.due_date} />
+              ) : (
+                <span
+                  title={t("tasks.fields.dueDate")}
+                  aria-label={t("tasks.fields.dueDate")}
+                  className="text-caption text-fg-subtle"
+                >
+                  —
+                </span>
+              )}
+            </span>
+          )}
           {show("created") && (
-            <span className="w-14 text-right text-caption text-fg-muted">
-              {formatMonthDay(new Date(task.created_at), locale)}
+            <span
+              title={createdTip}
+              aria-label={createdTip}
+              onClick={() => onOpen(task)}
+              className="pointer-events-auto w-16 shrink-0 cursor-pointer text-right text-caption text-fg-muted tabular-nums"
+            >
+              {createdFormatted}
             </span>
           )}
           {show("updated") && (
-            <span className="w-14 text-right text-caption text-fg-muted">
-              {formatMonthDay(new Date(task.updated_at), locale)}
+            <span
+              title={updatedTip}
+              aria-label={updatedTip}
+              onClick={() => onOpen(task)}
+              className="pointer-events-auto w-16 shrink-0 cursor-pointer text-right text-caption text-fg-muted tabular-nums"
+            >
+              {updatedFormatted}
             </span>
           )}
         </span>

@@ -59,7 +59,7 @@ export function SpaceMoreMenu({
             props.open && "bg-surface-sidebar-active text-fg-default",
           )}
         >
-          <Icon name="more" className="text-fg-muted" />
+          <Icon name="settings" className="shrink-0 text-fg-muted" />
           <span className="min-w-0 flex-1 truncate">
             {t("shell.space.more")}
           </span>

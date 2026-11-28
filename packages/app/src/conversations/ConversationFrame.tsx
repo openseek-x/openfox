@@ -28,7 +28,8 @@ export function ConversationFrame({
     >
       <WorkspacePanelContext.Provider value={conversationId ? panel : null}>
         <div className="relative flex h-full min-h-0 min-w-0 flex-1 @container">
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          {/* 产物分栏依据外层可用宽度，聊天顶栏依据内层聊天列宽度。 */}
+          <div className="@container flex min-h-0 min-w-0 flex-1 flex-col">
             {header}
             {children}
           </div>

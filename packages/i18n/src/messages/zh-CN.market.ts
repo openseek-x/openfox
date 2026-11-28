@@ -5,6 +5,10 @@ export const marketZh = {
   retry: "重试",
   emptyTitle: "市场还没有内容",
   emptyDesc: "目录由平台管理员导入后，这里会出现可添加的技能和 Agent 模板。",
+  emptyNextStep: "可联系平台管理员导入目录，或先在空间内手动创建技能与 Agent。",
+  emptyPickerNextStep:
+    "可联系平台管理员导入目录，或关闭弹窗后在空间中手动创建技能。",
+  emptyActionAgents: "前往组织 Agent",
   noResults: "没有找到与「{q}」相关的内容",
   noItems: "这个分类下还没有内容",
   resultCount: "找到 {count} 个结果",

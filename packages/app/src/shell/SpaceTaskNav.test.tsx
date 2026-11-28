@@ -73,16 +73,18 @@ const navLinks = () =>
 afterEach(() => localStorage.clear());
 
 describe("侧栏「任务」下一级", () => {
-  it("默认只固定迭代与视图，其余从「更多…」进入", async () => {
+  it("默认只固定迭代与视图，带图标展示，其余从「更多任务项…」进入", async () => {
     const user = userEvent.setup();
     renderNav();
     expect(navLinks()).toEqual(["迭代", "视图"]);
-    expect(screen.getByRole("link", { name: "迭代" })).toHaveAttribute(
-      "href",
-      `${BASE}/iterations`,
-    );
+    const iterLink = screen.getByRole("link", { name: "迭代" });
+    expect(iterLink).toHaveAttribute("href", `${BASE}/iterations`);
+    expect(iterLink.querySelector("svg")).not.toBeNull();
+    expect(
+      screen.getByRole("link", { name: "视图" }).querySelector("svg"),
+    ).not.toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "更多…" }));
+    await user.click(screen.getByRole("button", { name: "更多任务项…" }));
     const menu = screen.getByRole("menu", { name: "任务导航" });
     expect(
       within(menu)
@@ -102,7 +104,7 @@ describe("侧栏「任务」下一级", () => {
   it("固定 / 取消固定写入本机，并按空间区分", async () => {
     const user = userEvent.setup();
     const view = renderNav();
-    await user.click(screen.getByRole("button", { name: "更多…" }));
+    await user.click(screen.getByRole("button", { name: "更多任务项…" }));
     await user.click(
       screen.getByRole("button", { name: "固定「专项」到侧栏" }),
     );
@@ -127,7 +129,7 @@ describe("侧栏「任务」下一级", () => {
       iterations: false,
       triage: false,
     });
-    await user.click(screen.getByRole("button", { name: "更多…" }));
+    await user.click(screen.getByRole("button", { name: "更多任务项…" }));
     expect(
       screen.getAllByRole("menuitem").map((item) => item.textContent),
     ).toEqual(["迭代", "分拣台", "视图", "专项"]);
@@ -158,7 +160,7 @@ describe("侧栏「任务」下一级", () => {
     );
     renderNav(`${BASE}/trash`);
     expect(navLinks()).toEqual(["视图"]);
-    await user.click(screen.getByRole("button", { name: "更多…" }));
+    await user.click(screen.getByRole("button", { name: "更多任务项…" }));
     expect(
       screen.queryByRole("menuitem", { name: "最近删除" }),
     ).not.toBeInTheDocument();
@@ -171,11 +173,11 @@ describe("侧栏「任务」下一级", () => {
   });
 });
 
-describe("侧栏空间「更多」", () => {
+describe("侧栏空间「空间设置」", () => {
   it("列出空间设置的三个入口并跳到对应设置页", async () => {
     const user = userEvent.setup();
     renderNav();
-    await user.click(screen.getByRole("button", { name: "更多" }));
+    await user.click(screen.getByRole("button", { name: "空间设置" }));
     const menu = screen.getByRole("menu", { name: "空间更多操作" });
     expect(within(menu).getByText("空间设置")).toBeInTheDocument();
     expect(
@@ -192,7 +194,7 @@ describe("侧栏空间「更多」", () => {
     );
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "更多" }));
+    await user.click(screen.getByRole("button", { name: "空间设置" }));
     await user.click(screen.getByRole("menuitem", { name: "更多设置" }));
     expect(screen.getByRole("status", { name: "当前路径" })).toHaveTextContent(
       "/o/o1/settings/spaces/s1/general",

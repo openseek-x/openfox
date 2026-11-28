@@ -7,7 +7,15 @@ import type {
   TaskStatus,
 } from "@openfox/api";
 import { useT } from "@openfox/i18n";
-import { Button, Icon, IconButton, Spinner, TextInput } from "@openfox/ui";
+import {
+  Button,
+  Icon,
+  IconButton,
+  Spinner,
+  TextInput,
+  Tooltip,
+  cn,
+} from "@openfox/ui";
 
 import { EstimationContext } from "../spaces/EstimateField";
 import { readLocal } from "../storage";
@@ -35,6 +43,7 @@ import {
   type FilterCondition,
   type FilterField,
   type FilterQuery,
+  type Layout,
 } from "./model";
 import { useTaskCounts, type Person, type TaskSource } from "./queries";
 import { TaskTable } from "./table/TaskTable";
@@ -293,16 +302,60 @@ export function TaskWorkspace({
   else if (display.layout === "table") body = <TaskTable {...viewProps} />;
   else body = <Board {...viewProps} toolbar={boardToolbar} />;
 
+  const layoutOptions: ReadonlyArray<{
+    id: Layout;
+    icon: "kanban" | "list" | "file-spreadsheet" | "square-chart-gantt";
+  }> = [
+    { id: "board", icon: "kanban" },
+    { id: "list", icon: "list" },
+    { id: "table", icon: "file-spreadsheet" },
+    { id: "gantt", icon: "square-chart-gantt" },
+  ];
+
   return (
     <EstimationContext.Provider value={estimation}>
       <div className="flex min-h-0 flex-1 flex-col">
         <div
           role="toolbar"
           aria-label={t("tasks.toolbar")}
-          className="@container flex min-h-12 items-center gap-2 px-4"
+          className="@container flex min-h-12 flex-wrap items-center gap-2 px-4 py-1"
         >
-          <div className="flex min-w-0 flex-1 items-center gap-2">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
             {leading}
+          </div>
+          {/* 可见布局分段控件：使用 role="group" + aria-pressed，避免与显示设置弹窗内 role="radio" 冲突 */}
+          <div
+            role="group"
+            aria-label={t("tasks.displayMenu.layout")}
+            className="inline-flex h-8 shrink-0 items-center gap-0.5 rounded-full bg-surface-muted p-0.5"
+          >
+            {layoutOptions.map((item) => {
+              const selected = !statsOpen && display.layout === item.id;
+              const label = t(`tasks.displayMenu.${item.id}`);
+              return (
+                <Tooltip key={item.id} content={label}>
+                  <button
+                    type="button"
+                    aria-label={label}
+                    aria-pressed={selected}
+                    onClick={() => {
+                      if (statsOpen) setStatsOpen(false);
+                      if (display.layout !== item.id)
+                        setDisplay({ ...display, layout: item.id });
+                    }}
+                    className={cn(
+                      "inline-flex h-7 items-center justify-center gap-1 rounded-full px-2 text-body-sm whitespace-nowrap transition-colors motion-reduce:transition-none",
+                      selected
+                        ? "bg-surface-card font-medium text-fg-default shadow-card"
+                        : "text-fg-secondary hover:text-fg-default",
+                    )}
+                  >
+                    <Icon name={item.icon} size={14} />
+                    <span className="hidden @3xl:inline">{label}</span>
+                  </button>
+                </Tooltip>
+              );
+            })}
           </div>
           <span ref={setBoardToolbar} className="contents" />
           {finding || find ? (
@@ -329,6 +382,7 @@ export function TaskWorkspace({
           ) : (
             <IconButton
               label={t("tasks.find")}
+              tooltip
               icon={<Icon name="search" />}
               variant="round"
               onClick={() => setFinding(true)}
@@ -364,6 +418,7 @@ export function TaskWorkspace({
             label={t(
               kind === "my" ? "myTasks.dashboard" : "tasks.stats.toggle",
             )}
+            tooltip
             icon={<Icon name="bar-chart" />}
             variant="round"
             active={statsOpen}

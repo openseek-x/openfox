@@ -41,7 +41,8 @@ export function computerNoticeState(
 
 /**
  * 输入框上方的电脑提示。数据还在加载、拿不到 Agent 时不显示；
- * 电脑列表沿用现有查询键（侧栏电脑入口每 30 秒刷新同一份缓存），电脑上线后提示自然消失。
+ * 电脑列表沿用现有查询键，由 computers 模块的 useDevices 每 30 秒轮询刷新，
+ * 驻留的会话页在电脑重连后提示会自动消失（不依赖侧栏电脑入口是否挂载）。
  * agent 已知时（小助手）直接传入，不再请求 Agent 详情。
  */
 export function ComputerNotice({

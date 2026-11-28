@@ -193,7 +193,10 @@ const Row = memo(function Row({
           onToggle={onSelect}
         />
       </TableCell>
-      <TableCell className="max-w-[140px] truncate whitespace-nowrap text-caption text-fg-muted">
+      <TableCell
+        title={displayIdOf(task)}
+        className="max-w-[140px] truncate whitespace-nowrap text-caption text-fg-muted tabular-nums"
+      >
         {displayIdOf(task)}
       </TableCell>
       <TableCell>

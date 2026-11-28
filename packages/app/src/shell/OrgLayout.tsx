@@ -54,6 +54,7 @@ import {
 } from "../conversations/ChatPanel";
 import { conversationDestination } from "../conversations/chatNavigation";
 import { ConversationItem } from "../conversations/ConversationItem";
+import { NewChatButton } from "../conversations/NewChatPopover";
 import { useConversations } from "../conversations/queries";
 import { keys, useApi } from "../context";
 import { useInboxStats } from "../inbox/queries";
@@ -608,12 +609,14 @@ function NavRow({
   to,
   icon,
   label,
+  title,
   trailing,
   end,
 }: {
   to: string;
   icon: IconName;
   label: string;
+  title?: string;
   trailing?: React.ReactNode;
   end?: boolean;
 }) {
@@ -621,6 +624,7 @@ function NavRow({
     <NavLink
       to={to}
       end={end}
+      title={title}
       className={({ isActive }) =>
         cn(
           "flex h-[var(--density-nav-row,30px)] items-center gap-2 rounded-lg pr-1.5 pl-2 text-body-sm transition-colors duration-100 not-aria-[current=page]:hover:bg-surface-sidebar-hover not-aria-[current=page]:hover:text-fg-default motion-reduce:transition-none",
@@ -634,7 +638,10 @@ function NavRow({
         <>
           <Icon
             name={icon}
-            className={isActive ? "text-fg-default" : "text-fg-muted"}
+            className={cn(
+              "shrink-0",
+              isActive ? "text-fg-default" : "text-fg-muted",
+            )}
           />
           <span className="min-w-0 flex-1 truncate">{label}</span>
           {trailing}
@@ -731,21 +738,13 @@ function Navigation({
           to={`${base}/agents`}
           icon="bot"
           label={t("shell.allAgents")}
-          trailing={
-            <span className="text-caption text-fg-muted">
-              {t("shell.allAgentsHint")}
-            </span>
-          }
+          title={t("shell.allAgentsHint")}
         />
         <NavRow
           to={`${base}/market`}
           icon="store"
           label={t("shell.market")}
-          trailing={
-            <span className="truncate text-caption text-fg-muted">
-              {t("shell.marketHint")}
-            </span>
-          }
+          title={t("shell.marketHint")}
         />
       </div>
 
@@ -764,7 +763,13 @@ function Navigation({
             ))}
         </>
       )}
-      <SectionLabel label={t("shell.chat")} />
+      <div className="group flex items-center pr-1">
+        <SectionLabel label={t("shell.chat")} />
+        {/* 「+」平时隐藏，悬停分组行或展开浮层时出现（与「我的空间」分组行一致） */}
+        <span className="of-row-actions mt-3 ml-auto">
+          <NewChatButton orgId={orgId} variant="section" />
+        </span>
+      </div>
       <DirectChatList orgId={orgId} compact rail="home" />
       {conversations.isLoading ? (
         <RowsSkeleton rows={2} />
@@ -847,17 +852,14 @@ function Navigation({
                   to={`${base}/spaces/${space.id}/agents`}
                   icon="bot"
                   label={t("shell.space.agents")}
+                  title={t("shell.space.agentsHint")}
                 />
                 {/* 阶段 5a · Agent 自动化（Figma 侧栏：Agents / Agent 自动化 / 文档库 / 技能） */}
                 <NavRow
                   to={`${base}/spaces/${space.id}/automations`}
                   icon="zap"
                   label={t("automations.navLabel")}
-                  trailing={
-                    <span className="text-caption text-fg-muted">
-                      {t("automations.navSubtitle")}
-                    </span>
-                  }
+                  title={t("automations.navSubtitle")}
                 />
                 <NavRow
                   to={`${base}/spaces/${space.id}/docs`}
@@ -869,7 +871,7 @@ function Navigation({
                   icon="sparkles"
                   label={t("shell.space.skills")}
                 />
-                {/* 空间「更多」：空间设置入口（Figma 03 页 S5b） */}
+                {/* 空间「空间设置」：空间设置快捷菜单（Figma 03 页 S5b） */}
                 <SpaceMoreMenu orgId={orgId} spaceId={space.id} />
               </div>
             )}
@@ -882,12 +884,6 @@ function Navigation({
           to={`${base}/settings/integrations`}
           icon="puzzle"
           label={t("shell.integrations")}
-        />
-        <NavRow
-          to={`${base}/settings`}
-          icon="settings"
-          label={t("shell.moreSettings")}
-          end
         />
       </div>
 

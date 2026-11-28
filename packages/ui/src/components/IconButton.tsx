@@ -1,6 +1,7 @@
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 
 import { cn } from "../cn";
+import { Tooltip } from "./Tooltip";
 
 export type IconButtonStyle =
   "round" | "ghost-soft" | "outline" | "secondary" | "ghost";
@@ -14,6 +15,8 @@ export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>
   size?: IconButtonSize;
   /** 按下/展开态（Figma Active/Pressed） */
   active?: boolean;
+  /** 开启自定义 Tooltip（悬停和键盘聚焦均显示），避免与原生 title 重复弹出 */
+  tooltip?: boolean | ReactNode;
 }
 
 const sizeClass: Record<IconButtonSize, string> = {
@@ -44,6 +47,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
       variant = "ghost",
       size = "32",
       active = false,
+      tooltip = false,
       className,
       type = "button",
       ...rest
@@ -62,12 +66,12 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
       rest["aria-pressed"],
     ].some((state) => state === true || state === "true");
     const bordered = variant === "outline" || variant === "round";
-    return (
+    const button = (
       <button
         ref={ref}
         type={type}
         aria-label={label}
-        title={label}
+        title={tooltip ? undefined : label}
         aria-pressed={
           (rest["aria-expanded"] === undefined && active) || undefined
         }
@@ -91,6 +95,10 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
       >
         {icon}
       </button>
+    );
+    if (!tooltip) return button;
+    return (
+      <Tooltip content={tooltip === true ? label : tooltip}>{button}</Tooltip>
     );
   },
 );

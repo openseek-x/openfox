@@ -119,8 +119,10 @@ export function useArtifactPanel(
       );
   }, [key, urlSelected]);
   useEffect(() => {
-    if (conversationId && session.key === key)
-      store.write(key, { tabs, selected });
+    if (!conversationId || session.key !== key) return;
+    // 未保存过且处于默认空态时不写入 IndexedDB，避免打开会话立即触发本地保存提示
+    if (!store.read(key) && tabs.length === 0 && selected === null) return;
+    store.write(key, { tabs, selected });
   }, [store, key, conversationId, session, tabs, selected]);
 
   // 地址里选中的产物总在标签里（刷新恢复、外部链接打开）

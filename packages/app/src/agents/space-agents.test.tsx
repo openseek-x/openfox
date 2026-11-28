@@ -101,6 +101,7 @@ describe("空间 Agents 页", () => {
     expect(
       within(crumb).getByRole("heading", { name: "Agents" }),
     ).toBeInTheDocument();
+    expect(within(crumb).getByText("当前空间")).toBeInTheDocument();
     // 不再是「即将开放」占位
     expect(
       screen.queryByText("页面不存在，或该功能暂未开放"),
@@ -174,7 +175,7 @@ describe("空间 Agents 页", () => {
     expect(await screen.findByText("熊孩子")).toBeInTheDocument();
     expect(screen.getByText("架构师")).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "全部 Agent 和小队" }),
+      screen.getByRole("heading", { name: "组织 Agent 和小队" }),
     ).toBeInTheDocument();
     await user.click(screen.getByText("显示已归档（3）→"));
     const dialog = await screen.findByRole("dialog", { name: "已归档 Agent" });

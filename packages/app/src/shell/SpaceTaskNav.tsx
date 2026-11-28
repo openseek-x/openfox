@@ -62,13 +62,15 @@ function readPinned(spaceId: string): TaskNavId[] {
   }
 }
 
-/** 「任务」下的子项行：左侧引导线，只有文字（Figma Sidebar/SubItem）。 */
+/** 「任务」下的子项行：左侧引导线 + 与兄弟项一致的图标和文字。 */
 function SubRow({
   to,
+  icon,
   label,
   end,
 }: {
   to: string;
+  icon: ReactElement;
   label: string;
   end?: boolean;
 }) {
@@ -78,13 +80,19 @@ function SubRow({
       end={end}
       className={({ isActive }) =>
         cn(
-          "flex h-[var(--density-subnav-row,30px)] items-center rounded-lg px-2 text-body-sm transition-colors duration-100 not-aria-[current=page]:hover:bg-surface-sidebar-hover not-aria-[current=page]:hover:text-fg-default motion-reduce:transition-none",
+          "flex h-[var(--density-subnav-row,30px)] items-center gap-2 rounded-lg px-2 text-body-sm transition-colors duration-100 not-aria-[current=page]:hover:bg-surface-sidebar-hover not-aria-[current=page]:hover:text-fg-default motion-reduce:transition-none",
           isActive
             ? "bg-surface-sidebar-active font-medium text-fg-default"
             : "text-fg-secondary",
         )
       }
     >
+      <span
+        aria-hidden
+        className="flex shrink-0 items-center text-fg-secondary"
+      >
+        {icon}
+      </span>
       <span className="min-w-0 flex-1 truncate">{label}</span>
     </NavLink>
   );
@@ -130,6 +138,7 @@ export function SpaceTaskNav({
         <div key={item.id} className="flex flex-col gap-0.5">
           <SubRow
             to={`${base}/${item.path}`}
+            icon={item.icon}
             label={t(item.label)}
             end={item.id === "views"}
           />
@@ -150,13 +159,16 @@ export function SpaceTaskNav({
             aria-expanded={props.open}
             onClick={props.toggle}
             className={cn(
-              "flex h-[30px] items-center rounded-lg px-2 text-left text-body-sm text-fg-muted transition-colors duration-100 motion-reduce:transition-none",
+              "flex h-[30px] items-center gap-2 rounded-lg px-2 text-left text-body-sm text-fg-muted transition-colors duration-100 motion-reduce:transition-none",
               props.open
                 ? "bg-surface-sidebar-active text-fg-default"
                 : "hover:bg-surface-sidebar-hover hover:text-fg-default",
             )}
           >
-            {t("shell.space.taskNavMore")}
+            <Icon name="more" size={14} className="shrink-0" />
+            <span className="min-w-0 flex-1 truncate">
+              {t("shell.space.taskNavMore")}
+            </span>
           </button>
         )}
       >

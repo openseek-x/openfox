@@ -69,13 +69,20 @@ export function useSpaces(orgId: string) {
   });
 }
 
-/** 组织级目录（与阶段 1 的处理人选择器共用缓存） */
-export function useDirectory(orgId: string, enabled = true) {
+/** 目录卡片的在线状态按心跳计算、没有实时事件，驻留在目录页时用同一档 30 秒轮询 */
+const DIRECTORY_POLL_MS = 30_000;
+
+/**
+ * 组织级目录（与阶段 1 的处理人选择器共用缓存）。
+ * poll 仅由展示在线状态的目录页开启，其他调用方不额外轮询。
+ */
+export function useDirectory(orgId: string, enabled = true, poll = false) {
   const api = useApi();
   return useQuery({
     queryKey: keys.agentDirectory(orgId),
     queryFn: () => api.agents.directory(orgId),
     enabled,
+    refetchInterval: poll ? DIRECTORY_POLL_MS : false,
   });
 }
 
@@ -112,14 +119,9 @@ export function useArchivedDirectory(orgId: string, enabled = true) {
   });
 }
 
-export function useDevices(orgId: string, enabled = true) {
-  const api = useApi();
-  return useQuery({
-    queryKey: keys.devices(orgId),
-    queryFn: () => api.devices.list(orgId),
-    enabled,
-  });
-}
+// 电脑列表只保留 computers 模块里的一份实现：在线状态靠心跳判定、没有实时事件，
+// 必须带 30 秒轮询，会话横幅、Agent 设置等驻留页才能收到电脑断开/重连后的新状态。
+export { useDevices } from "../computers/queries";
 
 // ---------- 抽屉的空间定位 ----------
 
@@ -252,11 +254,12 @@ export function useCrew(
   });
 }
 
-export function useContacts(orgId: string) {
+export function useContacts(orgId: string, enabled = true) {
   const api = useApi();
   return useQuery({
     queryKey: keys.contacts(orgId),
     queryFn: () => api.contacts.list(orgId),
+    enabled,
   });
 }
 

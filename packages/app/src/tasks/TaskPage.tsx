@@ -247,7 +247,15 @@ function TaskAiPanel({
             avatar={conversation.agent.avatar}
             size={20}
           />
-          <span className="min-w-0 truncate text-body font-medium">
+          <span
+            title={[
+              crewState.crew?.name ?? conversation.agent.name,
+              conversation.title,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+            className="min-w-0 truncate text-body font-medium"
+          >
             {crewState.crew?.name ?? conversation.agent.name}
             {conversation.title && (
               <span className="font-normal text-fg-muted">
