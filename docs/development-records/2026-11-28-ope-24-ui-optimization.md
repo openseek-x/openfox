@@ -91,3 +91,49 @@
   - `OPENFOX_WEB_PORT=4193 pnpm exec playwright test tests/frontend/e2e/ope24-ui-optimization.spec.ts`：**4/4 通过**（6.1s），覆盖浅色桌面（1440×900）、深色桌面（1440×900）、窄屏（680×800 与 960×640 + 480px 最宽侧栏）与英文界面（960×640），均验证根级与主内容区横向溢出为 0，并完成 14 张实机渲染截图目视核对。
   - `tests/frontend/e2e/scroll-containment.spec.ts`：11 项通过、1 项跳过（live fixture）、1 项基线既有失败（`DocsPage` 在 `d420ae3` 窄屏收起 `main aside` 后与旧断言不一致，本次未改动 `docs` 模块）。
 - **未验证边界**：未在连接真实后端/数据库与 Electron 原生窗口环境中端到端验证 live fixture 用例。
+
+---
+
+## 七、第 2 轮返修（PR #37 复测反馈）
+
+### 7.1 触发与范围
+
+- 触发：综合复测结论 e9e2ea28、Web 报告 7e12ae85、macOS 报告 88d975cf；PR #37 的 head `d133880` 与 `develop` 冲突。
+- 沿用分支 `feat/ope-24-ui-optimization` 与 PR #37，不新建 PR。只改前端，未动 `contracts/`、`internal/`、`cmd/`、`db/`。
+
+### 7.2 实际改动
+
+1. **合并 `origin/develop`（`b395002`）**：合并提交 `c79d5e8`，解决 5 处文本冲突：`AgentsPage.tsx`、`DirectoryCard.tsx`、`ConversationHeader.tsx`、`InboxPage.tsx`、`OrgLayout.tsx`。`develop` 另外改了 `agents/queries.ts`、`TaskPage.tsx`、`TaskConversations.tsx`（无文本冲突），返修在合并后的版本上进行。
+2. **UI-02（P0）任务页 AI 面板长标题读不到全称**：`packages/app/src/tasks/TaskPage.tsx` 的 `TaskAiPanel` 标题 `span` 原本带 `truncate` 却没有 `title`。现在补上 `title`，内容为「Agent 或小队名 · 会话标题」，空值经 `filter(Boolean)` 过滤。
+3. **UI-01 / UI-09 设备与目录在线状态不刷新**：
+   - `packages/app/src/agents/queries.ts` 里的 `useDevices` 原来没有轮询，`computers/queries.ts` 的同名钩子才有 30 秒轮询，两份实现不一致。现在删除 `agents/queries.ts` 中的重复实现，改为 `export { useDevices } from "../computers/queries"`，只保留一份带 30 秒轮询的实现。
+   - `useDirectory` 增加第三个参数 `poll`（默认 `false`），为 `true` 时按 `DIRECTORY_POLL_MS = 30_000` 轮询。只有展示在线状态的 `AgentsPage` 传 `true`，其他调用方不额外轮询。
+   - `packages/app/src/conversations/ComputerNotice.tsx`：更正注释，原写「侧栏每 30 秒刷新同一份缓存」，实际由 `computers` 模块的 `useDevices` 轮询，与侧栏入口是否挂载无关。
+4. **测试**：`tests/frontend/e2e/ope24-ui-optimization.spec.ts` 新增 `OPE-24 UI-02` 用例（提交 `e7ef590`），在 700px 与 900px 下打开关联任务的 AI 面板，断言页头 `title` 为「Agent 名称 · 会话标题」全文且根级与主区无横向溢出；为此在模拟数据中补了关联任务会话 `c2` 及任务详情相关接口。
+
+### 7.3 需人拍板（未擅自实现，保持默认）
+
+- Q5：AI 页头是否增加任务号、任务状态与独立设置。默认不加，本轮只修长标题提示。
+- Q6：UI-08 侧栏「暂无 Agent 会话＋新建对话」空态保留、精简还是移除。默认保持现状。
+
+### 7.4 配置、数据与回退
+
+无新增依赖、无配置文件、无后端接口、数据库或迁移变更。回退方式：回退本轮的合并提交 `c79d5e8` 与测试提交 `e7ef590`。
+
+### 7.5 验证（HEAD `e7ef590`，实际运行）
+
+| 校验项 | 命令 | 结果 |
+| --- | --- | --- |
+| 前端单测 | `pnpm exec vitest run packages/app/src/conversations packages/app/src/agents packages/app/src/tasks` | 通过，114 文件、967/967 用例 |
+| E2E（模拟 API） | `OPENFOX_WEB_PORT=4203 pnpm exec playwright test tests/frontend/e2e/ope24-ui-optimization.spec.ts` | 通过，5/5 |
+| 格式与类型检查 | `pnpm lint`（`set -o pipefail`） | 通过，退出码 0 |
+| 生产构建 | `pnpm build` | 构建完成并输出 `dist`，产物时间晚于本轮测试开始时间；未取到退出码 |
+
+**真实后端复验（非模拟，部分覆盖）**：在本任务 worktree 的开发服务（代理到临时夹具后端）上，用夹具账号登录后打开组织 Agent 页，浅色 1440×900、深色 1440×900、浅色 680×800（DPR 均为 1）下，Agent 卡片显示「离线 · Unnamed device」，根级与主区横向溢出为 0；680px 下页头高 44px，三个按钮均 28px 高、不折行。截图见 `.hifox-task/evidence/live-*.png`。
+
+**未复验项**：
+
+- 真实页面上的「未绑定电脑」状态：夹具 Agent 绑定设备后，应用拒绝解绑（403）与置空电脑配置（400），未绕过校验；该状态仅由模拟 E2E 覆盖。
+- 电脑由离线变在线后，驻留的会话横幅与目录卡片自动刷新：夹具设备没有心跳，无法在真实页面上让设备上线。
+- UI-02 在真实页面的 700px / 900px 表现：夹具里没有任务和关联会话，仅有模拟 E2E 覆盖。
+- Electron 960×640 窗口。
