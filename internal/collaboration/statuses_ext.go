@@ -397,6 +397,10 @@ func (s Service) MoveStatus(ctx context.Context, tx pgx.Tx, organizationID, stat
 			statusID).Scan(&affected); err != nil {
 			return nil, err
 		}
+		// 服务端不变量：有任务的状态不能移进重复类别，这些任务没有可写的重复目标。
+		if affected > 0 && category == "DUPLICATE" && oldCategory != "DUPLICATE" {
+			return nil, invalidInput("a status with tasks cannot be moved into the duplicate category")
+		}
 		if affected > MaxStatusMoveTasks {
 			return nil, ErrStatusMoveTooLarge
 		}
@@ -454,7 +458,8 @@ func (s Service) MoveStatus(ctx context.Context, tx pgx.Tx, organizationID, stat
 	if categoryChanged {
 		// 写 status_id 会触发 sync_task_status_projection，按新类别重算 tasks.status。
 		if _, err := tx.Exec(ctx, `
-			UPDATE openfox.tasks SET status_id = status_id
+			UPDATE openfox.tasks SET status_id = status_id,
+			       duplicate_of_task_id = CASE WHEN (SELECT ts.category FROM openfox.task_statuses ts WHERE ts.organization_id = openfox_private.current_organization_id() AND ts.id = $1::uuid) = 'DUPLICATE' THEN duplicate_of_task_id ELSE NULL END
 			 WHERE organization_id = openfox_private.current_organization_id() AND status_id = $1::uuid`,
 			statusID); err != nil {
 			return nil, err
@@ -572,6 +577,8 @@ func (s Service) DeleteStatus(ctx context.Context, tx pgx.Tx, organizationID, st
 		return ErrStatusRequired
 	}
 
+	// 替换状态仍是重复类别时保留各任务的重复目标，否则随状态一起清空。
+	keepDuplicateTarget := false
 	var taskCount int
 	if err := tx.QueryRow(ctx, `
 		SELECT count(*) FROM openfox.tasks
@@ -590,6 +597,11 @@ func (s Service) DeleteStatus(ctx context.Context, tx pgx.Tx, organizationID, st
 		if replacement == nil || replacement.Archived {
 			return invalidInput("replacement status is unavailable")
 		}
+		// 服务端不变量：批量替换没有可写的重复目标，所以非重复类别的状态不能被替换成重复类别。
+		if replacement.Category == "DUPLICATE" && target.Category != "DUPLICATE" {
+			return invalidInput("replacement status cannot be a duplicate status")
+		}
+		keepDuplicateTarget = replacement.Category == "DUPLICATE"
 		var missing bool
 		if err := tx.QueryRow(ctx, `
 			SELECT EXISTS (
@@ -607,9 +619,10 @@ func (s Service) DeleteStatus(ctx context.Context, tx pgx.Tx, organizationID, st
 		}
 		if _, err := tx.Exec(ctx, `
 			UPDATE openfox.tasks
-			   SET status_id = $2::uuid, version = version + 1
+			   SET status_id = $2::uuid, version = version + 1,
+			       duplicate_of_task_id = CASE WHEN $3::boolean THEN duplicate_of_task_id ELSE NULL END
 			 WHERE organization_id = openfox_private.current_organization_id() AND status_id = $1::uuid`,
-			statusID, replacementStatusID); err != nil {
+			statusID, replacementStatusID, keepDuplicateTarget); err != nil {
 			return mapDatabaseError(err)
 		}
 	}

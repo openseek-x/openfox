@@ -1,12 +1,12 @@
 // Lucide 0.468.0. Both upstream notices are in LICENSE-lucide.txt.
 // Keys in this table match upstream SVG filenames; UI names are mapped below.
 function strokeIcon(paths: string) {
-  return { viewBox: "0 0 24 24", body: `<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths}</g>` };
+  return { viewBox: "0 0 24 24", body: `<g stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">${paths}</g>` };
 }
 
 // Plain system-font abbreviations distinguish integrations without vendor artwork.
 function letterIcon(label: string) {
-  return { viewBox: "0 0 24 24", body: `<rect x="1" y="2" width="22" height="20" rx="4" fill="currentColor" opacity=".1"/><text x="12" y="16" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="600" font-size="12" fill="currentColor">${label}</text>` };
+  return { viewBox: "0 0 24 24", body: `<rect x="1.5" y="1.5" width="21" height="21" rx="5.5" fill="currentColor" fill-opacity=".08" stroke="currentColor" stroke-opacity=".28" stroke-width="1"/><text x="12" y="16.6" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="600" font-size="13" fill="currentColor">${label}</text>` };
 }
 
 const lucide = {
@@ -247,7 +247,7 @@ export const iconData = {
   "bold": lucide["bold"],
   "book-open": lucide["book-open"],
   "bot": lucide["bot"],
-  "bot-face": lucide["bot"],
+  "bot-face": strokeIcon('<path d="M5.5 7.5 8 4l2.4 2h3.2L16 4l2.5 3.5A5.8 5.8 0 0 1 21 12.2V14a5 5 0 0 1-5 5H9l-4 2v-3.1a5 5 0 0 1-2-4v-1.7a5.8 5.8 0 0 1 2.5-4.7Z"/><path d="M8.5 11.5v1.5m7-1.5v1.5"/>'),
   "box": lucide["box"],
   "brand-asana": letterIcon("As"),
   "brand-bitbucket": letterIcon("BB"),
@@ -277,7 +277,7 @@ export const iconData = {
   "brand-yunxiao": letterIcon("YX"),
   "brand-zentao": letterIcon("ZT"),
   "briefcase": lucide["briefcase"],
-  "bug": lucide["bug"],
+  "bug": strokeIcon('<rect x="6.5" y="6" width="11" height="15" rx="5.5" fill="currentColor" fill-opacity=".16"/><path d="m8 3 2.3 3m5.7-3-2.3 3M7 11h10M3 10l3.5 1.5M3 16l3.5-1M21 10l-3.5 1.5M21 16l-3.5-1"/>'),
   "building": lucide["building"],
   "calendar": lucide["calendar"],
   "camera": lucide["camera"],
@@ -301,7 +301,7 @@ export const iconData = {
   "circle-plus": lucide["circle-plus"],
   "circle-slash": lucide["circle-slash"],
   "circle-x": lucide["circle-x"],
-  "clipboard": lucide["clipboard"],
+  "clipboard": strokeIcon('<rect x="4.5" y="4.5" width="15" height="17" rx="3.5" fill="currentColor" fill-opacity=".12"/><rect x="8.5" y="2" width="7" height="4.5" rx="2" fill="currentColor" stroke="none"/><path d="M8.5 11h7m-7 4h4"/>'),
   "clock": lucide["clock"],
   "cloud": lucide["cloud"],
   "code": lucide["code"],
@@ -387,7 +387,7 @@ export const iconData = {
   "hifox-plus": lucide["plus"],
   "hifox-queue-clock": lucide["list-restart"],
   "hifox-refresh": lucide["refresh-cw"],
-  "hifox-robot-head": lucide["bot"],
+  "hifox-robot-head": strokeIcon('<path d="M12 6V3h3"/><rect x="2.5" y="7" width="19" height="14" rx="6" fill="currentColor" fill-opacity=".14"/><path d="M8.5 12v3m7-3v3"/>'),
   "hifox-scan-eye": lucide["scan-eye"],
   "hifox-section-triangle": lucide["chevron-down"],
   "hifox-send-arrow": lucide["send"],
@@ -413,7 +413,7 @@ export const iconData = {
   "keyboard": lucide["keyboard"],
   "laptop": lucide["laptop"],
   "layers": lucide["layers"],
-  "layout-grid": lucide["layout-grid"],
+  "layout-grid": strokeIcon('<rect x="3" y="3" width="7" height="7" rx="2" fill="currentColor" fill-opacity=".18"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>'),
   "library-big": lucide["library-big"],
   "lightbulb": lucide["lightbulb"],
   "link": lucide["link"],
@@ -447,7 +447,7 @@ export const iconData = {
   "monitor": lucide["monitor"],
   "more": lucide["ellipsis"],
   "notebook-pen": lucide["notebook-pen"],
-  "orbit": lucide["orbit"],
+  "orbit": strokeIcon('<circle cx="12" cy="12" r="5" fill="currentColor" fill-opacity=".14"/><ellipse cx="12" cy="12" rx="10.5" ry="4" transform="rotate(-32 12 12)"/>'),
   "os-linux": letterIcon("Lx"),
   "os-linux-muted": letterIcon("Lx"),
   "os-macos": letterIcon("Mc"),
@@ -503,7 +503,7 @@ export const iconData = {
   "sparkles": lucide["sparkles"],
   "square": lucide["square"],
   "square-chart-gantt": lucide["square-chart-gantt"],
-  "square-check": lucide["square-check"],
+  "square-check": strokeIcon('<rect x="3" y="3" width="18" height="18" rx="5" fill="currentColor" fill-opacity=".12"/><path d="m7.5 12 3 3 6-6"/>'),
   "square-check-big": lucide["square-check-big"],
   "square-code": lucide["square-code"],
   "star": lucide["star"],

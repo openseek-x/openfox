@@ -20,6 +20,7 @@ import (
 	"github.com/pelletier/go-toml/v2"
 
 	"openfox/internal/runtime"
+	"openfox/internal/runtime/discovery"
 	"openfox/internal/runtime/mcpconfig"
 	"openfox/internal/runtime/toolbridge"
 	"openfox/internal/runtimepolicy"
@@ -27,7 +28,7 @@ import (
 
 const RuntimeName = "codex"
 
-var versionPattern = regexp.MustCompile(`(?m)codex-cli\s+([^\s]+)`)
+var versionPattern = regexp.MustCompile(`(?m)^(?:(?:codex-cli|codex)[\t ]+)?(\d+\.\d+\.\d+[0-9A-Za-z.+_-]*)[\t \r]*$`)
 
 type Adapter struct {
 	// Executable 为空时自动发现（PATH、登录 shell、常见安装目录、macOS ChatGPT/Codex App）；
@@ -45,10 +46,8 @@ type Adapter struct {
 	DisableNetwork bool
 
 	// discovery 为 nil 时使用真实环境；测试可替换。
-	discovery *discovery
-	mu        sync.Mutex
-	// resolved 缓存上次自动发现成功的路径，避免每次 Start 都启动登录 shell。
-	resolved           string
+	discovery          *discovery.Search
+	mu                 sync.Mutex
 	devicePath         string
 	supportsSocketAuth bool
 	pool               hostPool
@@ -77,7 +76,8 @@ func (a *Adapter) Detect(ctx context.Context) (runtime.Capabilities, error) {
 	if a == nil {
 		return runtime.Capabilities{}, runtime.ErrUnavailable
 	}
-	path, versionOutput, err := a.locate(ctxOrBackground(ctx))
+	candidate, version, err := a.locate(ctxOrBackground(ctx))
+	path := candidate.Path
 	if err != nil {
 		if path != "" {
 			return runtime.Capabilities{Runtime: RuntimeName, Executable: path, Login: runtime.LoginUnknown, Reason: "version probe failed"}, err
@@ -88,13 +88,9 @@ func (a *Adapter) Detect(ctx context.Context) (runtime.Capabilities, error) {
 	defer cancel()
 
 	baseEnv := withExecutableDir(a.baseEnvironment(), path)
-	version := parseVersion(versionOutput)
-	if version == "" {
-		version = "unknown"
-	}
 	helpOutput, err := runProbe(probeCtx, path, baseEnv, "app-server", "--help")
 	if err != nil || !strings.Contains(helpOutput, "app-server") {
-		return runtime.Capabilities{Runtime: RuntimeName, Version: version, Executable: path, Login: runtime.LoginUnknown, Reason: "codex app-server is unavailable"}, runtime.ErrUnsupported
+		return runtime.Capabilities{Runtime: RuntimeName, Version: version, Executable: path, DiscoverySource: candidate.Source, Login: runtime.LoginUnknown, Reason: "codex app-server is unavailable"}, runtime.ErrUnsupported
 	}
 	a.mu.Lock()
 	a.supportsSocketAuth = strings.Contains(helpOutput, "--ws-token-sha256") && strings.Contains(helpOutput, "--ws-auth")
@@ -117,7 +113,7 @@ func (a *Adapter) Detect(ctx context.Context) (runtime.Capabilities, error) {
 		}
 	}
 	report := runtime.Capabilities{
-		Runtime: RuntimeName, Version: version, Executable: path, Login: login,
+		Runtime: RuntimeName, Version: version, Executable: path, DiscoverySource: candidate.Source, Login: login,
 		Runnable:           login == runtime.LoginLoggedIn || apiKeyConfigured,
 		SupportsJSONEvents: true, SupportsCancel: true, SupportsResume: false,
 		DirectoryModes: []string{"NONE", "WORKSPACE", "EXPLICIT"},
@@ -425,15 +421,10 @@ func (e *homeExecution) Wait(ctx context.Context) (runtime.Result, error) {
 // locate 返回可用的 Codex 路径及其 --version 输出。显式配置失败时直接报错；
 // 自动发现时跳过 --version 失败的候选，继续尝试下一个。
 // 返回非空路径 + 错误表示找到了文件但版本探测失败。
-func (a *Adapter) locate(ctx context.Context) (string, string, error) {
-	d := defaultDiscovery()
+func (a *Adapter) locate(ctx context.Context) (discovery.Candidate, string, error) {
+	search := discovery.Local()
 	if a.discovery != nil {
-		d = *a.discovery
-	}
-	probe := func(path string) (string, error) {
-		probeCtx, cancel := context.WithTimeout(ctx, a.probeTimeout())
-		defer cancel()
-		return runProbe(probeCtx, path, withExecutableDir(a.baseEnvironment(), path), "--version")
+		search = *a.discovery
 	}
 	a.mu.Lock()
 	configured := a.devicePath
@@ -441,44 +432,28 @@ func (a *Adapter) locate(ctx context.Context) (string, string, error) {
 	if configured == "" {
 		configured = a.Executable
 	}
-	if item, ok := d.explicit(configured); ok {
-		path, err := resolveConfigured(item.path)
-		if err != nil {
-			return "", "", err
-		}
-		output, err := probe(path)
-		if err != nil {
-			return path, "", fmt.Errorf("%w: version probe: %v", runtime.ErrUnavailable, safeProbeError(err))
-		}
-		return path, output, nil
-	}
-	a.mu.Lock()
-	cached := a.resolved
-	a.mu.Unlock()
-	if cached != "" && isExecutableFile(cached) {
-		if output, err := probe(cached); err == nil {
-			return cached, output, nil
-		}
-	}
-	discoveryCtx, cancel := context.WithTimeout(ctx, a.probeTimeout()+loginShellTimeout)
+	ctx, cancel := context.WithTimeout(ctx, a.probeTimeout()+discovery.ShellTimeout)
 	defer cancel()
-	var found, output string
-	d.automatic(discoveryCtx, func(item candidate) bool {
-		result, err := probe(item.path)
+	return search.Resolve(ctx, codexTool, configured, func(path string) (string, error) {
+		probeCtx, stop := context.WithTimeout(ctx, a.probeTimeout())
+		defer stop()
+		output, err := runProbe(probeCtx, path, withExecutableDir(a.baseEnvironment(), path), "--version")
 		if err != nil {
-			// 与 HiFox 的 probeFailed 一致：版本探测失败的候选不采用。
-			return false
+			return "", fmt.Errorf("%w: version probe: %v", runtime.ErrUnavailable, safeProbeError(err))
 		}
-		found, output = item.path, result
-		return true
+		match := versionPattern.FindStringSubmatch(strings.TrimSpace(output))
+		if len(match) == 0 {
+			return "", fmt.Errorf("%w: Codex returned no version", runtime.ErrUnsupported)
+		}
+		// 包装脚本可能只打印版本号。此时先确认协议，避免同名程序遮蔽其他安装。
+		if strings.TrimSpace(match[0]) == match[1] {
+			help, err := runProbe(probeCtx, path, withExecutableDir(a.baseEnvironment(), path), "app-server", "--help")
+			if err != nil || !strings.Contains(help, "app-server") {
+				return "", runtime.ErrUnsupported
+			}
+		}
+		return match[1], nil
 	})
-	if found == "" {
-		return "", "", fmt.Errorf("%w: Codex executable not found", runtime.ErrUnavailable)
-	}
-	a.mu.Lock()
-	a.resolved = found
-	a.mu.Unlock()
-	return found, output, nil
 }
 
 func (a *Adapter) probeTimeout() time.Duration {
@@ -532,20 +507,6 @@ func runProbe(ctx context.Context, executable string, environment map[string]str
 		return "", runtime.ErrOutputLimit
 	}
 	return output.String(), nil
-}
-
-func parseVersion(output string) string {
-	match := versionPattern.FindStringSubmatch(output)
-	if len(match) == 2 {
-		return match[1]
-	}
-	for _, line := range strings.Split(output, "\n") {
-		line = strings.TrimSpace(line)
-		if line != "" && !strings.HasPrefix(line, "WARNING:") {
-			return line
-		}
-	}
-	return ""
 }
 
 func environmentSlice(environment map[string]string) []string {

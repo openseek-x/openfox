@@ -171,9 +171,9 @@ export function JoinOrCreateSpace({
   const label =
     joinable.length > 0 ? t("spaces.nav.joinOrCreate") : t("spaces.nav.create");
   const rowClass =
-    "flex h-[30px] w-full items-center gap-2 rounded-lg px-2 text-body text-fg-default not-aria-expanded:hover:bg-surface-hover aria-expanded:bg-surface-active";
+    "flex h-[30px] w-full items-center gap-2 rounded-lg px-2 text-body-sm text-fg-secondary transition-colors duration-100 not-aria-expanded:hover:bg-surface-sidebar-hover not-aria-expanded:hover:text-fg-default aria-expanded:bg-surface-sidebar-active aria-expanded:text-fg-default motion-reduce:transition-none";
   const iconClass =
-    "flex size-5 items-center justify-center rounded-md text-fg-muted not-aria-expanded:hover:bg-control-hover hover:text-fg-default aria-expanded:bg-surface-active";
+    "flex size-5 items-center justify-center rounded-md text-fg-muted not-aria-expanded:hover:bg-surface-sidebar-hover hover:text-fg-default aria-expanded:bg-surface-sidebar-active";
   if (joinable.length === 0 && !canCreate) return null;
   if (joinable.length === 0)
     return variant === "row" ? (
@@ -275,7 +275,7 @@ export function MySpacesNavGroup({ orgId }: { orgId: string }) {
 
   return (
     <div className="flex flex-col gap-0.5">
-      <div className="px-2.5 pb-1 text-caption text-fg-muted">
+      <div className="px-2.5 pb-1 text-caption font-medium text-fg-muted">
         {t("spaces.nav.group")}
       </div>
       <DndContext
@@ -355,10 +355,10 @@ function SpaceNavRow({
           if (justDragged.current) event.preventDefault();
         }}
         className={cn(
-          "flex h-[30px] cursor-grab items-center gap-2 rounded-lg px-2 text-body active:cursor-grabbing",
+          "flex h-[30px] cursor-grab items-center gap-2 rounded-lg px-2 text-body-sm transition-colors duration-100 active:cursor-grabbing motion-reduce:transition-none",
           active
-            ? "bg-surface-active font-medium"
-            : "text-fg-default hover:bg-surface-hover",
+            ? "bg-surface-sidebar-active font-medium text-fg-default"
+            : "text-fg-secondary hover:bg-surface-sidebar-hover hover:text-fg-default",
         )}
         // dnd-kit 默认把拖拽源标成 role=button；这里保留链接语义，只沿用其余无障碍属性
         {...{ ...attributes, role: undefined }}

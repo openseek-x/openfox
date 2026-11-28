@@ -42,7 +42,7 @@ export function Callout({
     <div
       role={tone === "danger" ? "alert" : "status"}
       className={cn(
-        "flex items-start gap-2.5 rounded-xl px-3.5 py-3 text-body",
+        "flex items-start gap-2.5 rounded-xl px-4 py-3 text-body ring-1 ring-inset ring-line-floating",
         t.box,
         className,
       )}

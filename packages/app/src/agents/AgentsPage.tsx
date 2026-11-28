@@ -204,10 +204,10 @@ export function AgentsPage({ space }: { space?: AgentsPageSpace } = {}) {
               aria-checked={filter === value}
               onClick={() => setFilter(value)}
               className={cn(
-                "h-8 shrink-0 rounded-full border px-3.5 text-body whitespace-nowrap",
+                "h-8 shrink-0 rounded-full border px-3.5 text-body-sm whitespace-nowrap transition-colors duration-100 motion-reduce:transition-none",
                 filter === value
-                  ? "border-transparent bg-surface-active font-medium"
-                  : "border-line-default text-fg-secondary hover:bg-surface-hover",
+                  ? "border-line-strong bg-surface-active font-medium text-fg-default"
+                  : "border-line-soft text-fg-secondary hover:bg-surface-hover hover:text-fg-default",
               )}
             >
               {t(`agents.directory.filters.${value}`)}
@@ -409,9 +409,9 @@ export function AgentsPage({ space }: { space?: AgentsPageSpace } = {}) {
 
   if (!space)
     return (
-      <div className="@container mx-auto flex max-w-[1100px] flex-col gap-4 px-8 pt-3 pb-10">
-        <header className="flex min-h-16 flex-wrap items-center gap-2 border-b border-line-default">
-          <h1 className="flex-auto text-heading font-medium">
+      <div className="@container mx-auto flex max-w-[1100px] flex-col gap-5 px-8 pt-4 pb-12">
+        <header className="flex min-h-14 flex-wrap items-center gap-2 border-b border-line-subtle pb-3">
+          <h1 className="flex-auto text-heading font-semibold tracking-[-0.015em] text-fg-default">
             {t("agents.directory.title")}
           </h1>
           {headerActions}
@@ -423,7 +423,7 @@ export function AgentsPage({ space }: { space?: AgentsPageSpace } = {}) {
   // 空间页：面包屑页头沿用任务、技能页的写法（空间图标 · 空间名 › Agents）
   return (
     <div className="flex h-full flex-col">
-      <header className="flex h-11 shrink-0 items-center gap-2 border-b border-line-default px-4">
+      <header className="flex h-11 shrink-0 items-center gap-2 border-b border-line-subtle px-4">
         <nav
           aria-label={t("agents.directory.breadcrumb")}
           className="flex min-w-0 flex-1 items-center gap-1.5 text-body"
@@ -433,7 +433,7 @@ export function AgentsPage({ space }: { space?: AgentsPageSpace } = {}) {
             {space.name}
           </span>
           <Icon name="chevron-right" size={12} className="text-fg-subtle" />
-          <h1 className="shrink-0 font-medium">
+          <h1 className="shrink-0 font-semibold text-fg-default">
             {t("agents.directory.spaceTitle")}
           </h1>
         </nav>
@@ -490,6 +490,8 @@ export function ArchivedDialog({
                 <CrewAvatar name={entry.name} members={[]} size={32} />
               ) : (
                 <AgentAvatar
+                  agentId={entry.id}
+                  spaceId={entry.space_id}
                   name={entry.name}
                   avatar={entry.avatar}
                   size={32}

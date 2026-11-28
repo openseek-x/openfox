@@ -120,7 +120,7 @@ function Group({
           aria-expanded={!collapsed}
           aria-label={t("tasks.list.toggleGroup", { status: column.name })}
           onClick={onToggle}
-          className="sticky top-0 z-10 flex h-[var(--density-group-row,36px)] w-full items-center gap-2 bg-surface-muted/70 px-4 text-left text-body font-medium"
+          className="sticky top-0 z-10 flex h-[var(--density-group-row,36px)] w-full items-center gap-2 border-b border-line-subtle bg-surface-canvas/95 px-4 text-left text-body-sm font-semibold backdrop-blur-xs"
         >
           <Icon
             name="chevron-down"
@@ -132,7 +132,7 @@ function Group({
           />
           <StatusIcon category={column.category} color={column.color} />
           {column.name}
-          <span className="text-body-sm font-normal text-fg-muted">
+          <span className="text-caption font-normal tabular-nums text-fg-muted">
             {count}
           </span>
         </button>
@@ -200,7 +200,7 @@ function Subgroups({
       >
         <div
           aria-hidden
-          className="flex h-8 items-center gap-2 border-b border-line-soft px-6 text-body-sm text-fg-secondary"
+          className="flex h-8 items-center gap-2 border-b border-line-subtle px-6 text-body-sm text-fg-secondary"
         >
           <GroupGlyph group={group} />
           <span className="min-w-0 truncate">{groupName(group)}</span>
@@ -241,7 +241,7 @@ const Row = memo(function Row({
     <li
       aria-selected={selection ? checked : undefined}
       className={cn(
-        "group relative flex h-[var(--density-list-row,44px)] items-center gap-2 border-b border-line-soft px-4",
+        "group relative flex h-[var(--density-list-row,44px)] items-center gap-2 border-b border-line-subtle px-4 transition-colors duration-100 motion-reduce:transition-none",
         checked ? "bg-surface-selected" : "hover:bg-surface-hover",
       )}
     >
@@ -264,7 +264,7 @@ const Row = memo(function Row({
           )}
         />
       )}
-      <span className="pointer-events-none relative flex min-w-0 flex-1 items-center gap-2">
+      <span className="pointer-events-none relative flex min-w-0 flex-1 items-center gap-2 [&_[aria-haspopup=dialog]]:pointer-events-auto">
         {show("priority") && <PriorityIcon priority={task.priority} labelled />}
         {show("id") && (
           <span className="w-20 shrink-0 truncate whitespace-nowrap text-caption text-fg-muted">

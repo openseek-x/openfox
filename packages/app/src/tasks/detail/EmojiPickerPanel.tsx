@@ -9,8 +9,9 @@ import EmojiPicker, {
 import { useState, type CSSProperties } from "react";
 
 import { useI18n, useT } from "@openfox/i18n";
+import { readLocal, writeLocal } from "../../storage";
 
-// 阶段 9c-2 · 表情选择器（emoji-picker-react 5.1.4），由 Reactions 用 React.lazy 懒加载，不进首屏包。
+// 表情选择器（emoji-picker-react 5.1.4），由 Reactions 用 React.lazy 懒加载，不进首屏包。
 // 原生表情字体（emojiStyle=native），数据随包内置，不访问 CDN。
 
 /** 中文数据集单独分包，只在中文界面第一次打开时加载；英文用库自带的默认数据。 */
@@ -38,25 +39,9 @@ const SKIN_KEY = "openfox:emoji:skin";
 const RECENT_MAX = 24;
 const SKIN_TONES = ["neutral", "1f3fb", "1f3fc", "1f3fd", "1f3fe", "1f3ff"];
 
-// 浏览器本地存储可能不可用（隐私模式、被禁用），读写都兜底
-function readStorage(key: string): string | null {
-  try {
-    return window.localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-function writeStorage(key: string, value: string) {
-  try {
-    window.localStorage.setItem(key, value);
-  } catch {
-    // 忽略：只是失去「最近使用」或默认肤色记忆
-  }
-}
-
 function readRecent(): string[] {
   try {
-    const value: unknown = JSON.parse(readStorage(RECENT_KEY) ?? "[]");
+    const value: unknown = JSON.parse(readLocal(RECENT_KEY) ?? "[]");
     return Array.isArray(value)
       ? value.filter((x): x is string => typeof x === "string")
       : [];
@@ -66,7 +51,7 @@ function readRecent(): string[] {
 }
 
 function readSkin(): SkinTonesValue {
-  const value = readStorage(SKIN_KEY);
+  const value = readLocal(SKIN_KEY);
   return (
     value && SKIN_TONES.includes(value) ? value : "neutral"
   ) as SkinTonesValue;
@@ -170,7 +155,7 @@ export default function EmojiPickerPanel({
       skinTone={skinTone}
       onSkinToneChange={(tone) => {
         setSkinTone(tone);
-        writeStorage(SKIN_KEY, tone);
+        writeLocal(SKIN_KEY, tone);
       }}
       onEmojiClick={(data) => {
         const id = data.unifiedWithoutSkinTone;
@@ -179,7 +164,7 @@ export default function EmojiPickerPanel({
           RECENT_MAX,
         );
         setRecent(next);
-        writeStorage(RECENT_KEY, JSON.stringify(next));
+        writeLocal(RECENT_KEY, JSON.stringify(next));
         onPick(data.emoji);
       }}
     />

@@ -55,9 +55,15 @@ export function ArtifactReview({
   const t = useT();
   const api = useApi();
   const load = useArtifactContent(orgId, artifact, !nativeSource);
-  const data = nativeSource
-    ? { text: nativeSource.text, blob: null, office: undefined }
-    : load.data;
+  const nativeText = nativeSource?.text;
+  const data = useMemo(
+    () =>
+      nativeText !== undefined
+        ? { text: nativeText, blob: null, office: undefined }
+        : load.data,
+    [nativeText, load.data],
+  );
+  const hasContent = Boolean(data);
   const text = data?.text ?? "";
   const contexts = useDraftFileContexts(conversationId);
   const context = contexts.find(
@@ -100,7 +106,7 @@ export function ArtifactReview({
   }, [annotate]);
   useEffect(() => setSource(sourceMode), [sourceMode]);
   useEffect(() => {
-    if (!data) return;
+    if (!hasContent) return;
     const locate = () => {
       const a = takeFileLocation(conversationId, artifact.id, artifact.sha256);
       if (!a) return;
@@ -110,7 +116,7 @@ export function ArtifactReview({
     locate();
     window.addEventListener("openfox:file-locate", locate);
     return () => window.removeEventListener("openfox:file-locate", locate);
-  }, [conversationId, artifact.id, artifact.sha256, Boolean(data)]);
+  }, [conversationId, artifact.id, artifact.sha256, hasContent]);
   const [page, setPage] = useViewState("csv.pageIndex", 0);
   const previewRef = useRef<HTMLDivElement>(null);
   const cellsRef = useRef<HTMLDivElement>(null);
@@ -167,7 +173,7 @@ export function ArtifactReview({
     } catch {
       return null;
     }
-  }, [artifact.mime_type, text, data]);
+  }, [artifact, text, data]);
   const choose = (anchor: ArtifactReviewAnchor, rect: SelectionRect) => {
     if (!annotate || !capabilities.selection.includes(anchor.kind)) return;
     if (utf8Length(anchor.quote) > 8192) {

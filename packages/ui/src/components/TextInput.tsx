@@ -18,11 +18,11 @@ export function controlShellClass(
   invalid: boolean,
 ): string {
   return cn(
-    "of-control of-input-frame flex min-w-0 items-center gap-2 border bg-surface-card text-body text-fg-default focus-visible:shadow-none",
+    "of-control of-input-frame flex min-w-0 items-center gap-2 border bg-surface-card text-body text-fg-default shadow-card transition-[border-color,background-color,box-shadow] duration-150 focus-visible:shadow-none motion-reduce:transition-none",
     controlFrameClass[variant],
     invalid
-      ? "border-danger"
-      : "border-line-default focus-within:border-line-focus",
+      ? "border-danger focus-within:ring-2 focus-within:ring-danger/15"
+      : "border-line-default focus-within:border-line-focus focus-within:ring-2 focus-within:ring-line-focus/15",
     "has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50",
   );
 }

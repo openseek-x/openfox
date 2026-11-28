@@ -100,6 +100,7 @@ export function Followers({
   const avatar = (follower: TaskFollower) =>
     follower.kind === "AGENT" ? (
       <AgentAvatar
+        agentId={follower.id}
         name={follower.name}
         avatar={agents.find((agent) => agent.id === follower.id)?.avatar}
         size={20}

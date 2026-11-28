@@ -264,7 +264,7 @@ export function StatusesPage() {
           title={t("settings.statuses.heading")}
           subtitle={t("settings.statuses.subtitle")}
         />
-        <div className="rounded-xl border border-line-default bg-surface-card px-4 py-3 text-body text-fg-secondary">
+        <div className="rounded-xl border border-line-soft bg-surface-card px-4 py-3 text-body-sm text-fg-secondary shadow-card">
           {t("settings.statuses.intro")}
         </div>
       </div>
@@ -378,7 +378,10 @@ function CategorySection({
     <section aria-labelledby={headingId} className="flex flex-col gap-3">
       <div className="flex items-end gap-3">
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <h2 id={headingId} className="text-title font-medium">
+          <h2
+            id={headingId}
+            className="text-body font-semibold text-fg-default"
+          >
             {t(`settings.statuses.categories.${category}.name`)}
           </h2>
           <p className="text-body-sm text-fg-muted">
@@ -408,7 +411,7 @@ function CategorySection({
           ref={setNodeRef}
           aria-labelledby={headingId}
           className={cn(
-            "flex min-h-14 flex-col rounded-xl border border-line-default bg-surface-card",
+            "flex min-h-14 flex-col rounded-xl border border-line-soft bg-surface-card shadow-card",
             isOver && "border-line-focus",
           )}
         >

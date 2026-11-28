@@ -1,3 +1,4 @@
+import { AgentInfoTrigger } from "../agents/AgentInfoTrigger";
 import { Fragment, type ReactNode } from "react";
 
 import { languageForFence } from "../code/languages";
@@ -63,14 +64,19 @@ export function renderInline(
       const parsed = parseMentionHref(mentionHref);
       nodes.push(
         parsed ? (
-          <span
+          <AgentInfoTrigger
             key={key}
-            data-mention={parsed.kind}
-            data-mention-id={parsed.id}
-            className="rounded bg-info-soft px-1 font-medium text-info"
+            agentId={parsed.kind === "agent" ? parsed.id : undefined}
+            name={mentionLabel ?? "Agent"}
           >
-            @{mentionLabel}
-          </span>
+            <span
+              data-mention={parsed.kind}
+              data-mention-id={parsed.id}
+              className="rounded bg-info-soft px-1 font-medium text-info"
+            >
+              @{mentionLabel}
+            </span>
+          </AgentInfoTrigger>
         ) : (
           <Fragment key={key}>{whole}</Fragment>
         ),

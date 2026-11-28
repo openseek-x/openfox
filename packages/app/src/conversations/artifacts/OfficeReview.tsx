@@ -141,7 +141,7 @@ function OfficePDFReview({
               </p>
               {sections.length > 1 && (
                 <select
-                  className="rounded border border-line-default bg-surface-default p-1 text-body-sm"
+                  className="rounded-md border border-line-default bg-surface-card p-1 text-body-sm"
                   aria-label={t("artifacts.review.officeSection")}
                   value={section}
                   onChange={(e) => {

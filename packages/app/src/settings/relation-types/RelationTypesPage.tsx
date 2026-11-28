@@ -115,7 +115,7 @@ export function RelationTypesPage() {
           }
         />
       ) : (
-        <div className="rounded-xl border border-line-default bg-surface-card px-2">
+        <div className="rounded-xl border border-line-soft bg-surface-card px-2 shadow-card">
           <Table
             aria-label={t("settings.relationTypes.title")}
             className="table-fixed"

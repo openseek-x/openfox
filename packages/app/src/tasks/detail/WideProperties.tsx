@@ -34,13 +34,13 @@ function PropertySection({
   const [open, setOpen] = useState(true);
   const id = useId();
   return (
-    <section className="rounded-lg border border-line-default">
+    <section className="rounded-xl border border-line-soft bg-surface-canvas/40">
       <button
         type="button"
         aria-expanded={open}
         aria-controls={id}
         onClick={() => setOpen(!open)}
-        className="flex h-10 w-full items-center justify-between rounded-lg px-3 text-body-sm font-medium text-fg-muted hover:bg-surface-hover"
+        className="flex h-9 w-full items-center justify-between rounded-xl px-3 text-caption font-semibold text-fg-muted transition-colors duration-100 hover:bg-surface-hover hover:text-fg-secondary motion-reduce:transition-none"
       >
         {title}
         <Icon
@@ -146,7 +146,7 @@ export function WideProperties(
           <div
             role="group"
             aria-label={t("tasks.fields.label")}
-            className="mt-2 border-t border-line-default pt-2"
+            className="mt-2 border-t border-line-subtle pt-2"
           >
             <TaskLabelPicker
               orgId={orgId}

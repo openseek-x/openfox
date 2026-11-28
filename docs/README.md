@@ -2,12 +2,15 @@
 
 从仓库根目录的 [README](../README.md) 了解项目、开发环境和验证命令。
 
-| 文档                                                               | 内容                                                                    |
-| ------------------------------------------------------------------ | ----------------------------------------------------------------------- |
-| [部署说明](../deploy/README.md)                                    | Web、桌面端、显式迁移与备份恢复                                         |
-| [数据库迁移](../db/migrations/README.md)                           | 迁移顺序、兼容要求和回退注意事项                                        |
-| [API 契约](../contracts/openapi.yaml)                              | 服务端接口定义                                                          |
-| [图形来源核对](asset-provenance-review.md)                         | 公开版图形映射、上游来源与许可声明                                      |
+| 文档                                          | 内容                             |
+| --------------------------------------------- | -------------------------------- |
+| [代码现状与检查入口](code-overview.md) | 中心、daemon、Web、桌面端及核查结果 |
+| [开发记录](development-records/) | 变更、迁移和验证证据 |
+| [集成说明](integrations/) | CodeCommit、QQ、Slack、Teams、Zoho BugTracker 配置 |
+| [部署说明](../deploy/README.md)               | Web、桌面端、显式迁移与备份恢复  |
+| [数据库迁移](../db/migrations/README.md)      | 迁移顺序、兼容要求和回退注意事项 |
+| [API 契约](../contracts/openapi.yaml)         | 服务端接口定义                   |
+| [图形来源核对](asset-provenance-review.md)    | 公开版图形映射、上游来源与许可声明   |
 | [测试智能体取证技能](agent-skills/test-evidence-delivery/SKILL.md) | 截图、录像、HTML 报告与正式报告评论的工作方式（可通过「上传技能」导入） |
 
 文件批注的支持范围、操作与恢复方式见[文件批注与 AI 定向修改](artifact-reviews.md)。

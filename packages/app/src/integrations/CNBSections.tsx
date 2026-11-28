@@ -227,7 +227,7 @@ function CNBConnection({
                     </Button>
                   </div>
                   <pre
-                    className="max-h-72 overflow-auto rounded-lg bg-surface-subtle p-3 text-caption"
+                    className="max-h-72 overflow-auto rounded-lg bg-surface-muted p-3 text-caption"
                     aria-label={t("integrations.cnb.example")}
                   >
                     {webhook.data.bridge_template}

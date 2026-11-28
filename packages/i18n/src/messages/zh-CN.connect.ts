@@ -81,6 +81,7 @@ export const connectZh = {
     },
   },
   devicePolicy: {
+    providerPath: "{name} CLI 路径",
     session_idle_minutes: "持久会话空闲回收时间（分钟）",
     session_max_minutes: "持久会话最大存活时间（分钟）",
     cli: "Codex CLI 程序路径",

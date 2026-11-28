@@ -140,8 +140,10 @@ export function ConfigPageHeader({
   return (
     <header className="flex items-start gap-4">
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <h1 className="text-subheading font-medium text-fg-default">{title}</h1>
-        <p className="text-body text-fg-muted">{subtitle}</p>
+        <h1 className="text-heading font-semibold tracking-[-0.015em] text-fg-default">
+          {title}
+        </h1>
+        <p className="text-body-sm text-fg-muted">{subtitle}</p>
       </div>
       {action}
     </header>
@@ -176,7 +178,7 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-line-default px-6 py-10 text-center">
+    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-line-soft bg-surface-canvas/50 px-6 py-10 text-center">
       <p className="text-body font-medium text-fg-default">{title}</p>
       {description && (
         <p className="max-w-sm text-body-sm text-fg-muted">{description}</p>

@@ -210,7 +210,9 @@ export function ConversationItem({
     <div
       className={cn(
         "group relative rounded-lg transition-colors duration-100 motion-reduce:transition-none",
-        selected ? "bg-surface-selected" : "hover:bg-surface-hover",
+        selected
+          ? "bg-surface-sidebar-active"
+          : "hover:bg-surface-sidebar-hover",
       )}
       onContextMenu={(event) => {
         if (menuItems.length === 0) return;
@@ -248,13 +250,17 @@ export function ConversationItem({
             )}
             <span
               className={cn(
-                "min-w-0 flex-1 truncate text-body",
-                conversation.unread ? "font-semibold" : "font-medium",
+                "min-w-0 flex-1 truncate text-body-sm",
+                conversation.unread
+                  ? "font-semibold text-fg-default"
+                  : "font-medium text-fg-secondary",
               )}
             >
               {label}
             </span>
             <AgentAvatar
+              agentId={conversation.agent.id}
+              spaceId={conversation.agent.space_id}
               name={conversation.agent.name}
               avatar={conversation.agent.avatar}
               size={20}

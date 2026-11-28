@@ -385,7 +385,7 @@ export function AccountBindingPage() {
   return (
     <SettingsColumn narrow>
       <header className="flex flex-col gap-1 px-1">
-        <h2 className="text-[20px] leading-7 font-bold text-fg-default">
+        <h2 className="text-heading font-semibold tracking-[-0.015em] text-fg-default">
           {t("accountBinding.title")}
         </h2>
         <p className="text-body-sm text-fg-muted">

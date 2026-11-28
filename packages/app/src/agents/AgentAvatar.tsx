@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
+import { AgentInfoTrigger } from "./AgentInfoTrigger";
 import type { AgentAvatarValue } from "@openfox/api";
 import { useT } from "@openfox/i18n";
 import {
@@ -34,6 +35,8 @@ const glyphSize: Record<number, number> = {
  * 私有 Agent 右下角加锁，离线时变灰。没有头像设置时按名字取颜色。
  */
 export function AgentAvatar({
+  agentId,
+  spaceId,
   name,
   avatar,
   size = 40,
@@ -42,6 +45,8 @@ export function AgentAvatar({
   className,
 }: {
   name: string;
+  agentId?: string | null;
+  spaceId?: string | null;
   avatar?: AgentAvatarValue;
   size?: 16 | 20 | 24 | 28 | 32 | 40 | 64;
   locked?: boolean;
@@ -87,10 +92,10 @@ export function AgentAvatar({
       )}
     </span>
   );
-  return offline ? (
-    <Tooltip content={t("agents.offline")}>{node}</Tooltip>
-  ) : (
-    node
+  return (
+    <AgentInfoTrigger agentId={agentId} spaceId={spaceId} name={name}>
+      {offline ? <Tooltip content={t("agents.offline")}>{node}</Tooltip> : node}
+    </AgentInfoTrigger>
   );
 }
 
@@ -101,7 +106,11 @@ export function CrewAvatar({
   size = 40,
 }: {
   name: string;
-  members: ReadonlyArray<{ name: string; avatar?: AgentAvatarValue }>;
+  members: ReadonlyArray<{
+    id?: string;
+    name: string;
+    avatar?: AgentAvatarValue;
+  }>;
   size?: 28 | 32 | 40 | 64;
 }) {
   if (members.length === 0)
@@ -119,24 +128,39 @@ export function CrewAvatar({
   const [a, b, c] = members;
   return (
     <span
-      role="img"
+      role="group"
       aria-label={name}
       style={{ width: size, height: size }}
       className="relative inline-flex shrink-0"
     >
       {a && (
         <span className="absolute top-0 left-1/2 -translate-x-1/2">
-          <AgentAvatar name={a.name} avatar={a.avatar} size={small} />
+          <AgentAvatar
+            agentId={a.id}
+            name={a.name}
+            avatar={a.avatar}
+            size={small}
+          />
         </span>
       )}
       {b && (
         <span className="absolute bottom-0 left-0">
-          <AgentAvatar name={b.name} avatar={b.avatar} size={small} />
+          <AgentAvatar
+            agentId={b.id}
+            name={b.name}
+            avatar={b.avatar}
+            size={small}
+          />
         </span>
       )}
       {c && (
         <span className="absolute right-0 bottom-0">
-          <AgentAvatar name={c.name} avatar={c.avatar} size={small} />
+          <AgentAvatar
+            agentId={c.id}
+            name={c.name}
+            avatar={c.avatar}
+            size={small}
+          />
         </span>
       )}
     </span>

@@ -128,7 +128,6 @@ func NewWithDispatch(auth identity.Service, pool *postgres.Pool, secureCookies b
 		dispatchHub:            dispatchOptions.Hub,
 		secrets:                dispatchOptions.Secrets,
 		importSafe:             dispatchOptions.ImportSafeHTTP,
-		integrations:           integrations.Service{GitHubConfigured: dispatchOptions.GitHubConfigured},
 		publicURL:              dispatchOptions.PublicURL,
 		secureCookies:          secureCookies,
 		emailRequestLimiter:    ratelimit.New(limits.EmailRequestPerWindow, limits.Window, 10000, nil),

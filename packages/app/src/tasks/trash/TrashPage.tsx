@@ -91,8 +91,10 @@ export function TrashPage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <header className="flex h-12 shrink-0 items-center gap-2 border-b border-line-default px-4">
-        <h1 className="text-title font-medium">{t("tasks.trash.title")}</h1>
+      <header className="flex h-11 shrink-0 items-center gap-2 border-b border-line-subtle px-4">
+        <h1 className="text-body font-semibold text-fg-default">
+          {t("tasks.trash.title")}
+        </h1>
       </header>
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-3">
         {mine ? (

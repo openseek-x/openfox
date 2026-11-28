@@ -1,3 +1,4 @@
+import { AgentAvatar } from "../agents/AgentAvatar";
 import { DevelopmentTools } from "./DevelopmentTools";
 import {
   LocalServiceDetails,
@@ -318,7 +319,7 @@ export function ComputerDetailBody({
               />
             ) : (
               <div className="flex min-w-0 items-center gap-1.5">
-                <h1 className="truncate text-heading font-bold text-fg-default">
+                <h1 className="truncate text-heading font-semibold tracking-[-0.015em] text-fg-default">
                   {update.isPending && update.variables.name
                     ? update.variables.name
                     : device.name}
@@ -475,7 +476,7 @@ export function ComputerDetailBody({
                   key={agent.id}
                   className="flex h-12 items-center gap-3 border-b border-line-soft px-4 last:border-b-0"
                 >
-                  <Avatar name={agent.name} kind="agent" size={24} />
+                  <AgentAvatar agentId={agent.id} name={agent.name} size={24} />
                   <span className="flex min-w-0 flex-1 items-center gap-1.5">
                     <span className="truncate text-body font-medium">
                       {agent.name}

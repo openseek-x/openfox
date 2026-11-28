@@ -47,6 +47,7 @@ import {
   useStatuses,
 } from "../tasks/queries";
 import { FieldEditor } from "../tasks/detail/Properties";
+import { withoutDuplicateStatuses } from "../tasks/detail/MarkDuplicateDialog";
 import {
   useTriageAccept,
   useTriageDecline,
@@ -76,8 +77,10 @@ export function TriageDecisionDialog({
   const decline = useTriageDecline(orgId, task.space_id);
   const settings = useTriageSettings(orgId, task.space_id);
   const types = useSpaceTypes(orgId, task.space_id);
-  const flow =
-    types.data?.find((type) => type.id === task.type_id)?.statuses ?? [];
+  // OPE-17 · 接受时不提供重复类别：标记为重复走分拣台的「标记重复」并选目标
+  const flow = withoutDuplicateStatuses(
+    types.data?.find((type) => type.id === task.type_id)?.statuses ?? [],
+  );
   const after = flow.findIndex((status) => status.status_id === task.status_id);
   const defaultStatus =
     flow.slice(after + 1).find((s) => s.category !== "TRIAGE") ??

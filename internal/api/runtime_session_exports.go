@@ -146,10 +146,10 @@ func (h *Handler) startRuntimeSessionExport(w http.ResponseWriter, r *http.Reque
 		return tx.QueryRow(ctx, `
 			INSERT INTO openfox.runtime_session_exports (
 				organization_id, id, conversation_id, run_id, device_id, requested_by_user_id,
-				command_id, runtime, session_id, expires_at
+				command_id, runtime, session_id, created_at, expires_at
 			) VALUES (
 				openfox_private.current_organization_id(), $1::uuid, $2::uuid, $3::uuid, $4::uuid,
-				$5::uuid, $6::uuid, $7, $8, clock_timestamp() + interval '1 hour'
+				$5::uuid, $6::uuid, $7, $8, statement_timestamp(), statement_timestamp() + interval '1 hour'
 			) RETURNING expires_at`, exportID, r.PathValue("conversationID"), runID, deviceID,
 			auth.principal.UserID, command.ID, provider, sessionID).Scan(&response.ExpiresAt)
 	})

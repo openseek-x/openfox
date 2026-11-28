@@ -121,18 +121,30 @@ export const CardBody = memo(function CardBody({
   const { locale } = useI18n();
   const show = (p: DisplaySettings["properties"][number]) =>
     display.properties.includes(p);
+  const hasMeta =
+    (show("subtasks") && task.subtask_count > 0) ||
+    (show("start") && Boolean(task.start_date)) ||
+    (show("due") && Boolean(task.due_date)) ||
+    (show("estimate") &&
+      task.estimate !== null &&
+      task.estimate !== undefined) ||
+    (show("labels") && task.label_items.length > 0);
+  const hasFooter =
+    show("created") ||
+    show("updated") ||
+    (show("priority") && task.priority !== "NONE");
   return (
     <article
       className={cn(
-        "flex flex-col gap-[var(--density-card-gap,6px)] rounded-lg border border-line-default bg-surface-card p-[var(--density-card-padding,10px)] shadow-card",
+        "flex flex-col gap-[var(--density-card-gap,8px)] rounded-xl border border-line-soft bg-surface-card p-[var(--density-card-padding,12px)] shadow-card",
         overlay
-          ? "rotate-1 shadow-popover"
-          : "transition-colors duration-100 group-hover:bg-surface-hover motion-reduce:transition-none",
+          ? "rotate-1 border-line-strong shadow-popover"
+          : "transition-[border-color,background-color,box-shadow] duration-150 group-hover:border-line-strong group-hover:bg-surface-hover/50 motion-reduce:transition-none",
       )}
     >
       <div className="flex h-5 items-center gap-2">
         {show("id") && (
-          <span className="min-w-0 truncate text-caption text-fg-muted">
+          <span className="min-w-0 truncate text-caption tabular-nums text-fg-muted">
             {displayIdOf(task)}
           </span>
         )}
@@ -153,36 +165,47 @@ export const CardBody = memo(function CardBody({
           label={task.type_name}
           className="mt-0.5 text-fg-muted"
         />
-        <span className="min-w-0 flex-1 text-body font-medium break-words">
+        <span
+          data-board-title
+          className="min-w-0 flex-1 text-body leading-snug font-medium break-words"
+        >
           {task.title}
         </span>
       </div>
-      <div className="flex flex-wrap items-center gap-1">
-        {show("subtasks") && <SubtaskChip task={task} />}
-        {show("start") && task.start_date && (
-          <span className="text-caption text-fg-muted">
-            {formatMonthDay(task.start_date, locale)} →
-          </span>
-        )}
-        {show("due") && <DueChip date={task.due_date} />}
-        {show("estimate") && <EstimateChip value={task.estimate} />}
-        {show("labels") && <LabelPills task={task} />}
-      </div>
-      <div className="flex items-center gap-2 text-caption text-fg-muted">
-        {show("created") && (
-          <span>
-            {t("tasks.createdOn", {
-              date: formatMonthDay(new Date(task.created_at), locale),
-            })}
-          </span>
-        )}
-        {show("updated") && (
-          <span>{formatMonthDay(new Date(task.updated_at), locale)}</span>
-        )}
-        {show("priority") && task.priority !== "NONE" && (
-          <PriorityIcon priority={task.priority} labelled className="ml-auto" />
-        )}
-      </div>
+      {hasMeta && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {show("subtasks") && <SubtaskChip task={task} />}
+          {show("start") && task.start_date && (
+            <span className="text-caption tabular-nums text-fg-muted">
+              {formatMonthDay(task.start_date, locale)} →
+            </span>
+          )}
+          {show("due") && <DueChip date={task.due_date} />}
+          {show("estimate") && <EstimateChip value={task.estimate} />}
+          {show("labels") && <LabelPills task={task} />}
+        </div>
+      )}
+      {hasFooter && (
+        <div className="flex items-center gap-2 text-caption tabular-nums text-fg-muted">
+          {show("created") && (
+            <span>
+              {t("tasks.createdOn", {
+                date: formatMonthDay(new Date(task.created_at), locale),
+              })}
+            </span>
+          )}
+          {show("updated") && (
+            <span>{formatMonthDay(new Date(task.updated_at), locale)}</span>
+          )}
+          {show("priority") && task.priority !== "NONE" && (
+            <PriorityIcon
+              priority={task.priority}
+              labelled
+              className="ml-auto"
+            />
+          )}
+        </div>
+      )}
     </article>
   );
 });

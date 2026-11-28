@@ -1,3 +1,4 @@
+import { AgentAvatar } from "../agents/AgentAvatar";
 import { useQuery } from "@tanstack/react-query";
 import { memo, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -58,7 +59,8 @@ export function InboxPage() {
   const openTaskPage = useOpenTaskPage();
   const createDialog = useOptionalCreateTaskDialog();
   const [section, setSection] = useState<InboxSection>("inbox");
-  const [importance, setImportance] = useState<Importance>("all");
+  const [inboxImportance, setImportance] = useState<Importance>("all");
+  const importance = section === "inbox" ? inboxImportance : "all";
   const [spaceIds, setSpaceIds] = useState<string[]>([]);
   const [spaceMode, setSpaceMode] = useState<"is" | "is_not">("is");
   const [q, setQ] = useState("");
@@ -184,12 +186,13 @@ export function InboxPage() {
     : t(`inbox.empty.${section}`);
 
   return (
-    <div className="flex h-full min-w-0 flex-col bg-surface-canvas">
+    <div className="flex h-full min-w-0 flex-col bg-surface-card">
       <h1 className="sr-only">{t("inbox.title")}</h1>
+      {/* 轻量水平页签栏，与全站 h-11 顶栏等高，释放垂直阅读空间 */}
       <div
         role="tablist"
         aria-label={t("inbox.title")}
-        className="flex shrink-0 gap-2 border-b border-line-default p-2"
+        className="flex h-11 shrink-0 items-center gap-1 border-b border-line-subtle px-4"
       >
         {SECTIONS.map((item) => {
           const selected = item.id === section;
@@ -204,28 +207,27 @@ export function InboxPage() {
               type="button"
               role="tab"
               aria-selected={selected}
-              onClick={() => {
-                setSection(item.id);
-                setImportance("all");
-              }}
+              onClick={() => setSection(item.id)}
               className={cn(
-                "relative flex h-15 min-w-0 flex-1 items-center gap-4 rounded-lg px-4 text-left transition-colors sm:max-w-64",
+                "relative flex h-full min-w-0 items-center gap-2 px-3 text-left transition-colors duration-150 motion-reduce:transition-none",
                 selected
-                  ? "bg-surface-selected text-fg-default after:absolute after:-bottom-[9px] after:inset-x-0.5 after:h-0.5 after:rounded-full after:bg-fg-default"
-                  : "text-fg-muted hover:bg-surface-hover",
+                  ? "font-semibold text-fg-default after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-primary"
+                  : "text-fg-muted hover:text-fg-default",
               )}
             >
-              <Icon name={item.icon} />
-              <span className="flex min-w-0 flex-col">
-                <span className="text-body font-medium">
-                  {t(`inbox.sections.${item.id}`)}
-                </span>
-                {count > 0 && (
-                  <span className="text-body-sm text-fg-muted tabular-nums">
-                    {sub}
-                  </span>
-                )}
+              <Icon
+                name={item.icon}
+                size={15}
+                className={selected ? "text-fg-default" : "text-fg-muted"}
+              />
+              <span className="truncate text-body-sm">
+                {t(`inbox.sections.${item.id}`)}
               </span>
+              {count > 0 && (
+                <span className="shrink-0 rounded-full bg-surface-muted/85 px-1.5 py-px text-[11px] leading-4 font-normal text-fg-muted tabular-nums">
+                  {sub}
+                </span>
+              )}
             </button>
           );
         })}
@@ -242,7 +244,6 @@ export function InboxPage() {
           icon={<Icon name="list-filter" />}
           variant="round"
           size="28"
-          className="bg-surface-canvas"
           active={spaceOpen || spaceIds.length > 0}
           aria-expanded={spaceOpen}
           onClick={() => setSpaceOpen((v) => !v)}
@@ -320,10 +321,10 @@ export function InboxPage() {
                   aria-checked={importance === option.value}
                   onClick={() => setImportance(option.value as Importance)}
                   className={cn(
-                    "h-7 rounded-full border border-line-default px-3 text-body-sm font-medium tabular-nums transition-colors",
+                    "h-7 rounded-full border px-3 text-body-sm font-medium tabular-nums transition-colors duration-100 motion-reduce:transition-none",
                     importance === option.value
-                      ? "bg-surface-selected text-fg-default"
-                      : "text-fg-muted hover:bg-surface-hover",
+                      ? "border-line-strong bg-surface-active text-fg-default"
+                      : "border-line-soft text-fg-muted hover:bg-surface-hover hover:text-fg-default",
                   )}
                 >
                   {option.label}
@@ -353,7 +354,6 @@ export function InboxPage() {
             icon={<Icon name="search" />}
             variant="round"
             size="28"
-            className="bg-surface-canvas"
             onClick={() => setSearching(true)}
           />
         )}
@@ -362,7 +362,6 @@ export function InboxPage() {
           icon={<Icon name="mail-check" />}
           variant="round"
           size="28"
-          className="bg-surface-canvas"
           disabled={
             section === "cleared" || groups.length === 0 || bulk.isPending
           }
@@ -381,7 +380,7 @@ export function InboxPage() {
           variant="outline"
           size="28"
           leading={<Icon name="check-check" />}
-          className="rounded-full bg-surface-canvas text-fg-muted"
+          className="rounded-full text-fg-secondary"
           style={{ borderRadius: 999 }}
           disabled={
             section !== "inbox" || groups.length === 0 || bulk.isPending
@@ -419,7 +418,7 @@ export function InboxPage() {
       ) : (
         <ul
           aria-label={t("inbox.list")}
-          className="min-h-0 flex-1 overflow-y-auto px-4 pb-3"
+          className="@container min-h-0 flex-1 overflow-y-auto px-4 pb-3"
         >
           {offers.map((o) => (
             <li
@@ -588,7 +587,7 @@ const Row = memo(function Row({
           ]
         : [{ id: "unclear", icon: "undo", label: "inbox.actions.unclear" }];
   return (
-    <li className="group relative flex h-[var(--density-table-row,40px)] items-center gap-2 border-b border-line-soft px-2 first:border-t hover:bg-surface-hover">
+    <li className="group relative flex items-center gap-2 border-b border-line-subtle px-2 py-1.5 transition-colors duration-100 first:border-t hover:bg-surface-hover motion-reduce:transition-none @3xl:h-[var(--density-table-row,40px)] @3xl:py-0">
       <button
         type="button"
         onClick={() => onOpen(group)}
@@ -604,7 +603,7 @@ const Row = memo(function Row({
           group.unread && !cleared ? "bg-info" : "bg-info/10",
         )}
       />
-      <span className="pointer-events-none relative grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-center gap-4">
+      <span className="pointer-events-none relative grid min-w-0 flex-1 grid-cols-1 items-center gap-1 @3xl:grid-cols-2 @3xl:gap-4 [&_[aria-haspopup=dialog]]:pointer-events-auto">
         <span className="flex min-w-0 items-center gap-2">
           {group.task_status_category && (
             <StatusIcon category={group.task_status_category} labelled />
@@ -639,14 +638,22 @@ const Row = memo(function Row({
             cleared && "opacity-60",
           )}
         >
-          {group.actor_name && group.task_title && (
-            <Avatar
-              name={group.actor_name}
-              kind={group.actor_kind === "AGENT" ? "agent" : "user"}
-              size={16}
-              className={cleared ? "grayscale" : undefined}
-            />
-          )}
+          {group.actor_name &&
+            group.task_title &&
+            (group.actor_kind === "AGENT" ? (
+              <AgentAvatar
+                agentId={group.actor_agent_id}
+                name={group.actor_name}
+                size={16}
+              />
+            ) : (
+              <Avatar
+                name={group.actor_name}
+                kind="user"
+                size={16}
+                className={cleared ? "grayscale" : undefined}
+              />
+            ))}
           <span
             title={[group.task_title && group.actor_name, event]
               .filter(Boolean)
@@ -676,7 +683,7 @@ const Row = memo(function Row({
           )}
         </span>
       </span>
-      <span className="pointer-events-none relative flex w-32 shrink-0 items-center justify-end gap-2 text-caption text-fg-muted tabular-nums">
+      <span className="pointer-events-none relative flex max-w-[35%] shrink-0 @3xl:w-32 items-center justify-end gap-2 text-caption text-fg-muted tabular-nums">
         {group.count > 1 && (
           <span className="shrink-0 text-caption text-fg-muted">
             +{group.count - 1}
@@ -688,7 +695,7 @@ const Row = memo(function Row({
               ? group.snoozed_until
               : group.latest_at
           }
-          className="w-24 shrink-0 text-right text-caption text-fg-muted group-focus-within:invisible group-hover:invisible"
+          className="min-w-0 truncate text-right @3xl:w-24 text-caption text-fg-muted group-focus-within:invisible group-hover:invisible"
         >
           {time}
         </time>

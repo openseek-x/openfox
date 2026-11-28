@@ -1,4 +1,4 @@
-name: Release OpenFox desktop and web
+name: Release OpenFox desktop, web and center
 on:
   push:
     branches: [master]
@@ -11,7 +11,11 @@ concurrency:
   queue: max
 
 jobs:
+  quality:
+    uses: ./.github/workflows/quality.yml
+
   build:
+    needs: quality
     if: github.event.deleted == false
     runs-on: macos-15
     timeout-minutes: 40
@@ -43,12 +47,6 @@ jobs:
           node -e 'if(new URL(process.env.OPENFOX_DESKTOP_DEFAULT_WEB_URL).protocol !== "https:") process.exit(1)'
           npm install --global pnpm@11.15.1
           pnpm install --frozen-lockfile
-      - name: Test desktop and update UI
-        run: |
-          pnpm --filter @openfox/desktop test
-          pnpm exec vitest run packages/app/src/me/me.test.tsx
-          pnpm typecheck
-          python3 deploy/test_publish_static.py
       - name: Build and verify the web and macOS installer
         env:
           RELEASE_VERSION: ${{ steps.inputs.outputs.version }}
@@ -67,6 +65,12 @@ jobs:
           test "$(plutil -extract CFBundleShortVersionString raw "$app/Contents/Info.plist")" = "$version"
           test "$(plutil -extract CFBundleIdentifier raw "$app/Contents/Info.plist")" = io.openfox.desktop
           codesign --verify --deep --strict "$app"
+          pi="$app/Contents/Resources/pi"
+          mkdir -p "$RUNNER_TEMP/pi-home"
+          env -i HOME="$RUNNER_TEMP/pi-home" PATH=/usr/bin:/bin PI_OFFLINE=1 \
+            "$app/Contents/Resources/bin/openfox" runtime probe --provider pi --executable "$pi/pi" --timeout 30s --json | \
+            jq -e --arg version "$(jq -er '.version' "$pi/package.json")" \
+              '.error == null and .capabilities.runtime == "pi" and .capabilities.version == $version'
           dmg="apps/desktop/dist/release/OpenFox-$version-arm64.dmg"
           hdiutil verify "$dmg"
           mount="$RUNNER_TEMP/dmg-mount"
@@ -136,8 +140,32 @@ jobs:
             -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
             "$DEPLOY_TARGET" "publish-artifact $RELEASE_VERSION $GITHUB_SHA ${ARTIFACT_DIGEST#sha256:}"
 
-  github-release:
+  center-image:
     needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Package the versioned Linux center image
+        run: |
+          set -euo pipefail
+          image="openfox-center:$VERSION"
+          archive="openfox-center-$VERSION-linux-amd64.tar.gz"
+          docker build --platform linux/amd64 --build-arg OPENFOX_VERSION="$VERSION" -t "$image" .
+          bash deploy/test-center.sh "$image" "$VERSION"
+          docker save "$image" | gzip > "$archive"
+          sha256sum "$archive" > "$archive.sha256"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: center-image
+          path: openfox-center-*.tar.gz*
+          compression-level: 0
+          if-no-files-found: error
+
+  github-release:
+    needs: [build, center-image]
     runs-on: ubuntu-latest
     outputs:
       is_latest: ${{ steps.publish.outputs.is_latest }}
@@ -147,6 +175,9 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: mac-installers
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: center-image
       - name: Publish verified installers on the version tag
         id: publish
         env:
@@ -156,7 +187,8 @@ jobs:
           set -euo pipefail
           repo="$GITHUB_REPOSITORY"
           tag="v$VERSION"
-          files=("OpenFox-$VERSION-arm64.dmg" "OpenFox-$VERSION-arm64.dmg.sig" "OpenFox-$VERSION-arm64.pkg")
+          files=("OpenFox-$VERSION-arm64.dmg" "OpenFox-$VERSION-arm64.dmg.sig" "OpenFox-$VERSION-arm64.pkg"
+                 "openfox-center-$VERSION-linux-amd64.tar.gz" "openfox-center-$VERSION-linux-amd64.tar.gz.sha256")
           # Reserve the immutable tag at the built master commit. Retries may reuse that exact ref.
           if ! gh api --method POST "repos/$repo/git/refs" -f "ref=refs/tags/$tag" -f "sha=$GITHUB_SHA" >/dev/null; then
             target=$(gh api "repos/$repo/git/ref/tags/$tag" --jq .object.sha)
@@ -164,7 +196,7 @@ jobs:
           fi
           if ! draft=$(gh release view "$tag" --repo "$repo" --json isDraft --jq .isDraft); then
             gh release create "$tag" --repo "$repo" --verify-tag --draft --title "OpenFox $VERSION" \
-              --notes 'Apple 芯片 Mac 请下载 DMG，打开后将 OpenFox 拖入「应用程序」。支持应用内更新的版本会在下载完成后提示「安装并重启」。'
+              --notes 'Apple 芯片 Mac 请下载 DMG，打开后将 OpenFox 拖入「应用程序」。支持应用内更新的版本会在下载完成后提示「安装并重启」。Linux amd64 中心服务请下载镜像归档及对应 SHA-256 文件。'
             draft=true
           fi
           if [[ "$draft" == true ]]; then

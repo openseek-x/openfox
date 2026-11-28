@@ -11,6 +11,7 @@ import {
   useTaskReadOnlyReason,
 } from "../../spaces/readonly";
 import { usePriorityLevels } from "../../organization/queries";
+import { withoutDuplicateStatuses } from "../detail/MarkDuplicateDialog";
 import {
   Picker,
   LabelDot,
@@ -83,10 +84,9 @@ export function BulkActionBar({
   if (selection.size === 0) return null;
 
   const agents = (spaceAgents.data ?? []).filter((agent) => !agent.archived_at);
-  const available = commonStatuses(
-    tasks,
-    types.data ?? [],
-    statuses.data ?? [],
+  // OPE-17 · 批量修改无法逐个选择重复目标，候选里不提供重复类别的状态
+  const available = withoutDuplicateStatuses(
+    commonStatuses(tasks, types.data ?? [], statuses.data ?? []),
   );
   const present = new Map<string, Task["label_items"][number]>();
   for (const task of tasks)

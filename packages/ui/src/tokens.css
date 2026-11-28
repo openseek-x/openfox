@@ -16,24 +16,24 @@
   --font-mono:
     "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
-  /* 背景（Figma bg/*） */
-  --color-surface-app: #efeff4;
-  --color-surface-canvas: #fcfcfd;
+  /* 背景（Figma bg/* · 简约轻层次阶梯：app < sidebar < card） */
+  --color-surface-app: #f0f0f2;
+  --color-surface-canvas: #fafafa;
   --color-surface-card: #ffffff;
-  --color-surface-muted: #f4f4f5;
-  --color-surface-hover: #f6f6f8;
-  --color-surface-active: #f0f0f3;
-  --color-surface-selected: #09090b14;
-  --color-surface-sidebar: #ececee;
-  --color-surface-sidebar-active: #e1e1e3;
+  --color-surface-muted: #f4f4f6;
+  --color-surface-hover: #f5f5f7;
+  --color-surface-active: #ebebef;
+  --color-surface-selected: #09090b0f;
+  --color-surface-sidebar: #f6f6f7;
+  --color-surface-sidebar-active: #e8e8ec;
   --color-surface-sidebar-hover: color-mix(
     in srgb,
     var(--color-surface-sidebar),
-    var(--color-surface-sidebar-active) 50%
+    var(--color-surface-sidebar-active) 55%
   );
   --color-control-hover: color-mix(
     in srgb,
-    var(--color-fg-default) 6%,
+    var(--color-fg-default) 5.5%,
     transparent
   );
   --color-secondary-hover: color-mix(
@@ -43,9 +43,9 @@
   );
   --color-scrim: #09090b;
   /* 对话代码：代码块底色、行内代码底色与代码块描边，和 surface-muted 区分开 */
-  --color-surface-code: #f6f6f7;
-  --color-surface-code-inline: #f1f1f3;
-  --color-line-code: #e7e7ea;
+  --color-surface-code: #f6f6f8;
+  --color-surface-code-inline: #f1f1f4;
+  --color-line-code: #e7e7ec;
 
   /* 文字（Figma fg/*） */
   --color-fg-default: #09090b;
@@ -54,13 +54,13 @@
   --color-fg-subtle: #a1a1aa;
   --color-fg-inverse: #fafafa;
 
-  /* 描边（Figma border/*） */
-  --color-line-default: #e4e4e7;
-  --color-line-strong: #d4d4d8;
+  /* 描边（Figma border/* · 柔和轻描边降低界面切割感） */
+  --color-line-default: #e6e6ea;
+  --color-line-strong: #d4d4da;
   --color-line-focus: #8e92f2;
-  --color-line-floating: #09090b14;
-  --color-line-soft: #e4e4e7b2;
-  --color-line-subtle: #e4e4e77d;
+  --color-line-floating: #09090b12;
+  --color-line-soft: #e6e6ea99;
+  --color-line-subtle: #e6e6ea66;
 
   /* 操作与强调（Figma action/*、accent/*） */
   --color-primary: #18181b;
@@ -110,11 +110,12 @@
   --text-code: 12px;
   --text-code--line-height: 20px;
 
-  /* 阴影（Figma Elevation/*、Focus/Ring） */
-  --shadow-card: 0 1px 2px 0 #09090b0f;
-  --shadow-popover: 0 8px 24px -4px #09090b1a, 0 2px 6px 0 #09090b0f;
-  --shadow-dialog: 0 24px 48px -12px #09090b2e;
-  --shadow-focus: 0 0 0 3px #8e92f259;
+  /* 阴影（Figma Elevation/*、Focus/Ring · 分层柔和投影） */
+  --shadow-card: 0 1px 2px 0 #09090b0a, 0 0 0 1px #09090b05;
+  --shadow-popover:
+    0 10px 28px -6px #09090b18, 0 2px 8px -2px #09090b0a, 0 0 0 1px #09090b08;
+  --shadow-dialog: 0 24px 56px -12px #09090b24, 0 4px 16px -4px #09090b0d;
+  --shadow-focus: 0 0 0 3px #8e92f24d;
 
   /* 动效 */
   --ease-drawer: cubic-bezier(0.78, 0.14, 0.15, 0.86);
@@ -123,6 +124,7 @@
 @layer base {
   * {
     scrollbar-width: thin;
+    scrollbar-color: var(--color-line-strong) transparent;
   }
 
   html,
@@ -130,7 +132,9 @@
     font-family: var(--font-sans);
     color: var(--color-fg-default);
     background: var(--color-surface-app);
+    text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   :focus-visible {
@@ -178,6 +182,16 @@
   }
 }
 
+/* 看板状态列与分组泳道底色：标准深色下直接采用画布色，保持层次通透。 */
+@utility of-board-lane {
+  @apply bg-surface-muted/55;
+
+  :root[data-theme="dark"]:is([data-palette="dark"], [data-palette="system"])
+    & {
+    @apply bg-surface-canvas;
+  }
+}
+
 @utility of-input-frame {
   --of-input-indicator: none;
   @apply transition-colors motion-reduce:transition-none;
@@ -221,15 +235,16 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --color-surface-app: #18181b;
-  --color-surface-canvas: #09090b;
+  /* 四层明度阶梯：app(#1f1f23) < sidebar(#222226) < canvas(#232326) < card(#27272a) */
+  --color-surface-app: #1f1f23;
+  --color-surface-canvas: #232326;
   --color-surface-card: #27272a;
-  --color-surface-muted: #3f3f46;
-  --color-surface-hover: #33333a;
-  --color-surface-active: #3f3f46;
-  --color-surface-selected: #fafafa14;
-  --color-surface-sidebar: #1f1f23;
-  --color-surface-sidebar-active: #34343b;
+  --color-surface-muted: #35353c;
+  --color-surface-hover: #303036;
+  --color-surface-active: #3a3a42;
+  --color-surface-selected: #fafafa12;
+  --color-surface-sidebar: #222226;
+  --color-surface-sidebar-active: #323238;
   --color-scrim: #09090b;
   --color-surface-code: #141417;
   --color-surface-code-inline: #1f1f23;
@@ -241,12 +256,12 @@
   --color-fg-subtle: #71717a;
   --color-fg-inverse: #09090b;
 
-  --color-line-default: #3f3f46;
-  --color-line-strong: #52525b;
+  --color-line-default: #35353c;
+  --color-line-strong: #4a4a54;
   --color-line-focus: #8e92f2;
-  --color-line-floating: #fafafa1a;
-  --color-line-soft: #3f3f46b2;
-  --color-line-subtle: #3f3f467d;
+  --color-line-floating: #ffffff14;
+  --color-line-soft: #35353ca6;
+  --color-line-subtle: #35353c66;
 
   --color-primary: #fafafa;
   --color-primary-disabled: #52525b;
@@ -268,32 +283,41 @@
   --color-pill-warning-border: #e0b43a66;
   --color-pill-muted-border: #a1a1aa4d;
 
-  --shadow-card: 0 1px 2px 0 #00000066;
-  --shadow-popover: 0 8px 24px -4px #00000080, 0 2px 6px 0 #00000066;
-  --shadow-dialog: 0 24px 48px -12px #00000080;
+  --shadow-card: 0 1px 2px 0 #0000004d, 0 0 0 1px #ffffff08;
+  --shadow-popover:
+    0 12px 32px -6px #00000073, 0 2px 8px -2px #0000004d, 0 0 0 1px #ffffff0f;
+  --shadow-dialog: 0 24px 56px -12px #0000008c, 0 0 0 1px #ffffff12;
   --shadow-focus: 0 0 0 3px #8e92f259;
 }
 
 :root[data-palette="magic-blue"] {
-  --color-surface-app: oklch(0.12 0.005 285.823);
-  --color-surface-canvas: #222542;
+  --color-surface-app: #1a1d36;
+  --color-surface-canvas: #20233e;
   --color-surface-card: #222542;
-  --color-surface-sidebar: #222542;
-  --color-surface-active: #404665;
-  --color-surface-sidebar-active: #404665;
-  --color-surface-hover: #303450;
-  --color-surface-muted: #404665;
-  --color-line-default: #404665;
+  --color-surface-sidebar: #1d203a;
+  --color-surface-active: #383e5e;
+  --color-surface-sidebar-active: #34395a;
+  --color-surface-hover: #2d314d;
+  --color-surface-muted: #34395a;
+  --color-line-default: #363c5c;
+  --color-line-strong: #4a5178;
+  --color-line-soft: #363c5ca6;
+  --color-line-subtle: #363c5c66;
+  --color-line-floating: #ffffff14;
 }
 
 :root[data-palette="classic-dark"] {
-  --color-surface-app: oklch(0.12 0.005 285.823);
-  --color-surface-canvas: #161616;
+  --color-surface-app: #101010;
+  --color-surface-canvas: #141414;
   --color-surface-card: #161616;
-  --color-surface-sidebar: #161616;
-  --color-surface-active: #303030;
-  --color-surface-sidebar-active: #303030;
-  --color-surface-hover: #242424;
-  --color-surface-muted: #303030;
-  --color-line-default: #303030;
+  --color-surface-sidebar: #121212;
+  --color-surface-active: #2a2a2a;
+  --color-surface-sidebar-active: #282828;
+  --color-surface-hover: #222222;
+  --color-surface-muted: #282828;
+  --color-line-default: #292929;
+  --color-line-strong: #3d3d3d;
+  --color-line-soft: #292929a6;
+  --color-line-subtle: #29292966;
+  --color-line-floating: #ffffff12;
 }

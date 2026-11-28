@@ -83,6 +83,7 @@ function ShortcutsBody({ prefs }: { prefs: UserPreferences }) {
   };
 
   // 录制期间拦截所有按键：单独的修饰键继续等待，其余按键按规则校验后保存或提示
+  const saveShortcut = update.mutate;
   useEffect(() => {
     if (!recording) return;
     const onKeyDown = (event: KeyboardEvent) => {
@@ -116,7 +117,7 @@ function ShortcutsBody({ prefs }: { prefs: UserPreferences }) {
         return;
       }
       setRecording(null);
-      update.mutate(
+      saveShortcut(
         { command_shortcuts: withShortcut(custom, recording, result.value) },
         {
           onSuccess: () => toast(t("me.shortcuts.saved")),
@@ -126,7 +127,7 @@ function ShortcutsBody({ prefs }: { prefs: UserPreferences }) {
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [recording, custom, t, toast, update.mutate]);
+  }, [recording, custom, t, toast, saveShortcut]);
 
   return (
     <SettingsColumn>
@@ -160,10 +161,10 @@ function ShortcutsBody({ prefs }: { prefs: UserPreferences }) {
                     update.mutate({ send_shortcut: option.value }, saveOptions);
                 }}
                 className={cn(
-                  "flex min-h-[68px] w-full items-center gap-3 rounded-xl border p-4 text-left",
+                  "flex min-h-[68px] w-full items-center gap-3 rounded-xl border p-4 text-left transition-[background-color,border-color,box-shadow] duration-150 motion-reduce:transition-none",
                   selected
-                    ? "border-primary bg-surface-muted"
-                    : "border-line-default bg-surface-card hover:bg-surface-hover",
+                    ? "border-primary/80 bg-surface-muted/75 shadow-card"
+                    : "border-line-soft bg-surface-card shadow-card hover:border-line-default hover:bg-surface-hover",
                 )}
               >
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -203,10 +204,10 @@ function ShortcutsBody({ prefs }: { prefs: UserPreferences }) {
                           <kbd
                             key={index}
                             className={cn(
-                              "inline-flex h-5 min-w-5 items-center justify-center rounded-sm border bg-surface-muted px-1 font-sans text-caption text-fg-muted",
+                              "inline-flex h-5 min-w-5 items-center justify-center rounded-sm border bg-surface-muted/85 px-1 font-sans text-caption text-fg-muted",
                               isRecording
                                 ? "border-line-focus"
-                                : "border-line-default",
+                                : "border-line-soft",
                             )}
                           >
                             {cap}

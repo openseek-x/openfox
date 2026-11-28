@@ -30,6 +30,7 @@
 | `cmd/openfox`                     | 本地电脑注册、执行与管理命令                       |
 | `apps/web`、`packages/`           | Web 入口、共享 React 界面、国际化与 API 客户端     |
 | `apps/desktop`                    | Electron 桌面端，加载同源 Web 工作台并连接本地命令 |
+| [Chrome 侧边栏](apps/extension/README.md) | 在当前网页旁与空间里的 Agent 对话，可附带选中的文字 |
 | `db/migrations`、`contracts`      | PostgreSQL 前向迁移与版本化接口契约                |
 | `deploy`、`tests`                 | 部署示例、恢复说明与测试                           |
 
@@ -65,9 +66,11 @@ pnpm dev
 ## 验证与部署
 
 ```sh
-make check          # Go 测试、vet 与迁移清单检查
-pnpm check          # 前端格式、类型、测试与构建
+make check          # Go 测试、vet、迁移和隔离 PostgreSQL 集成测试
+pnpm check          # API 契约、格式、Hooks、类型、全量测试与 Web 构建
 ```
+
+运行完整 Go 检查需将 PostgreSQL 17 的服务端和客户端命令加入 PATH。安装 Chromium（`pnpm exec playwright install chromium`）后，`python3 tests/integration/run_all.py --browser-only` 可构建静态页面并在临时数据库上运行 Playwright。
 
 `serve` **不会自动执行数据库迁移**。部署时先备份并检查目标数据库，再显式执行迁移、启动服务，最后发布 `apps/web/dist`；Web 与 API 应通过同一 HTTPS 域名提供。仓库中的 Compose 文件只是本地开发示例，不是一键生产部署方案。详见 [部署说明](deploy/README.md)、[迁移说明](db/migrations/README.md) 和 [API 契约](contracts/openapi.yaml)。
 

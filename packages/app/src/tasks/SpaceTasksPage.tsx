@@ -211,7 +211,7 @@ function SpaceTasksContent({
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex h-11 shrink-0 items-center gap-1.5 border-b border-line-default px-4">
+      <header className="flex min-h-11 shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-line-subtle px-4 py-1.5">
         <nav
           aria-label={t("tasks.breadcrumb")}
           className="flex min-w-0 items-center gap-1.5 text-body"
@@ -221,42 +221,45 @@ function SpaceTasksContent({
             {space.name}
           </span>
           <Icon name="chevron-right" size={12} className="text-fg-subtle" />
-          <h1 className="shrink-0 font-medium">{t("tasks.title")}</h1>
+          <h1 className="shrink-0 font-semibold text-fg-default">
+            {t("tasks.title")}
+          </h1>
         </nav>
-      </header>
-      <div className="flex min-h-9 flex-wrap items-center gap-2 border-b border-line-default px-4 text-body-sm">
-        <span>
-          {defaults.view
-            ? t("tasks.defaultView.source", { name: defaults.view.name })
-            : t(
-                defaults.follow
-                  ? "tasks.defaultView.system"
-                  : "tasks.defaultView.personal",
-              )}
-        </span>
-        {defaults.view && (
-          <>
-            <span className="text-fg-muted">{t("tasks.defaultView.and")}</span>
-            <Button size="28" variant="ghost" onClick={defaults.leave}>
-              {t("tasks.defaultView.leave")}
+        {/* 默认视图来源与管理操作收纳到页头右侧，消除顶部双层横线切割 */}
+        <div className="ml-auto flex flex-wrap items-center gap-1 text-caption text-fg-muted">
+          <span>
+            {defaults.view
+              ? t("tasks.defaultView.source", { name: defaults.view.name })
+              : t(
+                  defaults.follow
+                    ? "tasks.defaultView.system"
+                    : "tasks.defaultView.personal",
+                )}
+          </span>
+          {defaults.view && (
+            <>
+              <span>{t("tasks.defaultView.and")}</span>
+              <Button size="28" variant="ghost-muted" onClick={defaults.leave}>
+                {t("tasks.defaultView.leave")}
+              </Button>
+            </>
+          )}
+          {!defaults.follow && (
+            <Button size="28" variant="ghost-muted" onClick={defaults.reset}>
+              {t("tasks.defaultView.reset")}
             </Button>
-          </>
-        )}
-        {!defaults.follow && (
-          <Button size="28" variant="ghost" onClick={defaults.reset}>
-            {t("tasks.defaultView.reset")}
-          </Button>
-        )}
-        {space.can_manage && (
-          <Button
-            size="28"
-            variant="ghost"
-            onClick={() => setManagingDefault(true)}
-          >
-            {t("tasks.defaultView.manage")}
-          </Button>
-        )}
-      </div>
+          )}
+          {space.can_manage && (
+            <Button
+              size="28"
+              variant="ghost-muted"
+              onClick={() => setManagingDefault(true)}
+            >
+              {t("tasks.defaultView.manage")}
+            </Button>
+          )}
+        </div>
+      </header>
       {readOnlyReason && (
         <div className="px-4 pt-3">
           <RetiredBanner

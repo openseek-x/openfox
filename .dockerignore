@@ -1,0 +1,11 @@
+**
+!go.mod
+!go.sum
+!cmd/
+!cmd/openfox-server/
+!cmd/openfox-server/**
+!internal/
+!internal/**
+!db/
+!db/migrations/
+!db/migrations/*.sql

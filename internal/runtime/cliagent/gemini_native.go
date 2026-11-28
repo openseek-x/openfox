@@ -81,10 +81,12 @@ func (a *Adapter) detectGemini(ctx context.Context) (runtime.Capabilities, error
 	c := runtime.Capabilities{Runtime: NameGemini, Login: runtime.LoginUnknown, SupportsJSONEvents: true, SupportsCancel: true, SupportsResume: false, DirectoryModes: []string{"NONE", "WORKSPACE", "EXPLICIT"}}
 	install, e := a.geminiInstallation(ctx)
 	if e != nil {
+		c.Executable = install.Candidate.Path
 		c.Reason = e.Error()
 		return c, fmt.Errorf("%w: %s", runtime.ErrUnavailable, e)
 	}
-	c.Executable = install.Entry
+	c.Executable = install.Candidate.Path
+	c.DiscoverySource = install.Candidate.Source
 	root, e := a.makeStateDir()
 	if e != nil {
 		return c, e

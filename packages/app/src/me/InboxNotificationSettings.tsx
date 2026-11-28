@@ -74,7 +74,7 @@ export function InboxNotificationSettings({ onBack }: { onBack: () => void }) {
           {t("me.notifications.back")}
         </button>
         <header className="flex items-center gap-4">
-          <h1 className="flex-1 text-[24px] leading-8 font-medium">
+          <h1 className="flex-1 text-heading font-semibold tracking-[-0.015em] text-fg-default">
             {t("me.notifications.inbox.title")}
           </h1>
           <Button

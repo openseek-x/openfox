@@ -71,7 +71,7 @@ function SearchPanel({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-scrim/25 p-6 pt-[33vh]"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-scrim/30 p-6 pt-[33vh] backdrop-blur-[2px]"
       onPointerDown={dismissOnBackdrop(onClose)}
     >
       <div
@@ -79,7 +79,7 @@ function SearchPanel({
         role="dialog"
         aria-modal="true"
         aria-label={t("docs.search.label")}
-        className="flex w-[384px] max-w-full flex-col gap-2 rounded-xl bg-surface-card p-3 shadow-lg"
+        className="flex w-[384px] max-w-full flex-col gap-2 rounded-2xl border border-line-floating bg-surface-card p-3 shadow-dialog"
       >
         <div className="flex items-center gap-2">
           <TextInput

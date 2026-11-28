@@ -1,3 +1,4 @@
+import { AgentAvatar } from "../agents/AgentAvatar";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -9,7 +10,6 @@ import {
 } from "@openfox/api";
 import { useT, type MessageKey, type Translate } from "@openfox/i18n";
 import {
-  Avatar,
   Badge,
   Button,
   Callout,
@@ -229,7 +229,7 @@ function BindingRow({
   const expired = item.status === "EXPIRED";
   return (
     <div className="flex min-h-[68px] items-center gap-3 p-4">
-      <Avatar name={item.agent.name} kind="agent" size={32} />
+      <AgentAvatar agentId={item.agent.id} name={item.agent.name} size={32} />
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="truncate text-body font-medium">
           {item.agent.name}
@@ -357,7 +357,7 @@ function ScanDialog({
         .map((entry) => ({
           value: entry.id,
           label: entry.name,
-          icon: <Avatar name={entry.name} kind="agent" size={20} />,
+          icon: <AgentAvatar agentId={entry.id} name={entry.name} size={20} />,
           description: isAdmin
             ? t(
                 entry.mine

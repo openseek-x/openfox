@@ -139,7 +139,7 @@ func managedTelegram(ctx context.Context, tx pgx.Tx, org string, actor collabora
 			return r, err
 		}
 		if runtime != nil {
-			r.bot.Runtime = &FeishuBotRuntime{ComputerID: runtime.ComputerID, ComputerName: runtime.ComputerName, GrantID: runtime.GrantID, Runtime: runtime.Runtime, Model: runtime.Model}
+			r.bot.Runtime = &IMBotRuntime{ComputerID: runtime.ComputerID, ComputerName: runtime.ComputerName, GrantID: runtime.GrantID, Runtime: runtime.Runtime, Model: runtime.Model}
 		}
 	}
 	return r, nil
