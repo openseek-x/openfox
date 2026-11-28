@@ -1,6 +1,7 @@
 import { workspaceStore } from "../workspaceStorage";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { desktopBridge } from "../../desktop";
 
 // 阶段 10d · 产物面板的地址参数：?artifact=<产物 ID> 打开面板并选中该产物；?artifact=list 打开列表标签；
 // 显式 URL 优先；否则按账号/组织/会话恢复标签顺序和选中项。
@@ -8,6 +9,8 @@ import { useSearchParams } from "react-router-dom";
 export const ARTIFACT_PARAM = "artifact";
 export const ARTIFACT_LIST = "list";
 export const BROWSER_PANEL = "browser";
+export const COMMENTS_PANEL = "comments";
+export const PROPOSALS_PANEL = "proposals";
 export const NEW_PANEL = "new";
 // Bare artifact IDs are fixed revisions. Only an explicit head key follows updates.
 export const currentTabKey = (contentId: string) => `current:${contentId}`;
@@ -24,7 +27,13 @@ export const documentTab = (id: string) => {
   return match ? { spaceId: match[1]!, nodeId: match[2]! } : null;
 };
 export const isArtifactTab = (id: string) =>
-  ![ARTIFACT_LIST, NEW_PANEL, BROWSER_PANEL].includes(id) &&
+  ![
+    ARTIFACT_LIST,
+    NEW_PANEL,
+    BROWSER_PANEL,
+    COMMENTS_PANEL,
+    PROPOSALS_PANEL,
+  ].includes(id) &&
   !isBrowserTab(id) &&
   !isProposalTab(id) &&
   !documentTab(id);
@@ -32,7 +41,7 @@ export const isArtifactTab = (id: string) =>
 export interface ArtifactPanelState {
   /** 面板是否打开 */
   open: boolean;
-  /** 当前选中：文件、网页、产物列表或新标签入口。 */
+  /** 当前选中：文件、网页、评论、提案、产物列表或新标签入口。 */
   selected: string | null;
   /** 已打开的工作区标签，按显示顺序。 */
   tabs: string[];
@@ -41,6 +50,8 @@ export interface ArtifactPanelState {
   select: (id: string) => void;
   closeTab: (id: string) => void;
   closePanel: () => void;
+  /** 切换右侧工作区开合，重新打开时恢复上次标签页。 */
+  togglePanel: (fallback?: string) => void;
   /** 地址里的产物在本会话不存在：静默移除 */
   forget: (id: string) => void;
   syncBrowserTabs: (ids: string[]) => void;
@@ -204,6 +215,58 @@ export function useArtifactPanel(
     [setTabs],
   );
 
+  const lastSelected = useRef<string | null>(selected);
+  useEffect(() => {
+    lastSelected.current = null;
+  }, [key]);
+  useEffect(() => {
+    if (selected) lastSelected.current = selected;
+  }, [selected]);
+
+  const togglePanel = useCallback(
+    (fallback = NEW_PANEL) => {
+      if (selected) {
+        setSelected(null);
+        return;
+      }
+      const remembered = lastSelected.current;
+      const target =
+        remembered &&
+        (tabs.includes(remembered) || remembered === BROWSER_PANEL)
+          ? remembered
+          : (tabs.at(-1) ?? fallback);
+      setSelected(target);
+    },
+    [selected, tabs, setSelected],
+  );
+
+  // ⌘⇧\ / Ctrl+Shift+\ 快捷切换右侧工作区（同步监听桌面端内置浏览器内按键透传）
+  useEffect(() => {
+    if (!conversationId) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.isComposing ||
+        !(event.metaKey || event.ctrlKey) ||
+        !event.shiftKey ||
+        event.altKey
+      )
+        return;
+      if (event.code !== "Backslash" && event.key !== "\\" && event.key !== "|")
+        return;
+      event.preventDefault();
+      togglePanel();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    const unlisten = desktopBridge()?.onBrowserToggleSidebar?.((event) => {
+      if (event.side === "right") togglePanel();
+    });
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      unlisten?.();
+    };
+  }, [conversationId, togglePanel]);
+
   return useMemo(
     () => ({
       open: Boolean(selected),
@@ -218,11 +281,21 @@ export function useArtifactPanel(
       closePanel: () => {
         setSelected(null);
       },
+      togglePanel,
       forget: (id: string) => {
         setTabs((current) => current.filter((tab) => tab !== id));
         if (selected === id) setSelected(null, true);
       },
     }),
-    [selected, tabs, setSelected, closeTab, syncBrowserTabs, reorder, setTabs],
+    [
+      selected,
+      tabs,
+      setSelected,
+      closeTab,
+      syncBrowserTabs,
+      reorder,
+      togglePanel,
+      setTabs,
+    ],
   );
 }

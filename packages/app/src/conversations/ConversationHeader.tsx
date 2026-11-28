@@ -51,6 +51,7 @@ import {
   useConversations,
 } from "./queries";
 import { elapsedMs, formatDuration } from "./steps";
+import { WorkspaceHeaderButtons } from "./WorkspaceHeaderButtons";
 import { useWorkspaceReviewMenu } from "./WorkspaceReviewMenu";
 
 /** 每秒刷新的当前时间（工作中计时） */
@@ -588,10 +589,11 @@ export function ConversationHeader({
         className="flex h-7 shrink-0 items-center gap-1 rounded-md px-1.5 text-body-sm text-fg-secondary hover:bg-control-hover"
       >
         <Icon name="hifox-settings-sliders" size={14} />
-        <span className="sr-only @lg:not-sr-only">
+        <span className="sr-only @2xl:not-sr-only">
           {t("chat.header.settings")}
         </span>
       </button>
+      <WorkspaceHeaderButtons conversationId={conversation?.id} />
       {conversation && (
         <>
           {sharing && (

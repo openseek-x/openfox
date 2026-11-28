@@ -213,6 +213,9 @@ export interface DesktopBridge {
   onBrowserFocusAddress?(
     callback: (event: { lease: string }) => void,
   ): () => void;
+  onBrowserToggleSidebar?(
+    callback: (event: { lease: string; side: "left" | "right" }) => void,
+  ): () => void;
   getMachineProxy?(target: DesktopLocalTarget): Promise<DesktopMachineProxy>;
   saveMachineProxy?(
     input: DesktopLocalTarget & {
@@ -301,10 +304,12 @@ export interface DesktopBrowserTab {
   canAllowLocal?: boolean;
   canForward: boolean;
 }
+export type BrowserAnnotationMode = "element" | "text" | "region";
+
 export interface DesktopBrowserState {
   annotation?: {
     enabled: boolean;
-    mode: "element" | "text" | "region";
+    mode: BrowserAnnotationMode;
     frozen: boolean;
     error: string | null;
     selection: BrowserSelection | null;
@@ -344,7 +349,7 @@ export interface BrowserSelection {
 }
 export interface DesktopBrowserCommand {
   enabled?: boolean;
-  mode?: "element" | "text" | "region";
+  mode?: BrowserAnnotationMode;
   selectionId?: string;
   live?: BrowserComment["anchor"]["live"];
   lease: string;
@@ -362,6 +367,7 @@ export interface DesktopBrowserCommand {
     | "clear"
     | "allow-origin"
     | "reveal-download"
+    | "open-external"
     | "allow-control"
     | "take-over"
     | "annotate"
@@ -371,6 +377,8 @@ export interface DesktopBrowserCommand {
   tabId?: string;
   url?: string;
   visible?: boolean;
+  /** 原生视图因瞬时菜单或窗口被其他应用遮挡而暂时隐藏，保留当前标签上下文与 Agent 共用。 */
+  occluded?: boolean;
   bounds?: { x: number; y: number; width: number; height: number };
   downloadId?: string;
   runId?: string;

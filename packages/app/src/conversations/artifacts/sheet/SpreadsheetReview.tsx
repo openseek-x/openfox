@@ -14,6 +14,7 @@ import type {
   OfficeView,
 } from "@openfox/api";
 import { useT } from "@openfox/i18n";
+import { Icon, IconButton, cn } from "@openfox/ui";
 import type { SelectionRect } from "../selection";
 import { utf8Length } from "../anchors";
 import { regionFromPoints } from "../regions";
@@ -30,8 +31,14 @@ import {
 import type { SheetFrame, SheetReply, SheetRequest } from "./protocol";
 const LEFT = 40,
   TOP = 24;
-const button =
-  "rounded border border-line-default px-2 py-1 text-body-sm disabled:opacity-50";
+const SHEET_ZOOM_STEPS = [0.5, 0.75, 1, 1.25, 1.5] as const;
+const segmentBtn = (active: boolean) =>
+  cn(
+    "rounded-md px-2 py-0.5 text-caption transition-colors disabled:opacity-50",
+    active
+      ? "border border-line-subtle bg-surface-card font-medium text-fg-default"
+      : "border border-transparent text-fg-secondary hover:text-fg-default",
+  );
 export function SpreadsheetReview({
   blob,
   view,
@@ -527,41 +534,82 @@ export function SpreadsheetReview({
   };
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="order-last flex shrink-0 flex-wrap items-center gap-2 border-t border-line-default px-3 py-1.5 text-caption text-fg-muted">
-        <select
-          aria-label={t("artifacts.review.zoom")}
-          className={button}
-          value={zoom}
-          onChange={(e) => {
-            setZoom(e.target.value === "fit" ? "fit" : Number(e.target.value));
-            scroll.current?.scrollTo(0, 0);
-            setOffset({ x: 0, y: 0 });
-          }}
+      <div className="order-last flex shrink-0 flex-wrap items-center gap-2 border-t border-line-subtle bg-surface-card px-3 py-1.5 text-caption text-fg-muted">
+        <div className="inline-flex items-center gap-0.5 rounded-full border border-line-subtle bg-surface-muted p-0.5">
+          <IconButton
+            label={t("artifacts.review.zoomOut")}
+            icon={<Icon name="minus" size={14} />}
+            size="28"
+            className="size-6 rounded-full!"
+            disabled={zoom === SHEET_ZOOM_STEPS[0]}
+            onClick={() => {
+              const current = zoom === "fit" ? scale : zoom;
+              const prev = [...SHEET_ZOOM_STEPS]
+                .reverse()
+                .find((v) => v < current - 0.01);
+              setZoom(prev ?? SHEET_ZOOM_STEPS[0]);
+              scroll.current?.scrollTo(0, 0);
+              setOffset({ x: 0, y: 0 });
+            }}
+          />
+          <select
+            aria-label={t("artifacts.review.zoom")}
+            className="h-6 cursor-pointer rounded-full bg-transparent px-1.5 text-caption font-medium text-fg-default outline-none"
+            value={zoom}
+            onChange={(e) => {
+              setZoom(
+                e.target.value === "fit" ? "fit" : Number(e.target.value),
+              );
+              scroll.current?.scrollTo(0, 0);
+              setOffset({ x: 0, y: 0 });
+            }}
+          >
+            <option value="fit">{t("artifacts.review.fitWidth")}</option>
+            {SHEET_ZOOM_STEPS.map((v) => (
+              <option key={v} value={v}>
+                {v * 100}%
+              </option>
+            ))}
+          </select>
+          <IconButton
+            label={t("artifacts.review.zoomIn")}
+            icon={<Icon name="plus" size={14} />}
+            size="28"
+            className="size-6 rounded-full!"
+            disabled={zoom === SHEET_ZOOM_STEPS[SHEET_ZOOM_STEPS.length - 1]}
+            onClick={() => {
+              const current = zoom === "fit" ? scale : zoom;
+              const next = SHEET_ZOOM_STEPS.find((v) => v > current + 0.01);
+              setZoom(next ?? SHEET_ZOOM_STEPS[SHEET_ZOOM_STEPS.length - 1]!);
+              scroll.current?.scrollTo(0, 0);
+              setOffset({ x: 0, y: 0 });
+            }}
+          />
+        </div>
+        <div className="inline-flex items-center gap-0.5 rounded-lg border border-line-subtle bg-surface-muted p-0.5">
+          <button
+            type="button"
+            className={segmentBtn(mode === "cells")}
+            disabled={!editable || !frame}
+            aria-pressed={mode === "cells"}
+            onClick={() => setMode("cells")}
+          >
+            {t("artifacts.review.sheetCells")}
+          </button>
+          <button
+            type="button"
+            className={segmentBtn(mode === "objects")}
+            disabled={!editable || !frame}
+            aria-pressed={mode === "objects"}
+            onClick={() => setMode("objects")}
+          >
+            {t("artifacts.review.officeSelectObject")}
+          </button>
+        </div>
+        <output
+          aria-live="polite"
+          className="font-mono text-caption text-fg-muted"
         >
-          <option value="fit">{t("artifacts.review.fitWidth")}</option>
-          {[0.5, 0.75, 1, 1.25, 1.5].map((v) => (
-            <option key={v} value={v}>
-              {v * 100}%
-            </option>
-          ))}
-        </select>
-        <button
-          className={button}
-          disabled={!editable || !frame}
-          aria-pressed={mode === "cells"}
-          onClick={() => setMode("cells")}
-        >
-          {t("artifacts.review.sheetCells")}
-        </button>
-        <button
-          className={button}
-          disabled={!editable || !frame}
-          aria-pressed={mode === "objects"}
-          onClick={() => setMode("objects")}
-        >
-          {t("artifacts.review.officeSelectObject")}
-        </button>
-        <output aria-live="polite" className="text-caption text-fg-muted">
           {selection ? rangeName(selection) : ""}
         </output>
       </div>
@@ -742,16 +790,17 @@ export function SpreadsheetReview({
       <div
         role="tablist"
         aria-label={t("artifacts.review.sheetTabs")}
-        className="flex gap-1 overflow-x-auto"
+        className="flex shrink-0 gap-1 overflow-x-auto border-t border-line-subtle bg-surface-muted/60 px-2 py-1"
       >
         {sheets
           .filter((s) => !s.hidden)
           .map((s) => (
             <button
               key={s.index}
+              type="button"
               role="tab"
               aria-selected={s.index === index}
-              className={button}
+              className={segmentBtn(s.index === index)}
               disabled={!frame && s.index !== index}
               onClick={() => changeSheet(s.index)}
             >

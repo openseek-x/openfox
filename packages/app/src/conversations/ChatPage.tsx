@@ -24,6 +24,7 @@ import {
   useAgent,
   useCrew,
   useDirectory,
+  useMe,
   useStandaloneAgent,
 } from "../agents/queries";
 import type { ComposerAgent } from "./Composer";
@@ -487,10 +488,15 @@ export function ConversationLayout({
   };
 }) {
   const t = useT();
+  const me = useMe();
+  const reviewDisabled =
+    conversation.owner_user_id !== me.data?.id ||
+    conversation.lifecycle !== "OPEN";
   return (
     <ConversationFrame
       orgId={orgId}
       conversationId={conversation.id}
+      reviewDisabled={reviewDisabled}
       header={
         <ConversationHeader
           orgId={orgId}

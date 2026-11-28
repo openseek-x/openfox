@@ -192,10 +192,17 @@ export async function resetDrafts(erase = true): Promise<void> {
 }
 
 const emptyFileContexts: DraftFileContext[] = [];
+const emptyBrowserContexts: DraftBrowserContext[] = [];
 export function useDraftFileContexts(key: string): DraftFileContext[] {
   return useSyncExternalStore(
     (listener) => subscribeDraft(key, listener),
     () => readDraft(key)?.fileContexts ?? emptyFileContexts,
+  );
+}
+export function useDraftBrowserContexts(key: string): DraftBrowserContext[] {
+  return useSyncExternalStore(
+    (listener) => subscribeDraft(key, listener),
+    () => readDraft(key)?.browserContexts ?? emptyBrowserContexts,
   );
 }
 function changeFileContexts(
@@ -246,6 +253,34 @@ export function removeFileComment(
     return comments.length ? [{ ...c, comments }] : [];
   });
   changeFileContexts(key, next);
+}
+/** 就地更新待发送文件批注正文（保持锚点不变并校验 8 KiB/256 KiB 体积上限）。 */
+export function updateFileComment(
+  key: string,
+  contextID: string,
+  commentID: string,
+  body: string,
+): boolean {
+  const trimmed = body.trim();
+  if (!trimmed || new TextEncoder().encode(trimmed).length > 8192) return false;
+  const contexts = readDraft(key)?.fileContexts ?? [];
+  let updated = false;
+  const next = contexts.map((c) => {
+    if (c.id !== contextID) return c;
+    return {
+      ...c,
+      comments: c.comments.map((a) => {
+        if (a.thread_id !== commentID) return a;
+        updated = true;
+        return { ...a, body: trimmed };
+      }),
+    };
+  });
+  if (!updated) return false;
+  if (new TextEncoder().encode(JSON.stringify(next)).length > 256 * 1024)
+    return false;
+  changeFileContexts(key, next);
+  return true;
 }
 // The body remains readable in chat; full anchors travel as structured context.
 export function fileFeedbackBody(
@@ -313,6 +348,35 @@ export function removeBrowserComment(key: string, id: string) {
   });
   saveDraft(key, { ...current, browserContexts });
   for (const listener of [...(listeners.get(key) ?? [])]) listener();
+}
+/** 就地更新待发送网页批注正文（保持元素/区域锚点与截图不变）。 */
+export function updateBrowserComment(
+  key: string,
+  id: string,
+  body: string,
+): boolean {
+  const trimmed = body.trim();
+  if (!trimmed || new TextEncoder().encode(trimmed).length > 8192) return false;
+  const current = readDraft(key);
+  if (!current?.browserContexts?.length) return false;
+  let updated = false;
+  const browserContexts = current.browserContexts.map((c) => ({
+    ...c,
+    comments: c.comments.map((a) => {
+      if (a.id !== id) return a;
+      updated = true;
+      return { ...a, body: trimmed };
+    }),
+  }));
+  if (!updated) return false;
+  if (
+    new TextEncoder().encode(JSON.stringify(browserContexts)).length >
+    256 * 1024
+  )
+    return false;
+  saveDraft(key, { ...current, browserContexts });
+  for (const listener of [...(listeners.get(key) ?? [])]) listener();
+  return true;
 }
 
 const annotationBodies = scopedMap<string>("annotation:");

@@ -33,17 +33,17 @@ export function renderTokens(tokens: readonly CodeToken[]): ReactNode[] {
 }
 
 /**
- * 返回高亮后的内容；还没加载好、语言不支持或不需要高亮时返回 null。
- * language 为 null 且 auto 为 true 时按内容自动识别（只用于较短的代码）。
+ * 返回高亮节点与异步加载状态；加载完成前 pending 为 true，完成后（含不支持语言或失败回落纯文本）为 false。
  */
-export function useHighlight(
+export function useHighlightState(
   code: string,
   language: string | null,
   options: { auto?: boolean } = {},
-): ReactNode[] | null {
+): { nodes: ReactNode[] | null; pending: boolean } {
   const auto = options.auto ?? false;
   const wanted = Boolean(code) && (language !== null || auto);
   const [module, setModule] = useState<HighlightModule | null>(loaded);
+  const [failed, setFailed] = useState(false);
   useEffect(() => {
     if (!wanted || module) return;
     let alive = true;
@@ -52,18 +52,32 @@ export function useHighlight(
         if (alive) setModule(next);
       },
       () => {
-        // 高亮库加载失败时保持纯文本
+        // 高亮库加载失败时保持纯文本，并结束 pending 状态
+        if (alive) setFailed(true);
       },
     );
     return () => {
       alive = false;
     };
   }, [wanted, module]);
-  return useMemo(() => {
+  const nodes = useMemo(() => {
     if (!wanted || !module) return null;
     const tokens = module.highlightTokens(code, language, { auto });
     return tokens ? renderTokens(tokens) : null;
   }, [wanted, module, code, language, auto]);
+  return { nodes, pending: wanted && !module && !failed };
+}
+
+/**
+ * 返回高亮后的内容；还没加载好、语言不支持或不需要高亮时返回 null。
+ * language 为 null 且 auto 为 true 时按内容自动识别（只用于较短的代码）。
+ */
+export function useHighlight(
+  code: string,
+  language: string | null,
+  options: { auto?: boolean } = {},
+): ReactNode[] | null {
+  return useHighlightState(code, language, options).nodes;
 }
 
 /** <code> 内的内容：有高亮就用高亮，否则原文。 */

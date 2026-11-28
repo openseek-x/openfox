@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { isApiError, type WorkspaceCommentSource } from "@openfox/api";
 import { useT } from "@openfox/i18n";
+import { Button } from "@openfox/ui";
 import { useApi } from "../../context";
 import type { BrowserSelection } from "../../desktop";
 import type { BrowserSession } from "./useBrowserSession";
@@ -113,7 +114,7 @@ export function BrowserRebindEditor({
             }
           />
           <div
-            className="pointer-events-none absolute border-2 border-blue-500 bg-blue-500/10"
+            className="pointer-events-none absolute border-2 border-accent bg-accent/10"
             style={{
               left: `${(rect.x / v.width) * 100}%`,
               top: `${(rect.y / v.height) * 100}%`,
@@ -126,14 +127,25 @@ export function BrowserRebindEditor({
       <div
         className={`${selection.image ? "absolute left-2 right-2 top-2" : ""} mx-auto flex max-w-96 flex-wrap items-center gap-2 rounded-2xl border border-line-floating bg-surface-card p-2 text-caption shadow-popover`}
       >
-        <span>{t("artifacts.resolution.rebindHint")}</span>
-        <button type="button" disabled={busy} onClick={() => void confirm()}>
+        <span className="min-w-0 flex-1 text-fg-secondary">
+          {t("artifacts.resolution.rebindHint")}
+        </span>
+        <Button
+          size="28"
+          variant="primary"
+          disabled={busy}
+          onClick={() => void confirm()}
+        >
           {t("artifacts.resolution.confirmRebind")}
-        </button>
-        <button type="button" disabled={busy} onClick={cancel}>
+        </Button>
+        <Button size="28" variant="ghost" disabled={busy} onClick={cancel}>
           {t("common.cancel")}
-        </button>
-        {error && <p role="alert">{t("artifacts.resolution.failed")}</p>}
+        </Button>
+        {error && (
+          <p role="alert" className="w-full text-danger">
+            {t("artifacts.resolution.failed")}
+          </p>
+        )}
       </div>
     </div>
   );

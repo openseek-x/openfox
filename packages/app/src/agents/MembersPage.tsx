@@ -22,7 +22,6 @@ import { CreateCrewEntry } from "./CreateCrewDialog";
 import { InviteDialog } from "./InviteDialog";
 import { parseContact, runtimeLabel } from "./model";
 import { useAgentSettingsParam, useCrewSettingsParam } from "./params";
-import { SidebarCollapseButton } from "../shell/SidebarCollapseButton";
 import {
   rememberSpace,
   useContacts,
@@ -34,13 +33,7 @@ import {
 const contactValue = (item: Pick<ContactItem, "kind" | "id">) =>
   `${item.kind}:${item.id}`;
 
-export function MembersNavigation({
-  orgId,
-  onCollapse,
-}: {
-  orgId: string;
-  onCollapse: () => void;
-}) {
+export function MembersNavigation({ orgId }: { orgId: string }) {
   const t = useT();
   const contacts = useContacts(orgId);
   const role = useOrgRole(orgId);
@@ -78,13 +71,12 @@ export function MembersNavigation({
   return (
     <nav
       aria-label={t("agents.contacts.title")}
-      className="group/panel flex min-w-0 flex-1 flex-col overflow-hidden px-1.5 pt-1.5 pb-3"
+      className="flex min-w-0 flex-1 flex-col overflow-hidden px-1.5 pt-1.5 pb-3"
     >
       <div className="flex h-11 shrink-0 items-center gap-1 pr-1 pl-2.5">
         <h2 className="min-w-0 flex-1 truncate text-body font-semibold tracking-[-0.01em] text-fg-default">
           {t("agents.contacts.title")}
         </h2>
-        <SidebarCollapseButton onClick={onCollapse} />
         <Menu
           label={t("agents.contacts.newMenu")}
           placement="bottom-end"

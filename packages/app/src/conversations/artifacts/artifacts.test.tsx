@@ -578,6 +578,103 @@ describe("会话产物 · 预览规则", () => {
     );
     expect(aside.querySelector("iframe")).toBeNull();
   });
+
+  it("顶栏工作区按钮与 ⌘⇧\\ 快捷键可一键开合并恢复上次标签；启动页展示最近产物与评论/提案直达", async () => {
+    open("/o/o1/chat/c1", { list: [MD, CSV] });
+    const user = userEvent.setup();
+    const toggle = await screen.findByRole("button", { name: "打开工作区" });
+    await user.click(toggle);
+    const aside = await panel();
+    // 启动页展示最近产物、已保存评论与修改提案入口
+    expect(within(aside).getByText("最近产物")).toBeVisible();
+    expect(
+      within(aside).getByRole("button", { name: "已保存评论" }),
+    ).toBeVisible();
+    expect(
+      within(aside).getByRole("button", { name: "修改提案" }),
+    ).toBeVisible();
+    // 从最近产物直达报告.md
+    await user.click(within(aside).getByRole("button", { name: "报告.md" }));
+    expect(
+      await within(aside).findByRole("heading", { name: "周报标题" }),
+    ).toBeVisible();
+    // ⌘⇧\ 收起工作区，再次按下恢复「报告.md」标签
+    fireEvent.keyDown(window, {
+      key: "\\",
+      code: "Backslash",
+      metaKey: true,
+      shiftKey: true,
+    });
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("complementary", { name: "会话产物" }),
+      ).not.toBeInTheDocument(),
+    );
+    fireEvent.keyDown(window, {
+      key: "\\",
+      code: "Backslash",
+      metaKey: true,
+      shiftKey: true,
+    });
+    const reopened = await panel();
+    expect(
+      within(reopened).getByRole("tab", { name: "报告.md" }),
+    ).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("右侧工作区按含边框外宽判断 460px 断点：459px 双行、460px 与 461px 均为单行顶栏", async () => {
+    let observedCallback: ResizeObserverCallback | null = null;
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(callback: ResizeObserverCallback) {
+          observedCallback = callback;
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
+    open("/o/o1/chat/c1?artifact=a-md", { list: [MD] });
+    const aside = await panel();
+    await within(aside).findByRole("heading", { name: "周报标题" });
+
+    let outerWidth = 460;
+    vi.spyOn(aside, "getBoundingClientRect").mockImplementation(
+      () => ({ width: outerWidth }) as DOMRect,
+    );
+    // 模拟 1px 左边框导致 clientWidth 比外宽少 1px（460px 外宽对应 459px clientWidth）
+    vi.spyOn(aside, "clientWidth", "get").mockImplementation(
+      () => outerWidth - 1,
+    );
+
+    const triggerResize = (width: number) => {
+      outerWidth = width;
+      act(() => {
+        observedCallback?.([], {} as ResizeObserver);
+      });
+    };
+
+    const toolbarInHeader = () => {
+      const topBar = aside.firstElementChild?.nextElementSibling;
+      const modeGroup = within(aside).getByRole("group", { name: "查看方式" });
+      return Boolean(topBar?.contains(modeGroup));
+    };
+
+    triggerResize(459);
+    expect(toolbarInHeader()).toBe(false);
+
+    triggerResize(460);
+    expect(toolbarInHeader()).toBe(true);
+
+    triggerResize(461);
+    expect(toolbarInHeader()).toBe(true);
+
+    triggerResize(459);
+    expect(toolbarInHeader()).toBe(false);
+
+    triggerResize(460);
+    expect(toolbarInHeader()).toBe(true);
+  });
 });
 
 describe("会话产物 · 实时", () => {

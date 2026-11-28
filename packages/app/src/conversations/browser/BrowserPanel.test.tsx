@@ -377,3 +377,207 @@ it("keeps control, download reveal and confirmed site-data clearing accessible i
   expect(invoke).toHaveBeenCalledWith({ lease: "lease-a", action: "clear" });
   confirm.mockRestore();
 });
+
+it("deduplicates identical layout IPC calls during unrelated DOM mutations", async () => {
+  current.tabs[0]!.url = "https://example.com";
+  const frames: FrameRequestCallback[] = [];
+  vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
+    frames.push(cb);
+    return frames.length;
+  });
+  vi.stubGlobal("cancelAnimationFrame", () => {});
+  render(panel());
+  await waitFor(() => expect(mount).toHaveBeenCalled());
+  const flush = () =>
+    act(() => {
+      const list = frames.splice(0, frames.length);
+      list.forEach((cb) => cb(0));
+    });
+  flush();
+  const layoutCalls = () =>
+    invoke.mock.calls.filter(([call]) => call.action === "layout").length;
+  expect(layoutCalls()).toBe(1);
+  // 模拟对话区流式输出时频繁 DOM 变动：视口尺寸与遮挡状态未变，不应重复下发 layout IPC
+  const streamNode = document.createElement("div");
+  document.body.appendChild(streamNode);
+  streamNode.textContent = "token-1";
+  await act(async () => {
+    await Promise.resolve();
+  });
+  flush();
+  streamNode.textContent = "token-2";
+  await act(async () => {
+    await Promise.resolve();
+  });
+  flush();
+  expect(layoutCalls()).toBe(1);
+  streamNode.remove();
+});
+
+it("shows 3-mode segmented annotation bar when enabled, switches mode, and exits on Escape", async () => {
+  current.tabs[0]!.url = "https://example.com";
+  current.annotation = {
+    enabled: true,
+    mode: "element",
+    frozen: false,
+    error: null,
+    selection: null,
+  };
+  render(panel());
+  const user = userEvent.setup();
+  await waitFor(() =>
+    expect(screen.getByRole("group", { name: "选择方式" })).toBeVisible(),
+  );
+  expect(screen.queryByRole("combobox", { name: "选择方式" })).toBeNull();
+  await user.click(screen.getByRole("button", { name: "文字" }));
+  expect(invoke).toHaveBeenCalledWith({
+    lease: "lease-a",
+    action: "annotate",
+    enabled: true,
+    mode: "text",
+  });
+  await user.click(screen.getByRole("button", { name: "区域" }));
+  expect(invoke).toHaveBeenCalledWith({
+    lease: "lease-a",
+    action: "annotate",
+    enabled: true,
+    mode: "region",
+  });
+  await user.keyboard("{Escape}");
+  expect(invoke).toHaveBeenCalledWith({
+    lease: "lease-a",
+    action: "annotate",
+    enabled: false,
+    mode: "element",
+  });
+});
+
+it("opens current page in system browser via open-external and reports failures", async () => {
+  current.tabs[0]!.url = "https://example.com/docs";
+  const baseImpl = invoke.getMockImplementation()!;
+  invoke.mockImplementation(async (cmd) => {
+    if (cmd.action === "open-external") throw new Error("failed");
+    return baseImpl(cmd);
+  });
+  render(panel());
+  const user = userEvent.setup();
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "批注" })).toBeEnabled(),
+  );
+  await user.click(screen.getByRole("button", { name: "浏览器更多操作" }));
+  await user.click(
+    screen.getByRole("menuitem", { name: "在系统浏览器中打开" }),
+  );
+  expect(invoke).toHaveBeenCalledWith({
+    lease: "lease-a",
+    action: "open-external",
+    tabId: "tab-a",
+  });
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "无法在系统浏览器中打开当前页面",
+  );
+});
+
+it("marks dropdown menus as transient occlusion to preserve active Agent control while modals revoke", async () => {
+  current.tabs[0]!.url = "https://example.com/review/panel-b?case=ope23#sample";
+  current.control = {
+    connected: true,
+    pending: false,
+    active: true,
+    epoch: 2,
+    runId: "run-1",
+    generation: 1,
+    clientMessageId: null,
+    origins: ["https://example.com"],
+    error: null,
+  };
+  const frames: FrameRequestCallback[] = [];
+  vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
+    frames.push(cb);
+    return frames.length;
+  });
+  vi.stubGlobal("cancelAnimationFrame", () => {});
+  const rectSpy = vi
+    .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+    .mockReturnValue({
+      x: 10,
+      y: 88,
+      width: 500,
+      height: 600,
+      top: 88,
+      left: 10,
+      right: 510,
+      bottom: 688,
+      toJSON: () => ({}),
+    } as DOMRect);
+  const clientRectsSpy = vi
+    .spyOn(HTMLElement.prototype, "getClientRects")
+    .mockImplementation(function (this: HTMLElement) {
+      return [{ width: 200, height: 100 } as DOMRect] as unknown as DOMRectList;
+    });
+  try {
+    render(panel());
+    const user = userEvent.setup();
+    await waitFor(() => expect(mount).toHaveBeenCalled());
+    const flush = () =>
+      act(() => {
+        const list = frames.splice(0, frames.length);
+        list.forEach((cb) => cb(0));
+      });
+    flush();
+    expect(invoke).toHaveBeenLastCalledWith({
+      lease: "lease-a",
+      action: "layout",
+      visible: true,
+      bounds: { x: 10, y: 88, width: 500, height: 600 },
+    });
+
+    // 打开「更多」菜单：发送 occluded: true 隐藏原生视图但不撤销共用
+    await user.click(screen.getByRole("button", { name: "浏览器更多操作" }));
+    flush();
+    expect(invoke).toHaveBeenLastCalledWith({
+      lease: "lease-a",
+      action: "layout",
+      visible: false,
+      occluded: true,
+    });
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Agent 正在共用浏览器",
+    );
+
+    // 从菜单选择系统外开：仍保留共用并恢复布局
+    await user.click(
+      screen.getByRole("menuitem", { name: "在系统浏览器中打开" }),
+    );
+    flush();
+    expect(invoke).toHaveBeenCalledWith({
+      lease: "lease-a",
+      action: "open-external",
+      tabId: "tab-a",
+    });
+    expect(invoke).toHaveBeenLastCalledWith({
+      lease: "lease-a",
+      action: "layout",
+      visible: true,
+      bounds: { x: 10, y: 88, width: 500, height: 600 },
+    });
+
+    // 打开模态框：不携带 occluded: true，允许宿主撤权
+    const dialog = document.createElement("div");
+    dialog.setAttribute("role", "dialog");
+    document.body.appendChild(dialog);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    flush();
+    expect(invoke).toHaveBeenLastCalledWith({
+      lease: "lease-a",
+      action: "layout",
+      visible: false,
+    });
+    dialog.remove();
+  } finally {
+    rectSpy.mockRestore();
+    clientRectsSpy.mockRestore();
+  }
+});

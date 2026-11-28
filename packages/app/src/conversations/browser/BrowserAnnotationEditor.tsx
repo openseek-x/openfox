@@ -91,6 +91,17 @@ export function BrowserAnnotationEditor({
   const rect = selection.anchor.visual.rect,
     visual = selection.anchor.visual;
   const frozen = Boolean(selection.image);
+  const modeBadge =
+    selection.anchor.kind === "text"
+      ? t("artifacts.browser.selectedText")
+      : selection.anchor.kind === "region"
+        ? t("artifacts.browser.selectedRegion")
+        : t("artifacts.browser.selectedElement");
+  const previewLabel =
+    selection.anchor.snapshot.quote?.trim() ||
+    selection.anchor.snapshot.name?.trim() ||
+    selection.anchor.snapshot.selector_hint?.trim() ||
+    "";
   if (binding)
     return (
       <BrowserRebindEditor
@@ -120,7 +131,7 @@ export function BrowserAnnotationEditor({
       )}
       {frozen && (
         <div
-          className="pointer-events-none absolute border-2 border-blue-500 bg-blue-500/10"
+          className="pointer-events-none absolute border-2 border-accent bg-accent/10"
           style={{
             left: `${(rect.x / visual.width) * 100}%`,
             top: `${(rect.y / visual.height) * 100}%`,
@@ -156,6 +167,17 @@ export function BrowserAnnotationEditor({
         <blockquote id={quoteId} className="sr-only">
           {selection.anchor.snapshot.quote || t("artifacts.browser.region")}
         </blockquote>
+        <div
+          aria-hidden="true"
+          className="flex items-center gap-1.5 px-2 pb-1 pt-0.5 text-[11px] text-fg-muted"
+        >
+          <span className="shrink-0 rounded-full bg-surface-muted px-1.5 py-0.5 font-medium text-fg-secondary">
+            {modeBadge}
+          </span>
+          {previewLabel && (
+            <span className="min-w-0 truncate">{previewLabel}</span>
+          )}
+        </div>
         <AnnotationInput
           value={body}
           onChange={(value) => {

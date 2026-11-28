@@ -31,7 +31,12 @@ export function useBrowserSession(
       const current = lease.current;
       if (!current) return;
       if (
-        !["layout", "allow-control", "reveal-download"].includes(input.action)
+        ![
+          "layout",
+          "allow-control",
+          "reveal-download",
+          "open-external",
+        ].includes(input.action)
       )
         disarm();
       try {

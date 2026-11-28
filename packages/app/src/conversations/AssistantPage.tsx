@@ -44,6 +44,11 @@ import { AssistantStorageDialog } from "./AssistantStorageDialog";
 import { RuntimeSessionExportDialog } from "./RuntimeSessionExportDialog";
 import { ConversationFrame } from "./ConversationFrame";
 import { ConversationView } from "./ConversationView";
+import { WorkspaceHeaderButtons } from "./WorkspaceHeaderButtons";
+import { useWorkspaceReviewMenu } from "./WorkspaceReviewMenu";
+import { BROWSER_PANEL, useOpenArtifactList } from "./artifacts/params";
+import { useConversationArtifacts } from "./artifacts/queries";
+import { desktopBridge } from "../desktop";
 import { newDefaultsOf } from "./useOverrides";
 import {
   chatErrorMessage,
@@ -240,6 +245,7 @@ function AssistantWorkspace({
 }) {
   const t = useT();
   const api = useApi();
+  const me = useMe();
   const queryClient = useQueryClient();
   const [params, setParams] = useSearchParams();
   const sessions = useAssistantSessions(orgId, true);
@@ -331,10 +337,17 @@ function AssistantWorkspace({
     />
   );
 
+  const reviewDisabled =
+    !conversation.data ||
+    conversation.data.owner_user_id !== me.data?.id ||
+    conversation.data.lifecycle !== "OPEN" ||
+    Boolean(conversation.data.archived_at);
+
   return (
     <ConversationFrame
       orgId={orgId}
       conversationId={conversation.data?.id ?? null}
+      reviewDisabled={reviewDisabled}
       header={header}
     >
       {loadingSession ? (
@@ -442,6 +455,18 @@ function AssistantHeader({
   const hasTask = Boolean(conversation?.task_id);
   const running =
     conversation?.status === "WORKING" || conversation?.status === "QUEUED";
+  const owner = conversation?.owner_user_id === me.data?.id;
+  const artifacts = useConversationArtifacts(orgId, conversation?.id);
+  const openArtifacts = useOpenArtifactList();
+  const openBrowser = useOpenArtifactList(BROWSER_PANEL);
+  const artifactCount = artifacts.data?.length ?? 0;
+  const workspaceReview = useWorkspaceReviewMenu(
+    orgId,
+    conversation?.id,
+    !owner ||
+      conversation?.lifecycle !== "OPEN" ||
+      Boolean(conversation?.archived_at),
+  );
 
   const copyLink = async () => {
     if (!currentId) return;
@@ -553,6 +578,24 @@ function AssistantHeader({
         >
           {t("chat.assistant.more.rename")}
         </MenuItem>
+        {artifactCount > 0 && (
+          <MenuItem icon={<Icon name="layers" />} onSelect={openArtifacts}>
+            {t("artifacts.menu")}
+          </MenuItem>
+        )}
+        {conversation &&
+          desktopBridge()?.platform === "darwin" &&
+          desktopBridge()?.browserMount && (
+            <MenuItem icon={<Icon name="globe" />} onSelect={openBrowser}>
+              {t("artifacts.browser.label")}
+            </MenuItem>
+          )}
+        {workspaceReview.items && (
+          <>
+            <MenuSeparator />
+            {workspaceReview.items}
+          </>
+        )}
         <MenuSeparator />
         <MenuItem
           icon={<Icon name="copy" />}
@@ -578,6 +621,8 @@ function AssistantHeader({
           {t("chat.assistant.more.exportRuntimeSession")}
         </MenuItem>
       </Menu>
+      <WorkspaceHeaderButtons conversationId={conversation?.id} />
+      {workspaceReview.dialog}
       {runtimeExportOpen && currentId && conversation && (
         <RuntimeSessionExportDialog
           orgId={orgId}

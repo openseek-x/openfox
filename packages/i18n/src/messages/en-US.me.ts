@@ -183,6 +183,17 @@ export const meEn: Messages["me"] = {
     },
     saved: "Keyboard shortcut preferences updated",
     saveFailed: "Couldn't update keyboard shortcuts",
+    sidebar: {
+      title: "Sidebars & workspace",
+      description:
+        "Toggle the left navigation and right workspace sidebars smoothly.",
+      toggleLeft: "Toggle left navigation sidebar",
+      toggleLeftHelp:
+        "Show or hide the navigation sidebar for more reading and chat space.",
+      toggleRight: "Toggle right workspace sidebar",
+      toggleRightHelp:
+        "Show or hide the artifacts, browser, and annotations sidebar in a conversation.",
+    },
   },
   // Stage 4c · Personal access tokens
   tokens: {
