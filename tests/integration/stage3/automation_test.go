@@ -309,7 +309,8 @@ func TestWebhookReceiverAndManagement(t *testing.T) {
 		}
 	}
 
-	if status, raw := post(signed("d-valid", body), body); status != http.StatusAccepted {
+	deliveryHeaders := signed("d-valid", body)
+	if status, raw := post(deliveryHeaders, body); status != http.StatusAccepted {
 		t.Fatalf("valid signed webhook = %d %s, want 202", status, raw)
 	}
 	if n := env.runCount(created.Automation.ID, "webhook"); n != 1 {
@@ -329,8 +330,8 @@ func TestWebhookReceiverAndManagement(t *testing.T) {
 		t.Fatalf("rejected deliveries = %d, want 3", n)
 	}
 
-	// 同一去重键 10 分钟内只处理一次。
-	if status, raw := post(signed("d-valid", body), body); status != http.StatusOK || !strings.Contains(string(raw), "ignored") {
+	// 重试复用首次投递的签名与时间戳，即使跨秒仍应识别为同一投递。
+	if status, raw := post(deliveryHeaders, body); status != http.StatusOK || !strings.Contains(string(raw), "ignored") {
 		t.Fatalf("duplicate delivery = %d %s, want 200 ignored", status, raw)
 	}
 
