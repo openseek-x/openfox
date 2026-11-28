@@ -6,7 +6,7 @@ const os = require("node:os");
 const net = require("node:net");
 const http = require("node:http");
 const { once } = require("node:events");
-const { _electron } = require("@playwright/test");
+const { _electron, expect } = require("@playwright/test");
 
 test(
   "BrowserHost authorizes one Run, serves native tools through the socket and revokes on human input",
@@ -288,12 +288,19 @@ test(
       await application.evaluate(() => globalThis.fixture.openedExternal),
       [origin + "/review/panel-b?case=ope23#sample"],
     );
+    if (process.platform === "darwin") {
+      // 系统外开的替身未改变前台窗口，补发实机覆盖窗口时的 hide 事件。
+      await application.evaluate(() => {
+        globalThis.fixture.window.emit("hide");
+      });
+    }
     const restoredState = await command({
       action: "layout",
       visible: true,
       bounds: { x: 0, y: 0, width: 900, height: 650 },
     });
     assert.equal(restoredState.control.active, true);
+    assert.equal(restoredState.control.epoch, state.control.epoch);
     assert.equal(
       (await call("observe", { action: "snapshot", tab_id: tab })).ok,
       true,
@@ -364,6 +371,54 @@ test(
       generation: 1,
       origins: [origin],
     });
+    if (process.platform === "darwin") {
+      // 每次恢复窗口后才尝试使用旧授权，避免由隐藏期间的工具调用代为撤权。
+      const assertRevokedAndRegrant = async () => {
+        assert.equal(
+          (await call("tabs", { action: "list" })).text,
+          "CONTROL_REVOKED",
+        );
+        await command({
+          action: "allow-control",
+          runId: ids.run,
+          generation: 1,
+          origins: [origin],
+        });
+      };
+      await application.evaluate(({ app }) => app.hide());
+      await expect
+        .poll(() => application.evaluate(({ app }) => app.isHidden()))
+        .toBe(true);
+      await application.evaluate(({ app }) => {
+        app.show();
+        globalThis.fixture.window.show();
+      });
+      await assertRevokedAndRegrant();
+      await application.evaluate(async () => {
+        const { window } = globalThis.fixture;
+        const hidden = new Promise((resolve) => {
+          window.once("close", (event) => {
+            event.preventDefault();
+            window.hide();
+            resolve();
+          });
+        });
+        window.close();
+        await hidden;
+        window.show();
+      });
+      await assertRevokedAndRegrant();
+      await application.evaluate(async () => {
+        const { window } = globalThis.fixture;
+        const minimized = new Promise((r) => window.once("minimize", r));
+        window.minimize();
+        await minimized;
+        const restored = new Promise((r) => window.once("restore", r));
+        window.restore();
+        await restored;
+      });
+      await assertRevokedAndRegrant();
+    }
     await application.evaluate(() => globalThis.fixture.host.suspend());
     assert.equal(
       (await call("tabs", { action: "list" })).text,

@@ -1,4 +1,4 @@
-const { session, dialog, shell } = require("electron");
+const { session, dialog, shell, systemPreferences } = require("electron");
 const { createHash, randomUUID } = require("node:crypto");
 const path = require("node:path");
 const { createBrowserSurface, validateBounds } = require("./surface.cjs");
@@ -362,9 +362,22 @@ function createBrowserHost({
     await Promise.all(tabs.map((tab) => tab.surface.close()));
     await group.network.dispose();
   };
-  const revokeHidden = () => mounted?.control?.takeOver();
-  window.on("hide", revokeHidden);
-  window.on("minimize", revokeHidden);
+  const revokeControl = () => mounted?.control?.takeOver();
+  const onWindowHide = () => {
+    // macOS 在窗口被其他应用完全遮挡时也会发出 hide，此时窗口仍然可见。
+    if (process.platform !== "darwin" || !window.isVisible()) revokeControl();
+  };
+  // 已经被遮挡的窗口，主动隐藏应用或关闭到菜单栏时可能不会再发出 hide。
+  const appHideSubscription =
+    process.platform === "darwin"
+      ? systemPreferences.subscribeLocalNotification(
+          "NSApplicationWillHideNotification",
+          revokeControl,
+        )
+      : null;
+  window.on("hide", onWindowHide);
+  window.on("minimize", revokeControl);
+  window.on("close", revokeControl);
   return {
     suspend() {
       suspended = true;
@@ -654,8 +667,11 @@ function createBrowserHost({
     },
     async dispose() {
       disposed = true;
-      window.removeListener("hide", revokeHidden);
-      window.removeListener("minimize", revokeHidden);
+      window.removeListener("hide", onWindowHide);
+      window.removeListener("minimize", revokeControl);
+      window.removeListener("close", revokeControl);
+      if (appHideSubscription !== null)
+        systemPreferences.unsubscribeLocalNotification(appHideSubscription);
       await this.reset();
     },
   };

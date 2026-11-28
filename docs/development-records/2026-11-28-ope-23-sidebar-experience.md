@@ -51,3 +51,13 @@
    - `desktop.ts` 与 `BrowserPanel.tsx` 将瞬时下拉菜单（`[role="menu"]` / `[role="listbox"]`）和外部应用遮挡（`document.hidden`）与模态框/设置抽屉区分，发送 `layout { visible: false, occluded: true }`；模态框、设置抽屉及视口坍缩仍发送不带 `occluded` 的隐藏布局触发撤权；
    - `apps/desktop/browser/host.cjs` 收到带有效 `group.bounds` 的 `occluded: true` 瞬时遮挡时隐藏原生 `WebContentsView` 与 `InputShield`（防止遮挡菜单与点击穿透）但不调用 `takeOver()`，并在 `createAgentControl.visible()` 中放行瞬时遮挡态以保障同一活跃运行在菜单开启及系统外开返回期间可连续操作；窗口真正 `hide`/`minimize`、`suspend`、面板卸载 `hide`、页面崩溃及用户主动点击「接管」仍立即撤权。
 4. **复验结果**：`pnpm lint`（0 错）、全量 Vitest（245 文件 / 2,412 用例）、`@openfox/desktop` 单元（129/129）、真实 Electron 45 集成测试（`agent-control` / `host` / `annotations` 3/3）、Playwright E2E（`artifact-preview.spec.ts` 7/7 含新增 W01/W02/W05 用例）、`pnpm dev` 与 `rsbuild preview` 实机 1.7s 稳态复测、以及真实 Electron 45 预备+活动两轮实机复测均通过。真实后端持久化/真实 Agent 联调（缺可写测试账号）与物理键盘实按仍标注为环境受限项。
+
+## 第二轮验收返修 · macOS M01
+
+在 `ccbeaf4` 上从 B 标签的「更多」外开系统 Chrome，主窗口失焦约 0.33 秒后发出 `hide`。当时 `isVisible()` 为真、`isMinimized()` 为假，原运行的授权却从第 1 轮变为第 2 轮，返场读取 B 得到 `CONTROL_REVOKED`。
+
+桌面主进程现在按 macOS 的原生窗口状态区分遮挡和隐藏。收到 `hide` 且窗口仍可见时保留现有授权。主动隐藏整个应用、关闭窗口或最小化则直接撤权。即使 Chrome 已经完全盖住工作台，这三个动作也各有独立信号。窗口销毁时会清理相应订阅。
+
+在 macOS 27.2.1、Electron 45.0.0 和真实 Chrome 上，两次活动共用测试都在外开后停留 2.2 秒，再用原授权读写同一个 B 标签。点「接管」后旧授权立即失效。另用三个独立会话分别在 Chrome 位于前台时隐藏应用、关闭到菜单栏、最小化，恢复后的第一次旧授权调用均返回 `CONTROL_REVOKED`。预备授权也通过了外开、返场和主动接管。
+
+`pnpm check` 通过，含 2,412 项 Vitest 和 129 项桌面单测。`pnpm --filter @openfox/desktop test:browser:electron` 的 6 项集成测试全部通过。上述桌面复验使用模拟登录、Agent 运行和 daemon broker，真实账户与 Agent 服务链路待独立验收。
