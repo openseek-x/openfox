@@ -19,7 +19,11 @@ import {
 } from "../../realtime/useOrgEvents";
 import { json, renderSettings, type Call } from "../../settings/testing";
 import { ORG, chatBase, message, run, summary } from "../fixtures";
-import { artifactPreviewKind, artifactPreviewable } from "./model";
+import {
+  artifactAnnotatable,
+  artifactPreviewKind,
+  artifactPreviewable,
+} from "./model";
 
 // 阶段 10d · 会话产物：回复里的「产物：<文件名>」按钮、右侧标签面板（列表 + 文件标签）、?artifact= 恢复、
 // 各类型预览（Markdown / 图片 / 文本 / CSV / 二进制 / 已失效）、「更多」菜单入口与实时失效。
@@ -56,6 +60,9 @@ const PNG = artifact("a-png", "图表.png", "image/png");
 const TXT = artifact("a-txt", "main.go", "text/plain");
 const HTML = artifact("a-html", "页面.html", "text/plain");
 const CSV = artifact("a-csv", "数据.csv", "text/csv");
+const WEBM = artifact("a-webm", "TC-01-登录.webm", "video/webm", {
+  size_bytes: 4096,
+});
 const ZIP = artifact("a-zip", "产物.zip", "application/octet-stream", {
   size_bytes: 2048,
 });
@@ -403,6 +410,14 @@ describe("会话产物 · 预览规则", () => {
     expect(
       artifactPreviewKind({ ...HTML, mime_type: "application/octet-stream" }),
     ).toBe("binary");
+    expect(artifactPreviewKind(WEBM)).toBe("video");
+    expect(artifactPreviewKind({ ...WEBM, mime_type: "video/mp4" })).toBe(
+      "video",
+    );
+    // 扩展名是视频但中心按 octet-stream 存（未通过嗅探）：只能下载。
+    expect(
+      artifactPreviewKind({ ...WEBM, mime_type: "application/octet-stream" }),
+    ).toBe("binary");
     // SVG 仍按源码显示，不当作可执行图像。
     expect(artifactPreviewKind(artifact("x", "a.svg", "text/plain"))).toBe(
       "code",
@@ -414,6 +429,46 @@ describe("会话产物 · 预览规则", () => {
     expect(
       artifactPreviewable({ ...MD, size_bytes: 5 * 1024 * 1024 + 1 }),
     ).toBe(false);
+    // 测试报告与录像：HTML 渲染上限 10 MB，视频播放上限与单个产物上限一致（20 MB）。
+    expect(artifactPreviewable({ ...HTML, size_bytes: 7_447_186 })).toBe(true);
+    expect(
+      artifactPreviewable({ ...HTML, size_bytes: 10 * 1024 * 1024 + 1 }),
+    ).toBe(false);
+    expect(artifactPreviewable({ ...WEBM, size_bytes: 20 * 1024 * 1024 })).toBe(
+      true,
+    );
+    expect(
+      artifactPreviewable({ ...WEBM, size_bytes: 20 * 1024 * 1024 + 1 }),
+    ).toBe(false);
+    // 后端批注只支持 5 MB 以内文本；更大的 HTML 与视频只能查看。
+    expect(artifactAnnotatable({ ...HTML, size_bytes: 5 * 1024 * 1024 })).toBe(
+      true,
+    );
+    expect(
+      artifactAnnotatable({ ...HTML, size_bytes: 5 * 1024 * 1024 + 1 }),
+    ).toBe(false);
+    expect(artifactAnnotatable(WEBM)).toBe(false);
+  });
+
+  it("视频产物在面板内播放，可下载原文件", async () => {
+    const calls = open("/o/o1/chat/c1?artifact=a-webm", { list: [WEBM] });
+    const aside = await panel();
+    const video = await within(aside).findByLabelText("视频：TC-01-登录.webm");
+    expect(video.tagName).toBe("VIDEO");
+    // 视频直接指向下载地址由浏览器按 Range 分段播放，面板不再取回整段内容。
+    expect(video).toHaveAttribute(
+      "src",
+      "/api/v1/organizations/o1/runs/r1/artifacts/a-webm",
+    );
+    expect(video).toHaveAttribute("controls");
+    expect(calls.some((call) => call.path.endsWith("/artifacts/a-webm"))).toBe(
+      false,
+    );
+    expect(within(aside).getByRole("link", { name: "下载" })).toHaveAttribute(
+      "download",
+      "TC-01-登录.webm",
+    );
+    expect(within(aside).queryByRole("button", { name: "批注" })).toBeNull();
   });
 
   it("HTML 默认隔离预览；源码切换保留原文件，切回重新创建沙箱", async () => {
@@ -469,17 +524,17 @@ describe("会话产物 · 预览规则", () => {
     expect(aside.textContent).toContain("title: 周报");
   });
 
-  it("大 HTML 降为源码，超上限不请求内容，拒绝下载不绕过鉴权", async () => {
+  it("大 HTML 报告仍渲染且可切源码，超 5 MB 不能批注，超上限不请求内容，拒绝下载不绕过鉴权", async () => {
     CONTENT["a-denied"] = () =>
       json(403, { error: { code: "FORBIDDEN", message: "denied" } });
     CONTENT["a-large"] = CONTENT["a-html"]!;
     const list = [
-      { ...HTML, id: "a-large", size_bytes: 1024 * 1024 + 1 },
+      { ...HTML, id: "a-large", size_bytes: 5 * 1024 * 1024 + 1 },
       {
         ...HTML,
         id: "a-huge",
         name: "大文件.html",
-        size_bytes: 5 * 1024 * 1024 + 1,
+        size_bytes: 10 * 1024 * 1024 + 1,
       },
       { ...HTML, id: "a-denied", name: "不可读.html" },
     ];
@@ -489,9 +544,13 @@ describe("会话产物 · 预览规则", () => {
     }
     const calls = open("/o/o1/chat/c1?artifact=a-large", { list });
     const aside = await panel();
-    await within(aside).findByText(/文件较大/);
-    expect(aside.querySelector("iframe")).toBeNull();
-    expect(within(aside).queryByRole("group", { name: "查看方式" })).toBeNull();
+    expect(
+      await within(aside).findByTitle("HTML 预览：页面.html"),
+    ).toBeInTheDocument();
+    expect(
+      within(aside).getByRole("group", { name: "查看方式" }),
+    ).toBeInTheDocument();
+    expect(within(aside).queryByRole("button", { name: "批注" })).toBeNull();
     await userEvent.click(
       within(aside).getByRole("button", { name: "打开新标签页" }),
     );
@@ -501,6 +560,7 @@ describe("会话产物 · 预览规则", () => {
     await userEvent.click(
       within(aside).getByRole("button", { name: "打开 大文件.html" }),
     );
+    await within(aside).findByText(/文件较大/);
     expect(calls.some((call) => call.path.endsWith("/artifacts/a-huge"))).toBe(
       false,
     );

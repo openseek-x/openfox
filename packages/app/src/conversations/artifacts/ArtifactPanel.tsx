@@ -808,7 +808,9 @@ function ArtifactList({
                 name={
                   artifactPreviewKind(artifact) === "image"
                     ? "image"
-                    : "file-text"
+                    : artifactPreviewKind(artifact) === "video"
+                      ? "play"
+                      : "file-text"
                 }
                 className="shrink-0 text-fg-muted"
               />

@@ -302,6 +302,7 @@ export const stepsEn: Messages["steps"] = {
       image: "Image",
       text: "Text file",
       archive: "Archive",
+      video: "Video",
       other: "File",
     },
   },

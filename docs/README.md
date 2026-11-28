@@ -11,5 +11,6 @@
 | [数据库迁移](../db/migrations/README.md)      | 迁移顺序、兼容要求和回退注意事项 |
 | [API 契约](../contracts/openapi.yaml)         | 服务端接口定义                   |
 | [图形来源核对](asset-provenance-review.md)    | 公开版图形映射、上游来源与许可声明   |
+| [测试智能体取证技能](agent-skills/test-evidence-delivery/SKILL.md) | 截图、录像、HTML 报告与正式报告评论的工作方式（可通过「上传技能」导入） |
 
 文件批注的支持范围、操作与恢复方式见[文件批注与 AI 定向修改](artifact-reviews.md)。

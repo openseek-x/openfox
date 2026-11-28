@@ -9761,6 +9761,7 @@ export interface paths {
          * 下载产物（Content-Type 为产物 mime_type，Content-Disposition attachment; filename=产物名）
          * @description 阶段 10d：响应头一律带 X-Content-Type-Options: nosniff、Content-Security-Policy: sandbox、Cache-Control: private, no-store，
          *     Content-Disposition 一律 attachment（任何类型都不在浏览器里内联执行）。已过保留期、已清理或不存在 404。
+         *     支持 HTTP Range（Accept-Ranges: bytes，206 分段 / 416 越界）：视频产物由 <video> 直接指向该地址分段播放。
          */
         get: operations["downloadRunArtifact"];
         put?: never;
@@ -9892,8 +9893,8 @@ export interface paths {
          * 执行设备上传一个 Run 产物（阶段 10d · openfox_publish_artifact 发布工具；请求体为文件原始字节）
          * @description 只有该 Run 的执行电脑可上传；Run 必须未结束，X-Run-Generation 必须等于当前代次（否则 409 DELIVERY_CONFLICT）。
          *     X-Artifact-Name 只取最后一个路径成分并清理控制字符；X-Artifact-MIME 只接受可预览白名单
-         *     （text/plain、text/markdown、text/csv、image/png、image/jpeg、image/gif、image/webp、application/pdf，以及经过包结构校验的 DOCX/XLSX/PPTX 对应 MIME），其余一律存为 application/octet-stream。
-         *     单个文件不超过 min(组织策略 artifact_file_max_bytes, 20 MB)，每次 Run 合计不超过 artifact_run_max_bytes、最多 10 个
+         *     （text/plain、text/markdown、text/csv、image/png、image/jpeg、image/gif、image/webp、application/pdf、video/webm、video/mp4，以及经过包结构校验的 DOCX/XLSX/PPTX 对应 MIME），其余一律存为 application/octet-stream。声明为 video/webm、video/mp4 时文件头嗅探结果必须一致，否则 400。
+         *     单个文件不超过 min(组织策略 artifact_file_max_bytes, 20 MB)，每次 Run 合计不超过 artifact_run_max_bytes、最多 20 个
          *     （超出 413 RESOURCE_LIMIT）。同一 Run 内 sha256 相同的内容不重复登记：返回已有产物（200），新写入的对象被删除。
          *     新登记的产物发组织事件 run.artifact。保留期沿用组织策略（artifact_retention_days，从创建时刻起算；随结果的 artifact_ids 关联后才会被清理）。
          */
@@ -11838,8 +11839,8 @@ export interface paths {
          * 上传任务附件（multipart file；需要任务可编辑）
          * @description 单文件 ≤ 20 MB（413 ATTACHMENT_TOO_LARGE）；每个任务最多 100 个（409 ATTACHMENT_LIMIT）。
          *     类型按扩展名白名单加文件头嗅探判断（415 ATTACHMENT_TYPE_NOT_ALLOWED）：图片（png / jpg / gif / webp）、pdf、
-         *     文本（txt / md / csv / json / log / yaml 等）、Office（docx / xlsx / pptx / doc / xls / ppt）、zip、svg / html / xml。
-         *     svg / html / xml 以纯文本保存，只能下载不能预览。文件名只保留最后一个路径成分，拒绝空名与控制字符。
+         *     文本（txt / md / csv / json / log / yaml 等）、Office（docx / xlsx / pptx / doc / xls / ppt）、zip、svg / html / xml、
+         *     视频（webm / mp4，文件头必须是对应容器）。svg / html / xml 以纯文本保存；其中 html 可做隔离静态预览（见 preview_kind）。文件名只保留最后一个路径成分，拒绝空名与控制字符。
          */
         post: operations["uploadTaskAttachment"];
         delete?: never;
@@ -11886,13 +11887,15 @@ export interface paths {
          * 下载附件（任务附件按任务读权限；对话附件按会话读权限，未发送的只有上传人）
          * @description 默认 Content-Disposition: attachment。带 ?disposition=inline 且是图片（png / jpeg / gif / webp）时 inline；
          *     其余类型忽略该参数。所有响应带 X-Content-Type-Options: nosniff 与 Content-Security-Policy: sandbox。
+         *     支持 HTTP Range（Accept-Ranges: bytes，206 分段 / 416 越界），视频可以边下边播、拖动。
          */
         get: operations["getAttachment"];
         put?: never;
         post?: never;
         /**
          * 删除附件并清理存储对象
-         * @description 任务附件：上传人（仍需任务可编辑）或空间管理员。对话附件：只有上传人能删除尚未发送的附件（已随消息发送的 403）。
+         * @description 任务附件：上传人（仍需任务可编辑）或空间管理员；智能体正式报告评论的附件随评论存在，不能单独删除（403）。
+         *     对话附件：只有上传人能删除尚未发送的附件（已随消息发送的 403）。
          *     读不到该附件的人得到 404。
          */
         delete: operations["deleteAttachment"];
@@ -18225,14 +18228,39 @@ export interface components {
             /** @description 嗅探后的类型；svg / html / xml 为 text/plain */
             content_type: string;
             size_bytes: number;
-            /** Format: uuid */
-            uploaded_by: string;
+            /**
+             * @description AGENT = 智能体把本次 Run 的产物附到正式报告评论
+             * @enum {string}
+             */
+            uploader_kind: "USER" | "AGENT";
+            /**
+             * Format: uuid
+             * @description uploader_kind = USER 时出现
+             */
+            uploaded_by?: string;
+            /**
+             * Format: uuid
+             * @description uploader_kind = AGENT 时出现
+             */
+            uploaded_by_agent_id?: string;
+            /** @description 成员为姓名或 email，智能体为智能体名称 */
             uploader_name: string;
+            /**
+             * Format: uuid
+             * @description 所属的智能体正式报告评论；这类附件不能单独删除
+             */
+            comment_id?: string;
             /** Format: date-time */
             created_at: string;
             /** @description 可以用 ?disposition=inline 预览（png / jpeg / gif / webp） */
             previewable: boolean;
-            /** @description 仅上传响应与任务附件列表按调用者计算；消息里的附件为 false */
+            /**
+             * @description 页面内预览方式。image：?disposition=inline 显示；video（webm / mp4）：<video> 直接指向下载地址，按 HTTP Range 分段播放；
+             *     html：以纯文本保存的 .html / .htm 且不超过 10 MB，前端取回后做隔离静态渲染（无脚本、仅内嵌位图）；none：只能下载。
+             * @enum {string}
+             */
+            preview_kind: "image" | "video" | "html" | "none";
+            /** @description 仅上传响应与任务附件列表按调用者计算；消息里的附件与正式报告评论的附件为 false */
             can_delete: boolean;
         };
         DeviceRunAttachment: {
@@ -19419,6 +19447,8 @@ export interface components {
             reactions: components["schemas"]["ReactionSummary"][];
             /** Format: date-time */
             created_at: string;
+            /** @description 智能体正式报告评论附带的任务附件（每次 Run 最多一条报告评论），没有时不输出 */
+            attachments?: components["schemas"]["Attachment"][];
         };
         /** @description type=activity 时只有 activity；type=comment 时只有 comment */
         TimelineItem: {

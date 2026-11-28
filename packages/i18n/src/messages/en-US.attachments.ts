@@ -22,6 +22,7 @@ export const attachmentsEn: Messages["attachments"] = {
     pdf: "PDF document",
     image: "Image",
     archive: "Archive",
+    video: "Video",
     text: "Text file",
     file: "File",
   },

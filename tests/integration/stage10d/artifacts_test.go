@@ -113,14 +113,14 @@ func TestStage10dArtifacts(t *testing.T) {
 	if _, _, err := add(runLive, 1, 6, sha(6), artifacts.MaxArtifactBytes+1); !errors.Is(err, executiondelivery.ErrInvalidRequest) {
 		t.Fatalf("too large = %v", err)
 	}
-	// 5. 每次 Run 最多 10 个：再登记 9 个不同内容后，第 11 个 413。
-	for n := 10; n < 19; n++ {
+	// 5. 每次 Run 最多 MaxRunArtifacts 个：再登记 MaxRunArtifacts-1 个不同内容后，下一个 413。
+	for n := 10; n < 10+executiondelivery.MaxRunArtifacts-1; n++ {
 		if _, created, err := add(runLive, 1, n, sha(n), 10); err != nil || !created {
 			t.Fatalf("artifact %d: created=%v err=%v", n, created, err)
 		}
 	}
-	if _, _, err := add(runLive, 1, 30, sha(30), 10); !errors.Is(err, executiondelivery.ErrResourceLimit) {
-		t.Fatalf("11th artifact = %v", err)
+	if _, _, err := add(runLive, 1, 99, sha(99), 10); !errors.Is(err, executiondelivery.ErrResourceLimit) {
+		t.Fatalf("artifact over the run limit = %v", err)
 	}
 
 	// 组织事件：每个新登记的产物一条（去重不发），带会话与空间，payload 含 run_id。
@@ -137,11 +137,11 @@ func TestStage10dArtifacts(t *testing.T) {
 		orgA, conversationA, spaceA).Scan(&events, &payloadRun); err != nil {
 		t.Fatal(err)
 	}
-	if events != 10 || payloadRun != runLive {
+	if events != executiondelivery.MaxRunArtifacts || payloadRun != runLive {
 		t.Fatalf("run.artifact events = %d run=%s", events, payloadRun)
 	}
 
-	// 6. 会话产物列表：所有者能看到 10 个（created_at 倒序，带 run_id）；同组织其他成员看不到私有会话（404）；跨组织 404。
+	// 6. 会话产物列表：所有者能看到全部产物（MaxRunArtifacts 个）（created_at 倒序，带 run_id）；同组织其他成员看不到私有会话（404）；跨组织 404。
 	user := func(org, userID string, role policy.OrganizationRole, fn func(ctx context.Context, tx pgx.Tx, actor conversations.Actor) error) error {
 		selection := tenancy.OrganizationSelection{OrganizationID: org, ActorID: userID, AuthorizationVersion: 1}
 		actor := conversations.Actor{UserID: userID, Role: role, AuthorizationVersion: 1}
@@ -153,7 +153,7 @@ func TestStage10dArtifacts(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		if len(items) != 10 || items[len(items)-1].ID != first.ID || items[0].RunID != runLive {
+		if len(items) != executiondelivery.MaxRunArtifacts || items[len(items)-1].ID != first.ID || items[0].RunID != runLive {
 			t.Fatalf("owner list = %d items, last=%s", len(items), items[len(items)-1].ID)
 		}
 		for i := 1; i < len(items); i++ {

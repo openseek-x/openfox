@@ -3,9 +3,10 @@ import { ReferenceCard } from "./ReferenceCard";
 import { assistantActions } from "./assistantActions";
 import { useState, type ReactNode } from "react";
 
-import type { ConversationMessage } from "@openfox/api";
+import type { Attachment, ConversationMessage } from "@openfox/api";
 import { useI18n, useT } from "@openfox/i18n";
 import {
+  Dialog,
   Icon,
   IconButton,
   Message,
@@ -17,6 +18,7 @@ import {
 } from "@openfox/ui";
 
 import { KIND_BADGE, attachmentKind, formatBytes } from "../attachments/model";
+import { AttachmentPreview } from "../attachments/AttachmentPreview";
 import { useApi } from "../context";
 import { copyText } from "../tasks/parts";
 import { formatDuration, useRun } from "./steps";
@@ -70,73 +72,102 @@ export function MessageAttachments({
 }) {
   const t = useT();
   const api = useApi();
+  const [preview, setPreview] = useState<Attachment | null>(null);
   const items = message.attachments ?? [];
   if (items.length === 0) return null;
   const orgId = message.organization_id;
   return (
-    <ul
-      aria-label={t("attachments.title")}
-      className="flex w-full max-w-[85%] flex-col items-end gap-2"
-    >
-      {items.map((attachment) => {
-        const kind = attachmentKind(attachment.name);
-        const badge = KIND_BADGE[kind];
-        const url = api.attachments.url(orgId, attachment.id);
-        // 图片在新标签页里预览（inline），其余直接下载
-        const openUrl = attachment.previewable
-          ? api.attachments.previewUrl(orgId, attachment.id)
-          : url;
-        return (
-          <li
-            key={attachment.id}
-            className="flex w-full max-w-[420px] flex-wrap items-center gap-3 rounded-xl border border-line-default bg-surface-card p-3"
-          >
-            {attachment.previewable ? (
-              <img
-                src={api.attachments.previewUrl(orgId, attachment.id)}
-                alt=""
-                className="size-8 shrink-0 rounded-md object-cover"
-              />
-            ) : (
-              <span
-                aria-hidden="true"
-                className={cn(
-                  "flex size-8 shrink-0 items-center justify-center rounded-md text-caption font-semibold",
-                  badge.className,
-                )}
+    <>
+      <ul
+        aria-label={t("attachments.title")}
+        className="flex w-full max-w-[85%] flex-col items-end gap-2"
+      >
+        {items.map((attachment) => {
+          const kind = attachmentKind(attachment.name);
+          const badge = KIND_BADGE[kind];
+          const url = api.attachments.url(orgId, attachment.id);
+          // 图片在新标签页里预览（inline），其余直接下载
+          const openUrl = attachment.previewable
+            ? api.attachments.previewUrl(orgId, attachment.id)
+            : url;
+          return (
+            <li
+              key={attachment.id}
+              className="flex w-full max-w-[420px] flex-wrap items-center gap-3 rounded-xl border border-line-default bg-surface-card p-3"
+            >
+              {attachment.previewable ? (
+                <img
+                  src={api.attachments.previewUrl(orgId, attachment.id)}
+                  alt=""
+                  className="size-8 shrink-0 rounded-md object-cover"
+                />
+              ) : (
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "flex size-8 shrink-0 items-center justify-center rounded-md text-caption font-semibold",
+                    badge.className,
+                  )}
+                >
+                  {badge.badge || <Icon name="file-text" size={16} />}
+                </span>
+              )}
+              <span className="flex min-w-16 flex-1 flex-col">
+                <span className="truncate text-body-sm font-medium">
+                  {attachment.name}
+                </span>
+                <span className="text-caption text-fg-muted">
+                  {t(`attachments.kinds.${kind}`)} •{" "}
+                  {formatBytes(attachment.size_bytes)}
+                </span>
+              </span>
+              {attachment.preview_kind === "video" ||
+              attachment.preview_kind === "html" ? (
+                <button
+                  type="button"
+                  onClick={() => setPreview(attachment)}
+                  aria-label={t("attachments.openFile", {
+                    name: attachment.name,
+                  })}
+                  className="flex h-7 shrink-0 items-center rounded-md border border-line-default px-2 text-body-sm hover:bg-surface-hover"
+                >
+                  {t("attachments.open")}
+                </button>
+              ) : (
+                <a
+                  href={openUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={t("attachments.openFile", {
+                    name: attachment.name,
+                  })}
+                  className="flex h-7 shrink-0 items-center rounded-md border border-line-default px-2 text-body-sm hover:bg-surface-hover"
+                >
+                  {t("attachments.open")}
+                </a>
+              )}
+              <a
+                href={url}
+                aria-label={t("attachments.download", {
+                  name: attachment.name,
+                })}
+                className="flex size-7 shrink-0 items-center justify-center rounded-md text-fg-muted hover:bg-surface-muted"
               >
-                {badge.badge || <Icon name="file-text" size={16} />}
-              </span>
-            )}
-            <span className="flex min-w-16 flex-1 flex-col">
-              <span className="truncate text-body-sm font-medium">
-                {attachment.name}
-              </span>
-              <span className="text-caption text-fg-muted">
-                {t(`attachments.kinds.${kind}`)} •{" "}
-                {formatBytes(attachment.size_bytes)}
-              </span>
-            </span>
-            <a
-              href={openUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={t("attachments.openFile", { name: attachment.name })}
-              className="flex h-7 shrink-0 items-center rounded-md border border-line-default px-2 text-body-sm hover:bg-surface-hover"
-            >
-              {t("attachments.open")}
-            </a>
-            <a
-              href={url}
-              aria-label={t("attachments.download", { name: attachment.name })}
-              className="flex size-7 shrink-0 items-center justify-center rounded-md text-fg-muted hover:bg-surface-muted"
-            >
-              <Icon name="download" size={16} />
-            </a>
-          </li>
-        );
-      })}
-    </ul>
+                <Icon name="download" size={16} />
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+      <Dialog
+        open={Boolean(preview)}
+        onClose={() => setPreview(null)}
+        title={preview?.name ?? ""}
+        width={960}
+      >
+        {preview && <AttachmentPreview orgId={orgId} attachment={preview} />}
+      </Dialog>
+    </>
   );
 }
 

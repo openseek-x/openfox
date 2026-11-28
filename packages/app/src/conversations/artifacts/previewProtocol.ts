@@ -64,6 +64,7 @@ const capabilities: Record<ArtifactPreviewKind, PreviewCapabilities> = {
     sourceToggle: false,
     editable: false,
   },
+  video: { selection: [], sourceToggle: false, editable: false },
   binary: { selection: [], sourceToggle: false, editable: false },
 };
 export const previewCapabilities = (

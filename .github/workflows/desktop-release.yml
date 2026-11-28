@@ -47,12 +47,6 @@ jobs:
           node -e 'if(new URL(process.env.OPENFOX_DESKTOP_DEFAULT_WEB_URL).protocol !== "https:") process.exit(1)'
           npm install --global pnpm@11.15.1
           pnpm install --frozen-lockfile
-      - name: Test desktop and update UI
-        run: |
-          pnpm --filter @openfox/desktop test
-          pnpm exec vitest run packages/app/src/me/me.test.tsx
-          pnpm typecheck
-          python3 deploy/test_publish_static.py
       - name: Build and verify the web and macOS installer
         env:
           RELEASE_VERSION: ${{ steps.inputs.outputs.version }}

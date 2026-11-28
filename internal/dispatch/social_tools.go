@@ -42,23 +42,30 @@ func socialArg(args map[string]json.RawMessage, key string, max int) (string, bo
 	return s, s != "" && len([]rune(s)) <= max
 }
 func postAgentComment(ctx context.Context, tx pgx.Tx, run execution.Run, callID, body string, args map[string]json.RawMessage) (ToolResult, error) {
+	result, _, err := insertAgentComment(ctx, tx, run, callID, body, args, false)
+	return result, err
+}
+
+// insertAgentComment 写入 Agent 评论并返回评论 ID；report 为 true 时是本次 Run 唯一的正式报告评论（OPE-19）。
+// 同一调用 ID 重放返回 "comment already posted"（ID 为空）。
+func insertAgentComment(ctx context.Context, tx pgx.Tx, run execution.Run, callID, body string, args map[string]json.RawMessage, report bool) (ToolResult, string, error) {
 	target, ok := socialArg(args, "reply_to_id", 36)
 	if !ok || target != "" && !membership.ValidateUUID(target) {
-		return ToolResult{Text: "invalid reply target"}, nil
+		return ToolResult{Text: "invalid reply target"}, "", nil
 	}
 	name, ok := socialArg(args, "mention", 254)
 	if !ok {
-		return ToolResult{Text: "invalid mention"}, nil
+		return ToolResult{Text: "invalid mention"}, "", nil
 	}
 	mention := ""
 	var err error
 	if name != "" {
 		mention, err = socialRecipient(ctx, tx, run, name, false)
 		if err != nil {
-			return ToolResult{}, err
+			return ToolResult{}, "", err
 		}
 		if mention == "" {
-			return ToolResult{Text: "mention target is unavailable"}, nil
+			return ToolResult{Text: "mention target is unavailable"}, "", nil
 		}
 	}
 	clientID := "tool:" + run.ID + ":" + callID
@@ -68,50 +75,57 @@ func postAgentComment(ctx context.Context, tx pgx.Tx, run execution.Run, callID,
         FROM openfox.task_comments c WHERE c.organization_id=openfox_private.current_organization_id() AND c.task_id=$1 AND c.client_comment_id=$2`, run.TaskID, clientID, body, target, mention).Scan(&same)
 	if err == nil {
 		if same {
-			return ToolResult{OK: true, Text: "comment already posted"}, nil
+			return ToolResult{OK: true, Text: "comment already posted"}, "", nil
 		}
-		return ToolResult{Text: "call ID already used for different content"}, nil
+		return ToolResult{Text: "call ID already used for different content"}, "", nil
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
-		return ToolResult{}, err
+		return ToolResult{}, "", err
 	}
 	if target != "" {
 		root, err := collaboration.LockCommentThread(ctx, tx, run.SpaceID, run.TaskID, target)
 		var rule *collaboration.RuleError
 		if errors.As(err, &rule) {
-			return ToolResult{Text: "reply target is unavailable"}, nil
+			return ToolResult{Text: "reply target is unavailable"}, "", nil
 		}
 		if err != nil {
-			return ToolResult{}, err
+			return ToolResult{}, "", err
 		}
 		if root.ResolutionID != "" {
-			return ToolResult{Text: "reopen the discussion before replying"}, nil
+			return ToolResult{Text: "reopen the discussion before replying"}, "", nil
 		}
 	}
 	var id string
-	err = tx.QueryRow(ctx, `INSERT INTO openfox.task_comments(organization_id,space_id,task_id,author_agent_id,run_id,body,client_comment_id,reply_to_id)
-        SELECT organization_id,space_id,id,$3,$4,$5,$6,nullif($7,'')::uuid FROM openfox.tasks
+	err = tx.QueryRow(ctx, `INSERT INTO openfox.task_comments(organization_id,space_id,task_id,author_agent_id,run_id,body,client_comment_id,reply_to_id,run_report)
+        SELECT organization_id,space_id,id,$3,$4,$5,$6,nullif($7,'')::uuid,$8 FROM openfox.tasks
         WHERE organization_id=openfox_private.current_organization_id() AND id=$1 AND space_id=$2 AND deleted_at IS NULL
-        ON CONFLICT DO NOTHING RETURNING id::text`, run.TaskID, run.SpaceID, run.AgentID, run.ID, body, clientID, target).Scan(&id)
+        ON CONFLICT DO NOTHING RETURNING id::text`, run.TaskID, run.SpaceID, run.AgentID, run.ID, body, clientID, target, report).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ToolResult{Text: "task or comment is unavailable"}, nil
+		if report {
+			// 每轮唯一索引冲突：本轮的报告评论已被删除（对读者不可见）。
+			return ToolResult{Text: "the report comment of this run is unavailable (it may have been deleted); post the conclusion to the conversation instead"}, "", nil
+		}
+		return ToolResult{Text: "task or comment is unavailable"}, "", nil
 	}
 	if err != nil {
-		return ToolResult{}, err
+		return ToolResult{}, "", err
 	}
 	if mention != "" {
 		if _, err = tx.Exec(ctx, `INSERT INTO openfox.comment_mentions(organization_id,comment_id,position,mentioned_user_id) VALUES(openfox_private.current_organization_id(),$1,0,$2)`, id, mention); err != nil {
-			return ToolResult{}, err
+			return ToolResult{}, "", err
 		}
 		if _, err = tx.Exec(ctx, `SELECT openfox_private.enqueue_notification($1,'MENTION',NULL,NULL,$2,$3,'comment-mention:'||$3::uuid::text||':'||$1::uuid::text,left($4,200))`, mention, run.TaskID, id, body); err != nil {
-			return ToolResult{}, err
+			return ToolResult{}, "", err
 		}
 	}
 	_, err = tx.Exec(ctx, `SELECT openfox_private.enqueue_notification(a.user_id,'TASK_COMMENT',NULL,NULL,$1::uuid,$2::uuid,
         'comment:'||$2::text||':'||a.user_id::text,left($3,200)) FROM openfox_private.task_notice_audience(openfox_private.current_organization_id(),$1::uuid,
          (SELECT author_user_id FROM openfox.task_comments WHERE organization_id=openfox_private.current_organization_id() AND id=nullif($4,'')::uuid)) a
         WHERE a.user_id IS DISTINCT FROM nullif($5,'')::uuid`, run.TaskID, id, body, target, mention)
-	return ToolResult{OK: err == nil, Text: "comment posted"}, err
+	if err != nil {
+		return ToolResult{}, "", err
+	}
+	return ToolResult{OK: true, Text: "comment posted"}, id, nil
 }
 func toolReaction(ctx context.Context, tx pgx.Tx, run execution.Run, args map[string]json.RawMessage) (ToolResult, error) {
 	emoji, ok := socialArg(args, "emoji", 32)

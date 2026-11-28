@@ -758,7 +758,7 @@ func (h *Handler) streamStoredFile(w http.ResponseWriter, r *http.Request, key, 
 	w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	setFileTransferDeadline(w, size, false)
-	_, _ = io.Copy(w, file)
+	serveStoredContent(w, r, file)
 }
 
 // removeStoredFiles 在数据库提交后尽力删除存储文件；失败忽略（孤儿文件可由清理任务回收）。

@@ -362,7 +362,7 @@ export const artifactsEn: Messages["artifacts"] = {
     htmlNoMapping:
       "No elements can be mapped reliably. Switch to source annotation.",
     htmlUnavailable:
-      "HTML exceeds preview limits (512 KiB, 10,000 nodes or 128 levels), or cannot be parsed. Switch to source view.",
+      "HTML exceeds preview limits (20 MB, 50,000 nodes or 128 levels), or cannot be parsed. Switch to source view.",
     rendered: "Rendered view",
     textHint:
       "Select source text and add an instruction. Maximum selection: 8 KiB.",
@@ -388,6 +388,9 @@ export const artifactsEn: Messages["artifacts"] = {
       "This artifact passed its retention period or was deleted and can no longer be previewed or downloaded.",
     missing: "Artifact not found",
     tooLarge: "This file is too large to preview here. Download it to view.",
+    videoTitle: "Video: {name}",
+    videoUnavailable:
+      "This video cannot be played here. Download it and open it in a local player.",
     download: "Download",
     meta: "{type} · {size} · {time}",
   },

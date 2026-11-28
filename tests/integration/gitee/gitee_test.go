@@ -656,19 +656,22 @@ func TestGitee(t *testing.T) {
 	t.Run("pull request backlink", func(t *testing.T) {
 		task := w.task(w.foxSpace, "Backlink flow")
 		w.deliver("Merge Request Hook", prSpec{Action: "open", Number: 21, Title: task.DisplayID + " backlink", Branch: "b"}.payload())
+		var wantID string
 		waitFor(t, "backlink note", func() bool {
 			for _, note := range w.fake.Notes() {
 				if note.Kind == "pulls" && note.Number == "21" && strings.Contains(note.Body, task.DisplayID) && note.Token != "" {
+					wantID = strconv.FormatInt(note.ID, 10)
 					return true
 				}
 			}
 			return false
 		})
-		var comment string
-		w.scan(&comment, `SELECT backlink_comment_id FROM openfox.task_git_links WHERE task_id = $1::uuid`, task.ID)
-		if comment == "" {
-			t.Fatal("backlink comment id must be recorded")
-		}
+		// Gitee 返回评论后，后台事务才会把评论 ID 写入任务关联。
+		waitFor(t, "backlink comment id "+wantID, func() bool {
+			var recordedID string
+			w.scan(&recordedID, `SELECT backlink_comment_id FROM openfox.task_git_links WHERE task_id = $1::uuid`, task.ID)
+			return recordedID == wantID
+		})
 	})
 
 	t.Run("commit links", func(t *testing.T) {

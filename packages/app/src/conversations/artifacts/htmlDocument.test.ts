@@ -73,11 +73,37 @@ describe("HTML source mapping and isolation", () => {
     expect(() =>
       htmlPreviewDocument("<div>".repeat(130) + "</div>".repeat(130)),
     ).toThrow();
-    expect(() => htmlPreviewDocument("<br>".repeat(10001))).toThrow();
+    expect(() => htmlPreviewDocument("<br>".repeat(20001))).toThrow();
+    expect(() => htmlPreviewDocument("<br>".repeat(19000))).not.toThrow();
     expect(
       htmlPreviewDocument("<p>" + "x".repeat(8192) + "</p>").targets,
     ).toHaveLength(0);
     expect(() => htmlPreviewDocument("<p>x</p>", 'bad"nonce')).toThrow();
+  });
+  it("renders a multi-megabyte report with embedded step screenshots", () => {
+    // 测试报告：单文件 HTML，步骤截图以 data: 内嵌，体积超过 7,447,186 字节（A05 对照样本）。
+    const png = "iVBORw0KGgo" + "A".repeat(180_000);
+    const cases = Array.from(
+      { length: 14 },
+      (_, c) =>
+        `<section><h2>TC-${c + 1}</h2>` +
+        Array.from(
+          { length: 3 },
+          (_, s) =>
+            `<figure><img alt="TC-${c + 1} 步骤 ${s + 1}" src="data:image/png;base64,${png}"><figcaption>步骤 ${s + 1}</figcaption></figure>`,
+        ).join("") +
+        "</section>",
+    ).join("");
+    const source = `<!doctype html><html><head><title>测试报告</title></head><body><h1>测试报告</h1>${cases}</body></html>`;
+    expect(new TextEncoder().encode(source).length).toBeGreaterThan(7_447_186);
+    const parsed = new DOMParser().parseFromString(
+      htmlPreviewDocument(source).document,
+      "text/html",
+    );
+    expect(parsed.querySelectorAll("img[src^='data:image/png']")).toHaveLength(
+      42,
+    );
+    expect(parsed.querySelectorAll("h2")).toHaveLength(14);
   });
   it("accepts only the current frame, opaque origin, session and mapped element ID", () => {
     const result = htmlPreviewDocument("<p>原文</p>", token);

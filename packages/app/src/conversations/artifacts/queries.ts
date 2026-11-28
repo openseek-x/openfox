@@ -4,11 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { ArtifactReviewFile, OfficeView } from "@openfox/api";
 
 import { keys, useApi } from "../../context";
-import {
-  ARTIFACT_IMAGE_MAX_BYTES,
-  ARTIFACT_TEXT_MAX_BYTES,
-  artifactPreviewKind,
-} from "./model";
+import { artifactFetchLimit, artifactPreviewKind } from "./model";
 
 // 阶段 10d · 会话产物查询。列表挂在会话详情键下（Run 结束、会话变化时一并刷新），
 // 实时由 run.artifact 组织事件精确失效（见 realtime/useOrgEvents.ts）。
@@ -26,7 +22,7 @@ export function useConversationArtifacts(
   });
 }
 
-/** 预览内容：图片返回 Blob，文本返回解码后的字符串。产物不可变，取一次即可。 */
+/** 预览内容：图片、PDF 返回 Blob，文本返回解码后的字符串（视频走下载地址分段播放，不取内容）。产物不可变，取一次即可。 */
 export function useArtifactContent(
   orgId: string,
   artifact: ArtifactReviewFile | undefined,
@@ -75,7 +71,7 @@ export function useArtifactContent(
         orgId,
         artifact!.run_id,
         artifact!.id,
-        image ? ARTIFACT_IMAGE_MAX_BYTES : ARTIFACT_TEXT_MAX_BYTES,
+        artifactFetchLimit(kind),
         signal,
       );
       if (image) return { blob, text: "" };
@@ -86,7 +82,11 @@ export function useArtifactContent(
         ),
       };
     },
-    enabled: Boolean(orgId && artifact) && enabled && kind !== "binary",
+    enabled:
+      Boolean(orgId && artifact) &&
+      enabled &&
+      kind !== "binary" &&
+      kind !== "video",
     staleTime: Infinity,
     gcTime: 0, // Release decoded text/Blobs when the last preview unmounts.
     retry: false,

@@ -27,8 +27,10 @@ import {
 import { ChatMarkdown } from "../ChatMarkdown";
 import { fileKindOf, formatBytes } from "../steps/cards";
 import { HtmlPreview } from "./HtmlPreview";
+import { VideoPlayer } from "./VideoPreview";
 import {
   ARTIFACT_LARGE_TEXT_BYTES,
+  artifactAnnotatable,
   artifactExpired,
   artifactPreviewKind,
   artifactPreviewable,
@@ -60,7 +62,12 @@ export function ArtifactPreview({
   const capabilities = previewCapabilities(artifact);
   const historical = artifact.id !== artifact.head_artifact_id;
   const previewable = !expired && artifactPreviewable(artifact);
-  const content = useArtifactContent(orgId, artifact, previewable);
+  // 视频直接用下载地址分段播放，不取回内容。
+  const content = useArtifactContent(
+    orgId,
+    artifact,
+    previewable && kind !== "video",
+  );
   const downloadUrl = api.runs.artifactUrl(orgId, artifact.run_id, artifact.id);
   // 下载时中心返回 404（已被清理但列表还没刷新）也按失效显示
   const gone =
@@ -71,7 +78,7 @@ export function ArtifactPreview({
   const text = content.data?.text ?? "";
   const hasText =
     previewable &&
-    !["image", "pdf", "office"].includes(kind) &&
+    !["image", "pdf", "office", "video"].includes(kind) &&
     Boolean(content.data);
   const [source, setSource] = useViewState("source", false);
   const [annotate, setAnnotate] = useState(false);
@@ -97,7 +104,9 @@ export function ArtifactPreview({
     hasPendingLocation,
   );
   const large = artifact.size_bytes > ARTIFACT_LARGE_TEXT_BYTES;
-  const canSwitch = hasText && !large && capabilities.sourceToggle;
+  // HTML 报告超过大文件阈值仍渲染（只有源码视图按大文件模式显示前 500 行），因此保留源码切换。
+  const canSwitch =
+    hasText && (!large || kind === "html") && capabilities.sourceToggle;
   const fileType =
     kind === "html"
       ? "HTML"
@@ -138,6 +147,7 @@ export function ArtifactPreview({
       )}
       {conversationId &&
         capabilities.selection.length > 0 &&
+        artifactAnnotatable(artifact) &&
         !historical &&
         previewable &&
         !gone &&
@@ -171,6 +181,9 @@ export function ArtifactPreview({
           className="flex min-w-0 flex-1 items-center gap-1.5 px-1 text-caption text-fg-muted"
           title={artifact.name}
         >
+          {kind === "video" && (
+            <Icon name="play" size={15} className="shrink-0" />
+          )}
           <span className="truncate">{artifact.name}</span>
         </div>
       )}
@@ -327,6 +340,8 @@ export function ArtifactPreview({
                 </a>
               </div>
             )
+          ) : kind === "video" ? (
+            <VideoPlayer src={downloadUrl} name={artifact.name} />
           ) : content.isError ? (
             <div>
               {kind === "office" && (
@@ -372,7 +387,7 @@ export function ArtifactPreview({
             <VisualReview blob={content.data.blob!} name={artifact.name} pdf />
           ) : kind === "image" ? (
             <ImageBlob blob={content.data.blob!} name={artifact.name} />
-          ) : kind === "html" && !source && !large ? (
+          ) : kind === "html" && !source ? (
             <HtmlPreview text={text} name={artifact.name} />
           ) : kind === "markdown" && !source && !large ? (
             <MarkdownView
