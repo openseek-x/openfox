@@ -186,6 +186,7 @@ runs migrations implicitly.
 - [000173_device_registration_identity.sql](000173_device_registration_identity.sql)
 - [000174_device_workflow_permission.sql](000174_device_workflow_permission.sql)
 - [000175_default_device_max_runs.sql](000175_default_device_max_runs.sql)
+- [000176_agent_report_comment_attachments.sql](000176_agent_report_comment_attachments.sql)
 <!-- /migration-index -->
 
 ## 迁移设计与运维记录
