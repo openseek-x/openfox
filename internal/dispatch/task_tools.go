@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"openfox/internal/attachments"
 	"openfox/internal/execution"
 )
 
@@ -249,12 +250,16 @@ type ToolCall struct {
 	Generation int64           `json:"generation"`
 	CallID     string          `json:"call_id"`
 	Arguments  json.RawMessage `json:"arguments"`
+	// ReportFiles 是 API 层在事务外为 task_comment 的 artifact_ids 复制好的附件文件（OPE-19，见 report_tools.go）。
+	ReportFiles []attachments.ReportFile `json:"-"`
 }
 
 // ToolResult 是设备工具接口的响应：业务拒绝用 OK=false + 原因，不用错误码。
 type ToolResult struct {
-	OK   bool   `json:"ok"`
-	Text string `json:"text"`
+	// KeptFiles 是被报告评论引用的附件 ID（OPE-19）；API 层删除其余复制品。
+	KeptFiles []string `json:"-"`
+	OK        bool     `json:"ok"`
+	Text      string   `json:"text"`
 }
 
 // CallTool 在设备事务里执行 Agent 任务工具。授权与读取上下文相同，另外要求 RUNNING 且绑定了任务。
@@ -290,7 +295,7 @@ func (s Store) CallTool(ctx context.Context, tx pgx.Tx, organizationID, deviceID
 	case "task_view":
 		result, err = toolTaskView(ctx, tx, run.Run)
 	case "task_comment":
-		result, err = toolTaskComment(ctx, tx, run.Run, callID, args)
+		result, err = toolTaskComment(ctx, tx, run.Run, callID, args, call.ReportFiles)
 	case "task_start":
 		result, err = toolTaskStart(ctx, tx, run.Run, callID)
 	case "conversation_state":
@@ -357,7 +362,7 @@ func taskAssigneeNames(ctx context.Context, tx pgx.Tx, taskID string) ([]string,
 	return names, rows.Err()
 }
 
-func toolTaskComment(ctx context.Context, tx pgx.Tx, run execution.Run, callID string, args map[string]json.RawMessage) (ToolResult, error) {
+func toolTaskComment(ctx context.Context, tx pgx.Tx, run execution.Run, callID string, args map[string]json.RawMessage, files []attachments.ReportFile) (ToolResult, error) {
 	var body string
 	if raw, ok := args["body"]; !ok || json.Unmarshal(raw, &body) != nil {
 		return ToolResult{OK: false, Text: "body is required"}, nil
@@ -366,19 +371,28 @@ func toolTaskComment(ctx context.Context, tx pgx.Tx, run execution.Run, callID s
 	if body == "" || len([]rune(body)) > maxToolCommentBody {
 		return ToolResult{OK: false, Text: fmt.Sprintf("body must be 1-%d characters", maxToolCommentBody)}, nil
 	}
+	if ids, present, problem := reportArtifactIDs(args); problem != "" {
+		return ToolResult{Text: problem}, nil
+	} else if present {
+		return toolReportComment(ctx, tx, run, callID, body, args, ids, files)
+	}
 	result, err := postAgentComment(ctx, tx, run, callID, body, args)
 	if err != nil || !result.OK || result.Text == "comment already posted" {
 		return result, err
 	}
-	spaceID := run.SpaceID
-	// 让打开任务详情的成员及时看到 Agent 的评论（与任务表触发器发出的 task.changed 同一格式）。
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO openfox.organization_events (organization_id, type, entity, space_id, payload)
-		VALUES (openfox_private.current_organization_id(), 'task.changed', 'task', $1::uuid,
-		        jsonb_build_object('task_ids', jsonb_build_array($2::text), 'count', 1))`, spaceID, run.TaskID); err != nil {
+	if err := notifyTaskChanged(ctx, tx, run); err != nil {
 		return ToolResult{}, err
 	}
 	return ToolResult{OK: true, Text: "comment posted"}, nil
+}
+
+// notifyTaskChanged 让打开任务详情的成员及时看到 Agent 的评论（与任务表触发器发出的 task.changed 同一格式）。
+func notifyTaskChanged(ctx context.Context, tx pgx.Tx, run execution.Run) error {
+	_, err := tx.Exec(ctx, `
+		INSERT INTO openfox.organization_events (organization_id, type, entity, space_id, payload)
+		VALUES (openfox_private.current_organization_id(), 'task.changed', 'task', $1::uuid,
+		        jsonb_build_object('task_ids', jsonb_build_array($2::text), 'count', 1))`, run.SpaceID, run.TaskID)
+	return err
 }
 
 func toolTaskStart(ctx context.Context, tx pgx.Tx, run execution.Run, callID string) (ToolResult, error) {

@@ -10,6 +10,8 @@ var (
 	jpegHead = []byte("\xff\xd8\xff\xe0\x00\x10JFIF")
 	pdfHead  = []byte("%PDF-1.7\n")
 	zipHead  = []byte("PK\x03\x04\x14\x00")
+	webmHead = []byte("\x1a\x45\xdf\xa3\x9f\x42\x86\x81\x01")
+	mp4Head  = []byte("\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00mp42isom")
 )
 
 func TestClassify(t *testing.T) {
@@ -30,6 +32,11 @@ func TestClassify(t *testing.T) {
 		{"svg stored as text", "a.svg", []byte("<?xml version=\"1.0\"?><svg/>"), "text/plain; charset=utf-8", true},
 		{"html stored as text", "a.html", []byte("<html><script>1</script></html>"), "text/plain; charset=utf-8", true},
 		{"legacy doc binary", "a.doc", []byte("\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"), "application/octet-stream", true},
+		{"webm video", "case-01.webm", webmHead, "video/webm", true},
+		{"mp4 video", "case-01.MP4", mp4Head, "video/mp4", true},
+		{"webm extension but mp4 content", "a.webm", mp4Head, "", false},
+		{"mp4 extension but html content", "a.mp4", []byte("<html></html>"), "", false},
+		{"other video container", "a.mov", mp4Head, "", false},
 		{"png extension but html content", "a.png", []byte("<html></html>"), "", false},
 		{"png extension but jpeg content", "a.png", jpegHead, "", false},
 		{"pdf extension but zip content", "a.pdf", zipHead, "", false},
@@ -63,5 +70,29 @@ func TestPreviewableExcludesActiveContent(t *testing.T) {
 	}
 	if !Previewable("image/png") {
 		t.Error("png should be previewable")
+	}
+}
+
+func TestPreviewKind(t *testing.T) {
+	cases := []struct {
+		name, contentType string
+		size              int64
+		want              string
+	}{
+		{"a.png", "image/png", 10, PreviewImage},
+		{"a.webm", "video/webm", MaxBytes, PreviewVideo},
+		{"a.mp4", "video/mp4", 1, PreviewVideo},
+		{"report.html", "text/plain; charset=utf-8", 7_447_186, PreviewHTML},
+		{"REPORT.HTM", "text/plain; charset=utf-8", MaxHTMLPreviewBytes, PreviewHTML},
+		{"big.html", "text/plain; charset=utf-8", MaxHTMLPreviewBytes + 1, PreviewNone},
+		{"notes.txt", "text/plain; charset=utf-8", 10, PreviewNone},
+		{"a.html", "application/octet-stream", 10, PreviewNone},
+		{"a.svg", "text/plain; charset=utf-8", 10, PreviewNone},
+		{"a.pdf", "application/pdf", 10, PreviewNone},
+	}
+	for _, tc := range cases {
+		if got := PreviewKind(tc.name, tc.contentType, tc.size); got != tc.want {
+			t.Errorf("PreviewKind(%q, %q, %d) = %q, want %q", tc.name, tc.contentType, tc.size, got, tc.want)
+		}
 	}
 }

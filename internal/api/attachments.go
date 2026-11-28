@@ -168,7 +168,8 @@ func (h *Handler) listTaskAttachments(w http.ResponseWriter, r *http.Request) {
 		canManage := call.authorizeSpace(ctx, tx, service, spaceID, policy.ActionManageSpace, taskID) == nil
 		canWrite := call.authorizeSpace(ctx, tx, service, spaceID, policy.ActionUpdateObject, taskID) == nil
 		for index := range items {
-			items[index].CanDelete = canManage || (canWrite && items[index].UploadedBy == call.selected.Actor.UserID)
+			// 正式报告评论的附件随评论存在，不能单独删除。
+			items[index].CanDelete = items[index].CommentID == "" && (canManage || (canWrite && items[index].UploadedBy == call.selected.Actor.UserID))
 		}
 		return nil
 	})
@@ -338,6 +339,10 @@ func (h *Handler) deleteAttachment(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := authorizeAttachment(ctx, tx, call, service, item, true); err != nil {
 			return err
+		}
+		if item.CommentID != "" {
+			// 正式报告评论的附件随评论存在，不能单独删除。
+			return attachments.ErrReportAttachment
 		}
 		key, err = attachments.Delete(ctx, tx, item.ID)
 		return err

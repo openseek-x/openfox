@@ -140,6 +140,7 @@ type FileKind =
   | "image"
   | "text"
   | "archive"
+  | "video"
   | "other";
 
 const EXTENSIONS: Array<[FileKind, RegExp]> = [
@@ -149,6 +150,7 @@ const EXTENSIONS: Array<[FileKind, RegExp]> = [
   ["pdf", /\.pdf$/i],
   ["image", /\.(png|jpe?g|gif|webp|svg|bmp)$/i],
   ["archive", /\.(zip|tar|gz|tgz|7z|rar)$/i],
+  ["video", /\.(webm|mp4)$/i],
   ["text", /\.(txt|md|markdown|json|ya?ml|log|html?|xml)$/i],
 ];
 
@@ -157,6 +159,7 @@ export function fileKindOf(name: string, mime: string): FileKind {
   for (const [kind, pattern] of EXTENSIONS) if (pattern.test(name)) return kind;
   if (mime === "application/pdf") return "pdf";
   if (mime.startsWith("image/")) return "image";
+  if (mime.startsWith("video/")) return "video";
   if (mime.startsWith("text/")) return "text";
   return "other";
 }
@@ -169,6 +172,7 @@ const BADGE: Record<FileKind, { text: string; className: string }> = {
   image: { text: "IMG", className: "bg-info text-caption" },
   text: { text: "TXT", className: "bg-fg-muted text-caption" },
   archive: { text: "ZIP", className: "bg-fg-secondary text-caption" },
+  video: { text: "VID", className: "bg-[#7c3aed] text-caption" },
   other: { text: "", className: "bg-fg-subtle" },
 };
 

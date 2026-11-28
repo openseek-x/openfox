@@ -13,6 +13,9 @@ const (
 	OwnerTask         = "TASK"
 	OwnerConversation = "CONVERSATION"
 
+	UploaderUser  = "USER"
+	UploaderAgent = "AGENT"
+
 	// MaxBytes 与文档库一致。
 	MaxBytes = 20 << 20
 	// MaxPerTask 是每个任务的附件上限。
@@ -27,13 +30,14 @@ const (
 )
 
 var (
-	ErrNotFound     = collaboration.NewRuleError(http.StatusNotFound, "NOT_FOUND", "attachment is not available")
-	ErrTooLarge     = collaboration.NewRuleError(http.StatusRequestEntityTooLarge, "ATTACHMENT_TOO_LARGE", "attachment must not exceed 20 MB")
-	ErrTypeRejected = collaboration.NewRuleError(http.StatusUnsupportedMediaType, "ATTACHMENT_TYPE_NOT_ALLOWED", "this file type is not allowed as an attachment")
-	ErrTaskLimit    = collaboration.NewRuleError(http.StatusConflict, "ATTACHMENT_LIMIT", "a task can have at most 100 attachments")
-	ErrPendingLimit = collaboration.NewRuleError(http.StatusConflict, "ATTACHMENT_PENDING_LIMIT", "too many attachments are waiting to be sent")
-	ErrBadName      = collaboration.NewRuleError(http.StatusBadRequest, "INVALID_REQUEST", "attachment file name is invalid")
-	ErrBadMessage   = collaboration.NewRuleError(http.StatusBadRequest, "INVALID_REQUEST", "attachment_ids are invalid or already used")
+	ErrNotFound         = collaboration.NewRuleError(http.StatusNotFound, "NOT_FOUND", "attachment is not available")
+	ErrTooLarge         = collaboration.NewRuleError(http.StatusRequestEntityTooLarge, "ATTACHMENT_TOO_LARGE", "attachment must not exceed 20 MB")
+	ErrTypeRejected     = collaboration.NewRuleError(http.StatusUnsupportedMediaType, "ATTACHMENT_TYPE_NOT_ALLOWED", "this file type is not allowed as an attachment")
+	ErrTaskLimit        = collaboration.NewRuleError(http.StatusConflict, "ATTACHMENT_LIMIT", "a task can have at most 100 attachments")
+	ErrPendingLimit     = collaboration.NewRuleError(http.StatusConflict, "ATTACHMENT_PENDING_LIMIT", "too many attachments are waiting to be sent")
+	ErrBadName          = collaboration.NewRuleError(http.StatusBadRequest, "INVALID_REQUEST", "attachment file name is invalid")
+	ErrReportAttachment = collaboration.NewRuleError(http.StatusForbidden, "FORBIDDEN", "attachments of a report comment cannot be deleted separately")
+	ErrBadMessage       = collaboration.NewRuleError(http.StatusBadRequest, "INVALID_REQUEST", "attachment_ids are invalid or already used")
 )
 
 // FileInfo 是已写入存储的文件事实。
@@ -46,20 +50,26 @@ type FileInfo struct {
 
 // Attachment 是对外形态（契约 Attachment）；存储键不输出。
 type Attachment struct {
-	CommentThreadID string    `json:"-"`
-	ID              string    `json:"id"`
-	OwnerKind       string    `json:"owner_kind"`
-	TaskID          string    `json:"task_id,omitempty"`
-	ConversationID  string    `json:"conversation_id,omitempty"`
-	MessageID       string    `json:"message_id,omitempty"`
-	Name            string    `json:"name"`
-	ContentType     string    `json:"content_type"`
-	SizeBytes       int64     `json:"size_bytes"`
-	UploadedBy      string    `json:"uploaded_by"`
-	UploaderName    string    `json:"uploader_name"`
-	CreatedAt       time.Time `json:"created_at"`
+	CommentThreadID string `json:"-"`
+	ID              string `json:"id"`
+	OwnerKind       string `json:"owner_kind"`
+	TaskID          string `json:"task_id,omitempty"`
+	ConversationID  string `json:"conversation_id,omitempty"`
+	MessageID       string `json:"message_id,omitempty"`
+	Name            string `json:"name"`
+	ContentType     string `json:"content_type"`
+	SizeBytes       int64  `json:"size_bytes"`
+	// UploaderKind 是 USER（成员上传）或 AGENT（智能体把本次 Run 的产物附到正式报告评论）。
+	UploaderKind      string    `json:"uploader_kind"`
+	UploadedBy        string    `json:"uploaded_by,omitempty"`
+	UploadedByAgentID string    `json:"uploaded_by_agent_id,omitempty"`
+	UploaderName      string    `json:"uploader_name"`
+	CommentID         string    `json:"comment_id,omitempty"`
+	CreatedAt         time.Time `json:"created_at"`
 	// Previewable 为 true 表示可以用 ?disposition=inline 预览（仅 PNG / JPEG / GIF / WebP）。
 	Previewable bool `json:"previewable"`
+	// PreviewKind 是页面内预览方式：image / video / html / none（见 PreviewKind）。
+	PreviewKind string `json:"preview_kind"`
 	// CanDelete 由 API 层按调用者填写。
 	CanDelete bool   `json:"can_delete"`
 	SpaceID   string `json:"-"`

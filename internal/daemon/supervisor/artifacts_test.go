@@ -140,6 +140,14 @@ func TestInspectArtifactRejections(t *testing.T) {
 	}
 }
 
+// webmHeader / mp4Header 是最小的合法视频文件头（http.DetectContentType 可识别）。
+var (
+	webmHeader = []byte{0x1A, 0x45, 0xDF, 0xA3, 0x9F, 0x42, 0x86, 0x81, 0x01, 0x42, 0xF7, 0x81, 0x01, 0x42, 0xF2, 0x81, 0x04,
+		0x42, 0xF3, 0x81, 0x08, 0x42, 0x82, 0x84, 'w', 'e', 'b', 'm'}
+	mp4Header = []byte{0, 0, 0, 0x20, 'f', 't', 'y', 'p', 'i', 's', 'o', 'm', 0, 0, 2, 0, 'i', 's', 'o', 'm', 'i', 's', 'o', '2',
+		'a', 'v', 'c', '1', 'm', 'p', '4', '1'}
+)
+
 func TestClassifyArtifactIsConservative(t *testing.T) {
 	cases := []struct {
 		name    string
@@ -153,6 +161,12 @@ func TestClassifyArtifactIsConservative(t *testing.T) {
 		{"page.html", []byte("<script>alert(1)</script>"), "text/plain"},
 		{"icon.svg", []byte(`<svg onload="alert(1)"/>`), "text/plain"},
 		{"a.png", pngHeader, "image/png"},
+		// 测试录像：文件头必须是 WebM（EBML）/ MP4（ftyp）。
+		{"case-01.webm", webmHeader, "video/webm"},
+		{"case-01.mp4", mp4Header, "video/mp4"},
+		{"fake.webm", []byte("<html>"), octetStream},
+		{"swap.mp4", webmHeader, octetStream},
+		{"clip.mov", mp4Header, octetStream},
 		{"document.pdf", []byte("%PDF-1.7\nstartxref\n42\n%%EOF\n"), "application/pdf"},
 		{"fake.pdf", []byte("<html>not a PDF</html>"), octetStream},
 		// 扩展名与内容不符：一律只能下载。
@@ -238,15 +252,15 @@ func TestArtifactPublisherDedupLimitAndErrors(t *testing.T) {
 	if text, ok := publisher.call(context.Background(), publishArgs("../x", "")); ok || !strings.Contains(text, "outside the managed run roots") {
 		t.Fatalf("escape = %q", text)
 	}
-	// 上限：第 11 个不同内容的文件被拒绝。
+	// 上限：超过 maxRunArtifacts 个不同内容的文件被拒绝。
 	for i := 1; i < maxRunArtifacts; i++ {
 		writeFile(t, filepath.Join(out, "f.txt"), []byte(strings.Repeat("x", i)))
 		if text, ok := publisher.call(context.Background(), publishArgs(filepath.Join(out, "f.txt"), "")); !ok {
 			t.Fatalf("publish %d = %q", i, text)
 		}
 	}
-	writeFile(t, filepath.Join(out, "f.txt"), []byte("eleventh"))
-	if text, ok := publisher.call(context.Background(), publishArgs(filepath.Join(out, "f.txt"), "")); ok || !strings.Contains(text, "limit of 10") {
+	writeFile(t, filepath.Join(out, "f.txt"), []byte("one too many"))
+	if text, ok := publisher.call(context.Background(), publishArgs(filepath.Join(out, "f.txt"), "")); ok || !strings.Contains(text, "limit of 20") {
 		t.Fatalf("limit = %q", text)
 	}
 	if got := publisher.ids(); len(got) != maxRunArtifacts {
@@ -288,7 +302,7 @@ func TestArtifactPublisherUploadErrors(t *testing.T) {
 
 func TestBuildArtifactSectionMentionsDirectoryAndRule(t *testing.T) {
 	section := buildArtifactSection("/state/run-artifacts/run-1")
-	for _, want := range []string{"openfox_publish_artifact", "/state/run-artifacts/run-1", "does not deliver", "10 artifacts", "20 MB"} {
+	for _, want := range []string{"openfox_publish_artifact", "/state/run-artifacts/run-1", "does not deliver", "20 artifacts", "20 MB", "HTML reports", "WebM/MP4 videos"} {
 		if !strings.Contains(section, want) {
 			t.Errorf("section missing %q", want)
 		}

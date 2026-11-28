@@ -13620,6 +13620,8 @@ paths:
         private, no-store，
 
         Content-Disposition 一律 attachment（任何类型都不在浏览器里内联执行）。已过保留期、已清理或不存在 404。
+
+        支持 HTTP Range（Accept-Ranges: bytes，206 分段 / 416 越界）：视频产物由 <video> 直接指向该地址分段播放。
       responses:
         "200":
           description: 文件内容
@@ -13776,10 +13778,10 @@ paths:
 
         X-Artifact-Name 只取最后一个路径成分并清理控制字符；X-Artifact-MIME 只接受可预览白名单
 
-        （text/plain、text/markdown、text/csv、image/png、image/jpeg、image/gif、image/webp、application/pdf，以及经过包结构校验的 DOCX/XLSX/PPTX 对应 MIME），其余一律存为
-        application/octet-stream。
+        （text/plain、text/markdown、text/csv、image/png、image/jpeg、image/gif、image/webp、application/pdf、video/webm、video/mp4，以及经过包结构校验的 DOCX/XLSX/PPTX 对应 MIME），其余一律存为
+        application/octet-stream。声明为 video/webm、video/mp4 时文件头嗅探结果必须一致，否则 400。
 
-        单个文件不超过 min(组织策略 artifact_file_max_bytes, 20 MB)，每次 Run 合计不超过 artifact_run_max_bytes、最多 10 个
+        单个文件不超过 min(组织策略 artifact_file_max_bytes, 20 MB)，每次 Run 合计不超过 artifact_run_max_bytes、最多 20 个
 
         （超出 413 RESOURCE_LIMIT）。同一 Run 内 sha256 相同的内容不重复登记：返回已有产物（200），新写入的对象被删除。
 
@@ -16371,8 +16373,8 @@ paths:
       description: |
         单文件 ≤ 20 MB（413 ATTACHMENT_TOO_LARGE）；每个任务最多 100 个（409 ATTACHMENT_LIMIT）。
         类型按扩展名白名单加文件头嗅探判断（415 ATTACHMENT_TYPE_NOT_ALLOWED）：图片（png / jpg / gif / webp）、pdf、
-        文本（txt / md / csv / json / log / yaml 等）、Office（docx / xlsx / pptx / doc / xls / ppt）、zip、svg / html / xml。
-        svg / html / xml 以纯文本保存，只能下载不能预览。文件名只保留最后一个路径成分，拒绝空名与控制字符。
+        文本（txt / md / csv / json / log / yaml 等）、Office（docx / xlsx / pptx / doc / xls / ppt）、zip、svg / html / xml、
+        视频（webm / mp4，文件头必须是对应容器）。svg / html / xml 以纯文本保存；其中 html 可做隔离静态预览（见 preview_kind）。文件名只保留最后一个路径成分，拒绝空名与控制字符。
       requestBody:
         required: true
         content:
@@ -16437,6 +16439,7 @@ paths:
       description: |
         默认 Content-Disposition: attachment。带 ?disposition=inline 且是图片（png / jpeg / gif / webp）时 inline；
         其余类型忽略该参数。所有响应带 X-Content-Type-Options: nosniff 与 Content-Security-Policy: sandbox。
+        支持 HTTP Range（Accept-Ranges: bytes，206 分段 / 416 越界），视频可以边下边播、拖动。
       parameters:
         - { name: disposition, in: query, required: false, schema: { type: string, enum: [inline, attachment] } }
       responses:
@@ -16450,7 +16453,8 @@ paths:
       operationId: deleteAttachment
       summary: 删除附件并清理存储对象
       description: |
-        任务附件：上传人（仍需任务可编辑）或空间管理员。对话附件：只有上传人能删除尚未发送的附件（已随消息发送的 403）。
+        任务附件：上传人（仍需任务可编辑）或空间管理员；智能体正式报告评论的附件随评论存在，不能单独删除（403）。
+        对话附件：只有上传人能删除尚未发送的附件（已随消息发送的 403）。
         读不到该附件的人得到 404。
       responses:
         '204': { description: 已删除 }
@@ -26780,7 +26784,7 @@ components:
         items: { type: array, items: { $ref: '#/components/schemas/SkillImportItem' } }
     Attachment:
       type: object
-      required: [id, owner_kind, name, content_type, size_bytes, uploaded_by, uploader_name, created_at, previewable, can_delete]
+      required: [id, owner_kind, name, content_type, size_bytes, uploader_kind, uploader_name, created_at, previewable, preview_kind, can_delete]
       properties:
         id: { type: string, format: uuid }
         owner_kind: { type: string, enum: [TASK, CONVERSATION] }
@@ -26790,11 +26794,20 @@ components:
         name: { type: string, maxLength: 255 }
         content_type: { type: string, description: 嗅探后的类型；svg / html / xml 为 text/plain }
         size_bytes: { type: integer, minimum: 0, maximum: 20971520 }
-        uploaded_by: { type: string, format: uuid }
-        uploader_name: { type: string }
+        uploader_kind: { type: string, enum: [USER, AGENT], description: AGENT = 智能体把本次 Run 的产物附到正式报告评论 }
+        uploaded_by: { type: string, format: uuid, description: uploader_kind = USER 时出现 }
+        uploaded_by_agent_id: { type: string, format: uuid, description: uploader_kind = AGENT 时出现 }
+        uploader_name: { type: string, description: 成员为姓名或 email，智能体为智能体名称 }
+        comment_id: { type: string, format: uuid, description: 所属的智能体正式报告评论；这类附件不能单独删除 }
         created_at: { type: string, format: date-time }
         previewable: { type: boolean, description: 可以用 ?disposition=inline 预览（png / jpeg / gif / webp） }
-        can_delete: { type: boolean, description: 仅上传响应与任务附件列表按调用者计算；消息里的附件为 false }
+        preview_kind:
+          type: string
+          enum: [image, video, html, none]
+          description: |
+            页面内预览方式。image：?disposition=inline 显示；video（webm / mp4）：<video> 直接指向下载地址，按 HTTP Range 分段播放；
+            html：以纯文本保存的 .html / .htm 且不超过 10 MB，前端取回后做隔离静态渲染（无脚本、仅内嵌位图）；none：只能下载。
+        can_delete: { type: boolean, description: 仅上传响应与任务附件列表按调用者计算；消息里的附件与正式报告评论的附件为 false }
     DeviceRunAttachment:
       type: object
       required: [id, name, content_type, size_bytes]
@@ -28271,6 +28284,10 @@ components:
           type: array
           items: { $ref: '#/components/schemas/ReactionSummary' }
         created_at: { type: string, format: date-time }
+        attachments:
+          type: array
+          description: 智能体正式报告评论附带的任务附件（每次 Run 最多一条报告评论），没有时不输出
+          items: { $ref: '#/components/schemas/Attachment' }
     TimelineItem:
       type: object
       description: type=activity 时只有 activity；type=comment 时只有 comment

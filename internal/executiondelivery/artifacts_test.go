@@ -47,6 +47,10 @@ func TestNormalizeArtifactMIME(t *testing.T) {
 		"application/xhtml+xml":     "application/octet-stream",
 		"text/javascript":           "application/octet-stream",
 		"image/png; something=else": "image/png",
+		"video/webm":                "video/webm",
+		"Video/MP4":                 "video/mp4",
+		"video/quicktime":           "application/octet-stream",
+		"video/ogg":                 "application/octet-stream",
 	}
 	for input, want := range cases {
 		if got := NormalizeArtifactMIME(input); got != want {

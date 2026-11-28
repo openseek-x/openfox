@@ -8,6 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"openfox/internal/attachments"
 	"openfox/internal/collaboration"
 	"openfox/internal/idempotency"
 	"openfox/internal/policy"
@@ -365,7 +366,10 @@ func (h *Handler) listTaskTimeline(w http.ResponseWriter, r *http.Request) {
 	var page collaboration.TimelinePage
 	if h.subResource(w, r, false, policy.ActionReadObject, func(ctx context.Context, tx pgx.Tx, sub taskSub) (err error) {
 		page, err = sub.service.ListTimeline(ctx, tx, sub.call.organizationID, sub.spaceID, sub.taskID, sub.call.selected.Actor, sub.call.checkSpaceAccess(sub.access, policy.ActionUpdateObject, sub.taskID) == nil, limit, cursor, r.URL.Query().Get("thread"))
-		return err
+		if err != nil {
+			return err
+		}
+		return attachTimelineFiles(ctx, tx, page.Items)
 	}) {
 		// 新接口：没有下一页时 next_cursor 为 null。
 		response := map[string]any{"items": page.Items, "next_cursor": nullableString(page.NextCursor)}
@@ -374,4 +378,24 @@ func (h *Handler) listTaskTimeline(w http.ResponseWriter, r *http.Request) {
 		}
 		writeJSON(w, http.StatusOK, response)
 	}
+}
+
+// attachTimelineFiles 为本页的智能体评论批量附上正式报告的附件（OPE-19）；一次查询，没有附件的评论不输出该字段。
+func attachTimelineFiles(ctx context.Context, tx pgx.Tx, items []collaboration.TimelineItem) error {
+	ids := []string{}
+	for _, item := range items {
+		if item.Comment != nil && item.Comment.AuthorAgentID != "" {
+			ids = append(ids, item.Comment.ID)
+		}
+	}
+	files, err := attachments.ListForComments(ctx, tx, ids)
+	if err != nil {
+		return err
+	}
+	for _, item := range items {
+		if item.Comment != nil && len(files[item.Comment.ID]) > 0 {
+			item.Comment.Attachments = files[item.Comment.ID]
+		}
+	}
+	return nil
 }

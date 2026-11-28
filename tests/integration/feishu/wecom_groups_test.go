@@ -240,7 +240,7 @@ func TestWeComGroupAuthorizationPipeline(t *testing.T) {
 	if !result.OK {
 		t.Fatalf("create task %+v", result)
 	}
-	if replay := b.mustCall(run, "space_task_create", "create-login", map[string]any{"title": "登录修复任务"}); replay != result {
+	if replay := b.mustCall(run, "space_task_create", "create-login", map[string]any{"title": "登录修复任务"}); replay.OK != result.OK || replay.Text != result.Text {
 		t.Fatal("tool replay differs")
 	}
 	if b.count(`SELECT count(*) FROM openfox.tasks WHERE organization_id=$1::uuid AND title='登录修复任务'`, b.org) != 1 {

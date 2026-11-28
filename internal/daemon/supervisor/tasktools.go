@@ -34,15 +34,15 @@ func taskTools(runContext RunContext) []runtime.Tool {
 		return tools
 	}
 	empty := json.RawMessage(`{"type":"object","properties":{},"additionalProperties":false}`)
-	comment := json.RawMessage(`{"type":"object","properties":{"body":{"type":"string","minLength":1,"maxLength":10000}},"required":["body"],"additionalProperties":false}`)
+	comment := json.RawMessage(`{"type":"object","properties":{"body":{"type":"string","minLength":1,"maxLength":10000},"artifact_ids":{"type":"array","minItems":1,"maxItems":20,"uniqueItems":true,"items":{"type":"string","format":"uuid"},"description":"Optional. artifact_id values returned by openfox_publish_artifact in this run (HTML report, recordings, evidence list, screenshots). Makes this the run's single formal report comment with those files attached to the task; posting again in the same run reuses that comment and only adds missing files."}},"required":["body"],"additionalProperties":false}`)
 	if runContext.SocialTools {
-		comment = json.RawMessage(`{"type":"object","properties":{"body":{"type":"string","minLength":1,"maxLength":10000},"reply_to_id":{"type":"string","format":"uuid","description":"ID of an existing comment from task_view"},"mention":{"type":"string","maxLength":254,"description":"One member's exact email or user ID"}},"required":["body"],"additionalProperties":false}`)
+		comment = json.RawMessage(`{"type":"object","properties":{"body":{"type":"string","minLength":1,"maxLength":10000},"reply_to_id":{"type":"string","format":"uuid","description":"ID of an existing comment from task_view"},"mention":{"type":"string","maxLength":254,"description":"One member's exact email or user ID"},"artifact_ids":{"type":"array","minItems":1,"maxItems":20,"uniqueItems":true,"items":{"type":"string","format":"uuid"},"description":"Optional. artifact_id values returned by openfox_publish_artifact in this run (HTML report, recordings, evidence list, screenshots). Makes this the run's single formal report comment with those files attached to the task; posting again in the same run reuses that comment and only adds missing files."}},"required":["body"],"additionalProperties":false}`)
 		tools = append(tools, runtime.Tool{Name: toolPrefix + "task_reaction", Description: "React to the bound task, or to a comment from task_view.", InputSchema: json.RawMessage(`{"type":"object","properties":{"emoji":{"type":"string","minLength":1,"maxLength":32},"comment_id":{"type":"string","format":"uuid"}},"required":["emoji"],"additionalProperties":false}`)})
 	}
 	return append(tools, []runtime.Tool{
 		{Name: toolPrefix + "task_view", InputSchema: empty,
 			Description: "View the task bound to this run: id, title, status, description, acceptance criteria, assignee and the most recent comments."},
-		{Name: toolPrefix + "task_comment", Description: "Post a comment on the bound task as this agent (progress, findings, results). Use plain text or Markdown.",
+		{Name: toolPrefix + "task_comment", Description: "Post a comment on the bound task as this agent (progress, findings, results). Use plain text or Markdown. To deliver a report, publish the files with openfox_publish_artifact first and pass their artifact_ids: the comment becomes this run's single formal report comment and the files become task attachments (HTML reports render, WebM/MP4 recordings play).",
 			InputSchema: comment},
 		{Name: toolPrefix + "task_start", InputSchema: empty,
 			Description: "Move the bound task from the to-do state to the workflow's in-progress state. Does nothing if it is already in progress."},
@@ -137,7 +137,7 @@ func buildTaskSection(task *RunTask) string {
 ## Working agreement for this task
 - If this run was triggered by task assignment, first read the task comments above, then call openfox_task_start.
 - Use openfox_task_view when you need fresher or fuller task context.
-- Report progress and conclusions with openfox_task_comment.
+- Report progress and conclusions with openfox_task_comment. Deliver a final report as one comment with artifact_ids (publish the files first); retrying in the same run reuses that report comment.
 - When the work is done, call openfox_conversation_state with waiting_review so a human can accept it.
 - If you need a human to answer a question, ask it in your reply and call openfox_conversation_state with waiting_reply.
 - Never claim the task is completed and never try to change it to a completed or cancelled state; a human decides that.
