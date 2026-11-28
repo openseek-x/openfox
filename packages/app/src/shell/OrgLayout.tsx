@@ -736,13 +736,12 @@ function Navigation({
             ))}
         </>
       )}
-      <div className="flex items-center pr-1">
+      <div className="group flex items-center pr-1">
         <SectionLabel label={t("shell.chat")} />
-        <NewChatButton
-          orgId={orgId}
-          variant="section"
-          className="mt-3 ml-auto"
-        />
+        {/* 「+」平时隐藏，悬停分组行或展开浮层时出现（与「我的空间」分组行一致） */}
+        <span className="of-row-actions mt-3 ml-auto">
+          <NewChatButton orgId={orgId} variant="section" />
+        </span>
       </div>
       <DirectChatList orgId={orgId} compact rail="home" />
       {conversations.isLoading ? (

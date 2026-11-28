@@ -383,12 +383,14 @@ describe("侧栏进阶指引", () => {
     expect(
       within(nav).queryByRole("link", { name: "查看全部对话" }),
     ).not.toBeInTheDocument();
-    // 对话分组标题右侧直接放「新建对话」+ 按钮，空态只保留提示文案不重复放按钮
+    // 对话分组标题右侧放悬停显隐的「新建对话」+ 按钮，空态只保留提示文案不重复放按钮
     const chatHeading = within(nav).getByText("对话");
     const chatHeaderRow = chatHeading.parentElement!.parentElement!;
+    expect(chatHeaderRow.className).toContain("group");
     const newChatBtn = within(chatHeaderRow).getByRole("button", {
       name: "新建对话",
     });
+    expect(newChatBtn.parentElement!.className).toContain("of-row-actions");
     expect(newChatBtn).toHaveAttribute("aria-haspopup", "dialog");
     expect(
       within(nav).getAllByRole("button", { name: "新建对话" }),
