@@ -111,16 +111,16 @@ function ViewEditor({
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex h-11 shrink-0 items-center gap-1.5 border-b border-line-default px-4 text-body-sm">
+      <header className="flex h-11 shrink-0 items-center gap-1.5 border-b border-line-subtle px-4 text-body-sm">
         <Link to={listPath} className="text-fg-muted hover:text-fg-default">
           {t("views.title")}
         </Link>
         <Icon name="chevron-right" size={12} className="text-fg-subtle" />
-        <span className="font-medium">
+        <span className="font-semibold text-fg-default">
           {view ? t("views.editor.editTitle") : t("views.editor.createTitle")}
         </span>
       </header>
-      <div className="mx-4 mt-3 flex items-start gap-3 rounded-xl border border-line-default p-3">
+      <div className="mx-4 mt-3 flex items-start gap-3 rounded-xl border border-line-soft bg-surface-card p-3 shadow-card">
         <ViewIconPicker orgId={orgId} value={icon} onChange={setIcon} />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <input

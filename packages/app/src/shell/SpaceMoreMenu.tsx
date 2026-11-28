@@ -55,11 +55,11 @@ export function SpaceMoreMenu({
           aria-expanded={props.open}
           onClick={props.toggle}
           className={cn(
-            "flex h-[30px] items-center gap-2 rounded-lg pr-1.5 pl-2 text-left text-body text-fg-default hover:bg-surface-hover",
-            props.open && "bg-surface-active",
+            "flex h-[30px] items-center gap-2 rounded-lg pr-1.5 pl-2 text-left text-body-sm text-fg-secondary transition-colors duration-100 hover:bg-surface-sidebar-hover hover:text-fg-default motion-reduce:transition-none",
+            props.open && "bg-surface-sidebar-active text-fg-default",
           )}
         >
-          <Icon name="settings" className="shrink-0 text-fg-secondary" />
+          <Icon name="settings" className="shrink-0 text-fg-muted" />
           <span className="min-w-0 flex-1 truncate">
             {t("shell.space.more")}
           </span>

@@ -1,0 +1,65 @@
+name: Quality checks
+on:
+  pull_request:
+    branches: [develop, master]
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    # 同仓 develop → master 的发布 PR 先做预检，发布工作流在最终提交上跑全量回归。
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.base_ref != 'master' || github.head_ref != 'develop' ||
+      github.event.pull_request.head.repo.full_name != github.repository
+    strategy:
+      matrix:
+        suite: [go, web]
+    runs-on: macos-15
+    timeout-minutes: 90
+    env:
+      GOFLAGS: -p=2
+      VITEST_MAX_WORKERS: '2'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22.23.1'
+      - name: Install build and test tools
+        run: |
+          brew list --versions postgresql@17 || brew install postgresql@17
+          echo "$(brew --prefix postgresql@17)/bin" >> "$GITHUB_PATH"
+          npm install --global pnpm@11.15.1
+          pnpm install --frozen-lockfile
+      - name: Go, isolated PostgreSQL and migrations
+        if: matrix.suite == 'go'
+        run: |
+          make check
+          git diff --exit-code
+      - name: Frontend and API contracts
+        if: matrix.suite == 'web'
+        run: pnpm check
+      - name: Browser tests with the live API
+        if: matrix.suite == 'web'
+        run: |
+          pnpm exec playwright install chromium
+          python3 tests/integration/run_all.py --browser-only
+
+  center:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Static deployment tests
+        run: python3 deploy/test_publish_static.py
+      # 正式发布时，center-image 会对带版本号的待发布镜像运行同一个冒烟测试。
+      - name: Build and smoke-test the PR image
+        if: github.event_name == 'pull_request'
+        run: |
+          docker build --build-arg OPENFOX_VERSION="$GITHUB_SHA" -t openfox:center-check .
+          bash deploy/test-center.sh openfox:center-check "$GITHUB_SHA"

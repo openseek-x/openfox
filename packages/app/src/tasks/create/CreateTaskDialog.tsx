@@ -29,6 +29,7 @@ import {
   useInvitationAssignees,
 } from "../invitationAssignees";
 import { keys, useApi } from "../../context";
+import { readLocal, writeLocal } from "../../storage";
 import { workflowStatuses } from "../model";
 import {
   LabelDot,
@@ -43,6 +44,7 @@ import {
 } from "../pickers";
 import { formatMonthDay } from "../primitives/dates";
 import { PriorityIcon, type Priority } from "../primitives/PriorityIcon";
+import { withoutDuplicateStatuses } from "../detail/MarkDuplicateDialog";
 import { StatusIcon } from "../primitives/StatusIcon";
 import { TaskTypeIcon } from "../primitives/TaskTypeIcon";
 import {
@@ -129,8 +131,7 @@ export function CreateTaskDialog({
     !init.sourceComment &&
     (!init.assignee || /^(agent|crew):/.test(init.assignee.value));
   const [agentMode, setAgentMode] = useState(
-    () =>
-      canUseAgent && !init.manual && localStorage.getItem(modeKey) === "agent",
+    () => canUseAgent && !init.manual && readLocal(modeKey) === "agent",
   );
   const directory = useDirectory(orgId, agentMode);
   const creators = (directory.data?.entries ?? []).filter(
@@ -220,9 +221,11 @@ export function CreateTaskDialog({
   const fromTriage =
     init.submitToTriage && init.spaceId === spaceId && triageEnabled !== false;
   const triageStatus = workflow.find((item) => item.category === "TRIAGE");
+  // OPE-17 · 新任务还没有可选的重复目标，候选里不提供重复类别
+  const creatable = withoutDuplicateStatuses(workflow);
   const choices = triageEnabled
-    ? workflow
-    : workflow.filter((item) => item.category !== "TRIAGE");
+    ? creatable
+    : creatable.filter((item) => item.category !== "TRIAGE");
   const selectedStatus = choices.find((item) => item.id === statusId);
   const submitToTriage =
     guestTriage ||
@@ -274,7 +277,7 @@ export function CreateTaskDialog({
       }
     } else setDescription(brief);
     setAgentMode(next);
-    localStorage.setItem(modeKey, next ? "agent" : "manual");
+    writeLocal(modeKey, next ? "agent" : "manual");
     requestAnimationFrame(() =>
       panel.current?.querySelector<HTMLElement>("[data-autofocus]")?.focus(),
     );
@@ -718,6 +721,7 @@ export function CreateTaskDialog({
                     assigneeName ? (
                       <TaskAssigneeAvatar
                         name={assigneeName}
+                        id={refFromValue(assignees[0] ?? "")?.id}
                         kind={refFromValue(assignees[0] ?? "")?.kind ?? "HUMAN"}
                         size={16}
                       />

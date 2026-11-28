@@ -362,7 +362,7 @@ export default function PDFPage({
       {note && (
         <div
           role="note"
-          className="absolute left-2 right-2 top-2 z-20 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded border border-line-default bg-surface-card p-2 text-body-sm shadow-lg"
+          className="absolute left-2 right-2 top-2 z-20 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-line-floating bg-surface-card p-2 text-body-sm shadow-popover"
           onPointerDown={(e) => e.stopPropagation()}
         >
           {note}

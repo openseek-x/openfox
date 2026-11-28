@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffectEvent, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import {
@@ -112,8 +112,9 @@ export function SlackSession({
       !!data &&
       ["PENDING", "EXCHANGING"].includes(data.status) &&
       Date.parse(data.expires_at) <= Date.now();
+  const notifyDone = useEffectEvent(() => onDone?.());
   useEffect(() => {
-    if (done) onDone?.();
+    if (done) notifyDone();
   }, [done]); // Revalidate through GET; callback query strings never establish success.
   if (query.isError || !orgId || !sessionId)
     return (

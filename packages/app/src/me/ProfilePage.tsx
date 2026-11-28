@@ -270,12 +270,13 @@ function VerifyEmailDialog({
     onSuccess: (_result, input) => onVerified(input.challengeId),
     onError: (error) => toast(emailErrorMessage(t, error), { tone: "error" }),
   });
+  const sendCode = send.mutate;
   // 严格模式会重复执行 effect，用 ref 保证只发一次
   useEffect(() => {
     if (started.current) return;
     started.current = true;
-    send.mutate();
-  }, []);
+    sendCode();
+  }, [sendCode]);
   const resendAt = challenge ? Date.parse(challenge.resend_after) : null;
   const cooldown = useCountdown(resendAt);
   return (

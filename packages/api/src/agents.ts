@@ -250,9 +250,9 @@ export function createAgentsApi(http: HttpClient) {
           ),
       },
       /** 组织级目录；archived=true 只看已归档 */
-      directory: (orgId: string, archived = false) =>
+      directory: (orgId: string, archived = false, agentId?: string) =>
         http.request<S["AgentDirectory"]>(`${org(orgId)}/agent-directory`, {
-          query: { archived: archived || undefined },
+          query: { archived: archived || undefined, agent_id: agentId },
         }),
       /** 目录置顶（个人偏好，幂等） */
       setPin: (orgId: string, input: DirectoryPinInput) =>

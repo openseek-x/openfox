@@ -1,0 +1,22 @@
+{
+  "name": "@openfox/extension",
+  "private": true,
+  "type": "module",
+  "version": "0.2.1",
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit && rsbuild build",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@openfox/api": "workspace:*",
+    "@openfox/ui": "workspace:*",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@rsbuild/core": "2.2.14",
+    "@rsbuild/plugin-react": "2.1.1",
+    "@tailwindcss/postcss": "4.3.3",
+    "tailwindcss": "4.3.3"
+  }
+}

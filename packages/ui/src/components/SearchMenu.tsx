@@ -169,7 +169,7 @@ export function SearchMenu({
       aria-label={label}
       className={cn("w-[260px] p-0", className)}
     >
-      <div className="of-input-frame flex items-center gap-2 border-b border-line-default px-3 py-2 focus-within:border-line-focus">
+      <div className="of-input-frame flex items-center gap-2 border-b border-line-soft px-3 py-2 focus-within:border-line-focus">
         <Icon name="search" className="text-fg-muted" />
         <input
           ref={inputRef}
@@ -194,7 +194,7 @@ export function SearchMenu({
         role="listbox"
         aria-label={label}
         aria-multiselectable={multiple || undefined}
-        className="max-h-[320px] overflow-y-auto p-1"
+        className="max-h-[320px] overflow-y-auto p-1.5"
       >
         {flat.length === 0 && (
           <div className="px-2.5 py-3 text-center text-body-sm text-fg-muted">
@@ -208,7 +208,7 @@ export function SearchMenu({
             aria-label={group.label}
           >
             {group.label && (
-              <div className="px-2.5 pt-2 pb-1 text-caption text-fg-muted">
+              <div className="px-2.5 pt-2 pb-1 text-caption font-medium text-fg-muted">
                 {group.label}
               </div>
             )}
@@ -275,7 +275,7 @@ export function SearchMenu({
         </button>
       )}
       {footer && (!footer.requiresQuery || query.trim() !== "") && (
-        <div className="border-t border-line-default p-1">
+        <div className="border-t border-line-soft p-1.5">
           <button
             type="button"
             onClick={() => {

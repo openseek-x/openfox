@@ -463,8 +463,9 @@ export function ConversationHeader({
     : [];
 
   return (
-    <header className="flex h-11 shrink-0 items-center gap-1 border-b border-line-soft px-4">
+    <header className="flex h-11 shrink-0 items-center gap-1 border-b border-line-subtle px-4">
       <AgentAvatar
+        agentId={agent.id}
         name={agent.name}
         avatar={agent.avatar}
         size={20}
@@ -472,7 +473,7 @@ export function ConversationHeader({
       />
       <span
         title={crew?.name ?? agent.name}
-        className="min-w-0 max-w-[40%] truncate text-body font-medium"
+        className="min-w-0 max-w-[40%] truncate text-body font-semibold text-fg-default"
       >
         {crew?.name ?? agent.name}
       </span>

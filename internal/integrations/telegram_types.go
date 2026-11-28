@@ -74,24 +74,24 @@ type TelegramConfirmInput struct {
 	RemoteBotID string `json:"remote_bot_id"`
 }
 type TelegramBot struct {
-	UnsupportedTopicCount int64             `json:"unsupported_topic_count"`
-	Runtime               *FeishuBotRuntime `json:"runtime,omitempty"`
-	ExtraPrompt           string            `json:"extra_prompt,omitempty"`
-	ID                    string            `json:"id"`
-	ConnectionID          string            `json:"connection_id"`
-	Kind                  string            `json:"kind"`
-	Agent                 FeishuBotRef      `json:"agent"`
-	Space                 *FeishuBotRef     `json:"space,omitempty"`
-	RemoteBotID           telegram.ID       `json:"remote_bot_id"`
-	Username              string            `json:"username"`
-	Name                  string            `json:"name"`
-	State                 string            `json:"state"`
-	ControlStatus         string            `json:"control_status"`
-	LastError             string            `json:"last_error"`
-	Version               uint64            `json:"version"`
-	ConfiguredAt          *time.Time        `json:"configured_at,omitempty"`
-	FirstUpdateAt         *time.Time        `json:"first_update_at,omitempty"`
-	CanManage             bool              `json:"can_manage"`
+	UnsupportedTopicCount int64         `json:"unsupported_topic_count"`
+	Runtime               *IMBotRuntime `json:"runtime,omitempty"`
+	ExtraPrompt           string        `json:"extra_prompt,omitempty"`
+	ID                    string        `json:"id"`
+	ConnectionID          string        `json:"connection_id"`
+	Kind                  string        `json:"kind"`
+	Agent                 FeishuBotRef  `json:"agent"`
+	Space                 *FeishuBotRef `json:"space,omitempty"`
+	RemoteBotID           telegram.ID   `json:"remote_bot_id"`
+	Username              string        `json:"username"`
+	Name                  string        `json:"name"`
+	State                 string        `json:"state"`
+	ControlStatus         string        `json:"control_status"`
+	LastError             string        `json:"last_error"`
+	Version               uint64        `json:"version"`
+	ConfiguredAt          *time.Time    `json:"configured_at,omitempty"`
+	FirstUpdateAt         *time.Time    `json:"first_update_at,omitempty"`
+	CanManage             bool          `json:"can_manage"`
 }
 type TelegramBotsView struct {
 	Bots []TelegramBot `json:"bots"`

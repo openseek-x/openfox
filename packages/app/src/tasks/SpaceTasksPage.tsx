@@ -211,7 +211,7 @@ function SpaceTasksContent({
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex min-h-11 shrink-0 flex-wrap items-center gap-2 border-b border-line-default px-4 py-1">
+      <header className="flex min-h-11 shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-line-subtle px-4 py-1.5">
         <nav
           aria-label={t("tasks.breadcrumb")}
           className="flex min-w-0 flex-1 items-center gap-1.5 text-body"
@@ -225,7 +225,9 @@ function SpaceTasksContent({
             size={12}
             className="shrink-0 text-fg-subtle"
           />
-          <h1 className="shrink-0 font-medium">{t("tasks.title")}</h1>
+          <h1 className="shrink-0 font-semibold text-fg-default">
+            {t("tasks.title")}
+          </h1>
         </nav>
         <Button
           size="28"
@@ -238,7 +240,7 @@ function SpaceTasksContent({
           {t("tasks.new")}
         </Button>
       </header>
-      <div className="flex min-h-9 shrink-0 flex-wrap items-center gap-2 border-b border-line-default px-4 py-1 text-body-sm">
+      <div className="flex min-h-9 shrink-0 flex-wrap items-center gap-2 border-b border-line-subtle px-4 py-1 text-body-sm">
         <div
           role="group"
           aria-label={t("tasks.defaultView.sourceTabs")}

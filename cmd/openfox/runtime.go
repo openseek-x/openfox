@@ -50,7 +50,7 @@ func runRuntimeProbe(args []string) error {
 	flags := flag.NewFlagSet("runtime probe", flag.ContinueOnError)
 	flags.SetOutput(os.Stderr)
 	executable := flags.String("executable", "", "Runtime executable or PATH name (empty: auto-discover)")
-	provider := flags.String("provider", "codex", "Runtime provider (codex, codebuddy, hermes or gemini)")
+	provider := flags.String("provider", "codex", "Runtime provider (codex, claude-code, cursor, gemini, opencode, pi, codebuddy or hermes)")
 	timeout := flags.Duration("timeout", 5*time.Second, "capability probe timeout")
 	var supported stringListFlag
 	flags.Var(&supported, "supported-version", "supported Codex version; may be repeated")
@@ -106,6 +106,25 @@ func runRuntimeProbe(args []string) error {
 		response.Capabilities = cap
 		if err != nil {
 			response.Error = err.Error()
+		}
+	} else if *provider == "cursor" || *provider == "claude-code" || *provider == "pi" || *provider == "opencode" {
+		if len(supported) > 0 {
+			return errors.New("--supported-version is only accepted for Codex")
+		}
+		var probe capabilityProber
+		if *provider == "cursor" {
+			probe = cliagent.NewCursorDiscovery(*executable)
+		} else {
+			a := cliagent.New(*provider, *executable)
+			a.ProbeTimeout = *timeout
+			probe = a
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), *timeout)
+		defer cancel()
+		capabilities, err := probe.Detect(ctx)
+		response.Capabilities = capabilities
+		if err != nil {
+			response.Error = safeRuntimeError(err)
 		}
 	} else if *provider == "codex" {
 		response = probeRuntime(context.Background(), *executable, supported, *timeout)

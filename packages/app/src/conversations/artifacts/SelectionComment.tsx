@@ -58,7 +58,7 @@ export function SelectionComment({
         placement="top-start"
         offset={8}
         aria-label={t("artifacts.review.comment")}
-        className="of-input-frame w-75 max-w-[calc(100vw-16px)] rounded-[22px] border-line-default p-[7px] text-body-sm shadow-lg focus-within:border-line-strong"
+        className="of-input-frame w-75 max-w-[calc(100vw-16px)] rounded-[22px] border-line-floating p-[7px] text-body-sm shadow-popover focus-within:border-line-strong"
       >
         <AnnotationInput
           value={body}

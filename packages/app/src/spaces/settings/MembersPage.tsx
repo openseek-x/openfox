@@ -180,7 +180,9 @@ export function SpaceMembersPage({
   return (
     <div className="mx-auto flex w-full max-w-[768px] flex-col gap-5 px-6 pt-6 pb-12">
       {retired && <RetiredBanner />}
-      <h1 className="text-title font-semibold">{t("spaces.members.title")}</h1>
+      <h1 className="text-heading font-semibold tracking-[-0.015em] text-fg-default">
+        {t("spaces.members.title")}
+      </h1>
       <div className="flex items-center gap-2">
         <TextInput
           aria-label={t("spaces.members.search")}

@@ -1,11 +1,12 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { DeviceDetail, SpaceAgent } from "@openfox/api";
 
 import { agent, crew as crewFixture, device, entry } from "../agents/fixtures";
 import { json, renderSettings } from "../settings/testing";
+import { DEVICE_POLL_MS } from "../computers/queries";
 import { computerNoticeState } from "./ComputerNotice";
 import { ORG, TS, chatBase, message, summary } from "./fixtures";
 
@@ -173,6 +174,30 @@ describe("对话输入框上方的电脑提示", () => {
     expect(
       await screen.findByRole("complementary", { name: "a1 的设置" }),
     ).toBeInTheDocument();
+  });
+
+  it("电脑断开后重连：驻留的会话页在下一次轮询后提示自动消失", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      let online = false;
+      open({
+        online: false,
+        extra: (call) =>
+          call.method === "GET" && call.path === `${ORG}/devices`
+            ? json(200, {
+                devices: [device("d1", { online })],
+                next_cursor: null,
+              })
+            : undefined,
+      });
+      expect(await screen.findByText(OFFLINE)).toBeInTheDocument();
+      // 电脑重连后不重新进入页面，仅靠轮询刷新
+      online = true;
+      await act(() => vi.advanceTimersByTimeAsync(DEVICE_POLL_MS + 100));
+      await waitFor(() => expect(screen.queryByText(OFFLINE)).toBeNull());
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("小队对话不显示电脑提示", async () => {

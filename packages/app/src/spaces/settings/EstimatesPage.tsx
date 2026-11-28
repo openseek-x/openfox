@@ -146,7 +146,7 @@ export function EstimatesPage({
                   aria-expanded={open}
                   aria-label={t("spaces.estimates.issueTitle")}
                   onClick={toggle}
-                  className="flex h-8 w-[260px] items-center gap-2 rounded-lg border border-line-default px-2.5 text-body-sm hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-8 w-[260px] items-center gap-2 rounded-lg border border-line-soft bg-surface-card px-2.5 text-body-sm shadow-card transition-colors duration-100 hover:border-line-default hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
                 >
                   <span className="min-w-0 flex-1 truncate text-left">
                     {current.scale === "notUsed"

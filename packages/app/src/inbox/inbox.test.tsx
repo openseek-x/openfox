@@ -141,7 +141,7 @@ describe("收件箱", () => {
     );
   });
 
-  it("隐藏零计数；离开收件箱后收起并重置重要程度筛选", async () => {
+  it("隐藏零计数；其他分区不应用重要程度筛选，返回后恢复选择", async () => {
     const user = userEvent.setup();
     const server = renderInbox();
     await screen.findByRole("list", { name: "通知列表" });
@@ -163,7 +163,7 @@ describe("收件箱", () => {
       ),
     ).toBe(true);
     await user.click(screen.getByRole("tab", { name: /收件箱/ }));
-    expect(screen.getByRole("radio", { name: "全部 1" })).toHaveAttribute(
+    expect(screen.getByRole("radio", { name: "重要 1" })).toHaveAttribute(
       "aria-checked",
       "true",
     );

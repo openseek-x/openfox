@@ -78,12 +78,13 @@ export function TriageSettingsPage({
   const [disableOpen, setDisableOpen] = useState(false);
   const value = settings.data;
   const { hash } = useLocation();
+  const loaded = Boolean(value);
   useEffect(() => {
-    if (value && hash === "#triage-responsibility")
+    if (loaded && hash === "#triage-responsibility")
       document
         .getElementById("triage-responsibility")
         ?.scrollIntoView?.({ block: "start" });
-  }, [hash, !!value]);
+  }, [hash, loaded]);
   if (!value) return null;
   const editable = canManage && !retired && value.can_manage;
   const save = (patch: {
@@ -116,7 +117,7 @@ export function TriageSettingsPage({
         description={t("spaces.triage.settingsDescription")}
       />
       {!editable && (
-        <div className="rounded-lg border border-line-default bg-surface-muted px-4 py-3 text-body-sm text-fg-muted">
+        <div className="rounded-xl border border-line-soft bg-surface-muted/50 px-4 py-3 text-body-sm text-fg-muted">
           {t("spaces.triage.readOnly")}
         </div>
       )}

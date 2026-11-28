@@ -447,9 +447,11 @@ describe("窄布局 · 会话标签", () => {
     );
     await titleBox();
     const tabs = await screen.findByRole("group", { name: "本任务会话" });
-    // 2 个标签 + 更多按钮
+    // 两个会话切换按钮，头像和更多操作各有独立入口。
     await waitFor(() =>
-      expect(within(tabs).getAllByRole("button")).toHaveLength(3),
+      expect(
+        within(tabs).getAllByRole("button", { name: /会话 c/ }),
+      ).toHaveLength(2),
     );
     const pressed = within(tabs).getByRole("button", { pressed: true });
     expect(pressed).toHaveTextContent("熊猫 · 会话 c1");

@@ -1,6 +1,7 @@
 node_modules
 pnpm-lock.yaml
 apps/web/dist
+apps/extension/dist
 tests/frontend/test-results
 tests/frontend/playwright-report
 packages/api/src/schema.gen.ts

@@ -98,6 +98,7 @@ export function ConversationRow({
       <div className="flex min-w-0 items-center gap-2">
         <span className="flex shrink-0 items-center -space-x-1">
           <AgentAvatar
+            agentId={item.agent.id}
             name={item.agent.name}
             avatar={item.agent.avatar}
             size={20}
@@ -523,6 +524,7 @@ export function InvokeAgentButton({
                     key={agent.id}
                     icon={
                       <AgentAvatar
+                        agentId={agent.id}
                         name={agent.name}
                         avatar={agent.avatar}
                         size={20}
@@ -584,6 +586,7 @@ export function InvokeAgentButton({
                 key={agent.id}
                 icon={
                   <AgentAvatar
+                    agentId={agent.id}
                     name={agent.name}
                     avatar={agent.avatar}
                     size={20}

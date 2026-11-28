@@ -304,7 +304,6 @@ export function RunTranscriptDialog({
               }
               truncated={pages.hasNextPage}
               renderText={renderMarkdown}
-              defaultExpanded
             />
             {pages.hasNextPage && (
               <Button

@@ -18,6 +18,30 @@ Email notifications can be delivered more than once. If SMTP accepts a message a
 the worker stops before recording completion, the recipient may get another
 copy after the delivery lease expires. An expired notification can also end undelivered.
 
+## 本地运行中心镜像
+
+以下命令在仓库根目录执行。示例沿用 Compose 中的本地数据库凭据。目录权限设为 700，文件允许容器中的 UID 65532 读取。示例监听回环地址。
+
+```sh
+mkdir -p -m 700 deploy/secrets
+chmod 700 deploy/secrets
+if [ ! -e deploy/secrets/database.url ]; then
+  printf '%s\n' 'postgresql://openfox_migrate:change-me-for-local-use-only@postgres/openfox?sslmode=disable' > deploy/secrets/database.url
+  chmod 444 deploy/secrets/database.url
+fi
+docker compose -f deploy/compose.example.yml build openfox
+docker compose -f deploy/compose.example.yml up -d --wait postgres
+docker compose -f deploy/compose.example.yml run --rm --no-deps openfox migrate --apply
+docker compose -f deploy/compose.example.yml up -d
+curl --fail http://127.0.0.1:8080/ready
+```
+
+结束本地服务使用 `docker compose -f deploy/compose.example.yml down`。PostgreSQL 和产物保存在命名卷中。部署自有环境时，给运行身份单独授予读取数据库连接文件的权限，配置持久卷、HTTPS 公网地址与生产密钥。镜像默认使用 production，Compose 示例显式使用 development。
+
+QQ 扫码需要另行提供固定版本的 Node、对应运行库和官方 SDK。默认中心镜像只携带服务端、迁移及系统证书和时区数据。[QQ 连接器部署说明](../docs/integrations/qq/README.md)
+
+发布流水线在同一提交的质量检查通过后构建 Linux amd64 镜像。每个版本随 GitHub Release 附带 `openfox-center-<版本>-linux-amd64.tar.gz` 及其 `.sha256` 文件。将两者放在同一目录，运行 `sha256sum -c <校验文件>`，再执行 `docker load -i <镜像归档>`。导入后的标签为 `openfox-center:<版本>`，可用 `docker run --rm openfox-center:<版本> version` 核对版本。已有部署仍需显式迁移和切换服务。
+
 ## Web workbench and desktop app
 
 `nginx-web.example.conf` serves the static build of `apps/web` and proxies
@@ -27,6 +51,8 @@ workbench; like HiFox, it loads the web URL served here (set
 assets with `pnpm --filter @openfox/web build` and publish `apps/web/dist`.
 
 ## Desktop updates
+
+同仓 `develop → master` 的发布 PR 运行静态部署测试，以及中心镜像的迁移和服务健康检查。其他 PR 还会并行运行 Go 回归和前端回归（含真实 API 浏览器测试）。每次推送到 `master`，发布工作流都会在最终提交上执行完整回归，随后验证实际打包的安装器和中心镜像。
 
 Every push to `master`, including a merged pull request, queues a release of the
 push's head commit. GitHub Actions takes the major and minor from

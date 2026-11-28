@@ -133,6 +133,7 @@ export function AssigneeStack({
         <TaskAssigneeAvatar
           key={`${a.kind}:${a.id}`}
           name={a.name}
+          id={a.id}
           kind={a.kind}
           size={size}
           className="ring-2 ring-surface-card"

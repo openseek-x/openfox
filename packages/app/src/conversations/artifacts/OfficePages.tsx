@@ -1,7 +1,14 @@
 import { useViewState, usePreviewScroll } from "./viewState";
 import { Icon, IconButton } from "@openfox/ui";
 import { PreviewNavigation } from "./PreviewNavigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffectEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type {
   ArtifactAnnotation,
   ArtifactReviewAnchor,
@@ -83,6 +90,11 @@ export function OfficePages({
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
+  const restorePage = useEffectEvent((pages: number) => {
+    const restored = Math.max(0, Math.min(index, pages - 1));
+    setIndex(restored);
+    return restored;
+  });
   useEffect(() => {
     let closed = false;
     requested.current = 0;
@@ -130,8 +142,7 @@ export function OfficePages({
       if (reply.kind === "ready") {
         setCount(reply.pages);
         targets.current = reply.targets;
-        const restored = Math.max(0, Math.min(index, reply.pages - 1));
-        setIndex(restored);
+        const restored = restorePage(reply.pages);
         requested.current = restored;
         request.current({ kind: "page", page: restored });
         return;
@@ -162,16 +173,19 @@ export function OfficePages({
       worker.current = null;
     };
   }, [blob, view]);
-  const go = (page: number) => {
-    if (page < 0 || page >= count || page === requested.current) return;
-    requested.current = page;
-    setIndex(page);
-    setReady(false);
-    setError("");
-    setDraftRegion(null);
-    window.getSelection()?.removeAllRanges();
-    request.current({ kind: "page", page });
-  };
+  const go = useCallback(
+    (page: number) => {
+      if (page < 0 || page >= count || page === requested.current) return;
+      requested.current = page;
+      setIndex(page);
+      setReady(false);
+      setError("");
+      setDraftRegion(null);
+      window.getSelection()?.removeAllRanges();
+      request.current({ kind: "page", page });
+    },
+    [count, setIndex],
+  );
   useEffect(() => {
     down.current = null;
     setError("");
@@ -186,7 +200,7 @@ export function OfficePages({
         : (located.page ?? 1) - 1;
     if (page !== undefined) go(page);
     stage.current?.scrollIntoView({ block: "nearest" });
-  }, [located, count]);
+  }, [located, count, go]);
   const choose = (
     target: string,
     start: number,
@@ -349,7 +363,7 @@ export function OfficePages({
       <div ref={scroll} className="min-h-0 flex-1 overflow-auto p-4">
         <div
           ref={stage}
-          className="relative mx-auto bg-white shadow-sm"
+          className="relative mx-auto bg-white shadow-card"
           style={{
             width: (frame?.width ?? 816) * scale,
             height: (frame?.height ?? 1056) * scale,

@@ -13,14 +13,15 @@ const DefaultDeviceMaxRuns = 5
 
 // DevicePreferences are local to a physical computer, shared by its owner's organizations.
 type DevicePreferences struct {
-	SessionIdleMinutes int      `json:"session_idle_minutes,omitempty"`
-	SessionMaxMinutes  int      `json:"session_max_minutes,omitempty"`
-	CodexPath          string   `json:"codex_path"`
-	CodexArgs          []string `json:"codex_args"`
-	MemoryGuard        bool     `json:"memory_guard"`
-	MinMemoryMiB       int      `json:"min_memory_mib"`
-	LoadGuard          bool     `json:"load_guard"`
-	LoadPolicy         string   `json:"load_policy"`
+	SessionIdleMinutes int               `json:"session_idle_minutes,omitempty"`
+	SessionMaxMinutes  int               `json:"session_max_minutes,omitempty"`
+	RuntimePaths       map[string]string `json:"runtime_paths,omitempty"`
+	CodexPath          string            `json:"codex_path"`
+	CodexArgs          []string          `json:"codex_args"`
+	MemoryGuard        bool              `json:"memory_guard"`
+	MinMemoryMiB       int               `json:"min_memory_mib"`
+	LoadGuard          bool              `json:"load_guard"`
+	LoadPolicy         string            `json:"load_policy"`
 }
 type StoragePolicy struct {
 	RepoDays      int  `json:"repo_days,omitempty"`
@@ -80,6 +81,16 @@ func ParseDeviceSettings(raw []byte) (DeviceSettingsCommand, error) {
 	if v.Version < 1 || len(p.CodexPath) > 1024 || strings.IndexFunc(p.CodexPath, unicode.IsControl) >= 0 || len(p.CodexArgs) > 16 ||
 		p.MinMemoryMiB < 1 || p.MinMemoryMiB > 1048576 || (p.LoadPolicy != "balanced" && p.LoadPolicy != "performance" && p.LoadPolicy != "conservative") {
 		return v, invalid
+	}
+	for provider, path := range p.RuntimePaths {
+		switch provider {
+		case "claude-code", "opencode", "pi", "codebuddy", "gemini", "cursor":
+		default:
+			return v, invalid
+		}
+		if len(path) > 1024 || strings.IndexFunc(path, unicode.IsControl) >= 0 {
+			return v, invalid
+		}
 	}
 	for _, a := range p.CodexArgs {
 		if a == "" || len(a) > 512 || strings.IndexFunc(a, unicode.IsControl) >= 0 {

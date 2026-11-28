@@ -60,7 +60,14 @@ function useTargetOptions(
     ...targets.agents.map((agent) => ({
       value: `agent:${agent.id}`,
       label: agent.name,
-      icon: <AgentAvatar name={agent.name} avatar={agent.avatar} size={20} />,
+      icon: (
+        <AgentAvatar
+          agentId={agent.id}
+          name={agent.name}
+          avatar={agent.avatar}
+          size={20}
+        />
+      ),
       description: t("tasks.quickCommands.form.agentsGroup"),
     })),
     ...targets.crews.map((crew) => ({

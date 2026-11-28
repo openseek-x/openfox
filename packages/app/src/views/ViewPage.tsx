@@ -57,7 +57,7 @@ export function ViewPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex h-11 shrink-0 items-center gap-2 border-b border-line-default px-4">
+      <header className="flex h-11 shrink-0 items-center gap-2 border-b border-line-subtle px-4">
         <Link
           to={`/o/${orgId}/spaces/${spaceId}/views`}
           aria-label={t("views.title")}
@@ -66,7 +66,7 @@ export function ViewPage() {
           <Icon name="chevron-left" size={14} />
         </Link>
         <ViewIcon view={view} />
-        <h1 className="truncate font-medium">{view.name}</h1>
+        <h1 className="truncate font-semibold text-fg-default">{view.name}</h1>
         <Badge tone="muted">{t(`views.visibility.${view.visibility}`)}</Badge>
       </header>
       <ReadOnlyContext.Provider value={space.data.status === "retired"}>

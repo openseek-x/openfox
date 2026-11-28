@@ -16,7 +16,7 @@ export function GitSettingsPage() {
   const t = useT();
   return (
     <SettingsColumn wide>
-      <h1 className="px-1 text-heading font-semibold">
+      <h1 className="px-1 text-heading font-semibold tracking-[-0.015em] text-fg-default">
         {t("gitSettings.title")}
       </h1>
       <GitSettingsSection orgId={orgId} />
@@ -57,7 +57,7 @@ function SpaceGitSettings({
   const contentId = useId();
   return (
     <section
-      className="rounded-xl border border-line-default"
+      className="rounded-xl border border-line-soft bg-surface-card shadow-card"
       aria-label={space.name}
     >
       <h3>

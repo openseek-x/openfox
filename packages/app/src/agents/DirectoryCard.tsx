@@ -74,7 +74,7 @@ export function DirectoryCard({
   const statusTone = unbound ? "warning" : entry.online ? "success" : "muted";
   return (
     <div
-      className="group relative flex min-h-[76px] items-center gap-3 rounded-xl border border-line-default bg-surface-card px-4 py-2.5 transition-colors duration-100 hover:bg-surface-hover focus-within:bg-surface-hover has-[[aria-expanded=true]]:bg-surface-hover motion-reduce:transition-none"
+      className="group relative flex min-h-[76px] items-center gap-3 rounded-xl border border-line-soft bg-surface-card px-4 py-2.5 shadow-card transition-[border-color,background-color,box-shadow] duration-150 hover:border-line-strong hover:bg-surface-hover/60 focus-within:border-line-strong focus-within:bg-surface-hover/60 has-[[aria-expanded=true]]:border-line-strong has-[[aria-expanded=true]]:bg-surface-hover/60 motion-reduce:transition-none"
       data-testid={`directory-card-${entry.id}`}
     >
       <button
@@ -90,6 +90,8 @@ export function DirectoryCard({
         />
       ) : (
         <AgentAvatar
+          agentId={entry.id}
+          spaceId={entry.space_id}
           name={entry.name}
           avatar={entry.avatar}
           locked={entry.visibility === "PRIVATE"}

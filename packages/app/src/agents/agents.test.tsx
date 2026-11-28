@@ -206,6 +206,41 @@ describe("全部 Agent 目录", () => {
     expect(screen.getByText("显示已归档（2）→")).toBeInTheDocument();
   });
 
+  it("目录页驻留时按 30 秒轮询刷新卡片的电脑在线状态，无需重新进入页面（UI-09）", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    let online = true;
+    renderSettings(
+      "/o/o1/agents",
+      base((call) =>
+        call.method === "GET" && call.path === `${ORG}/agent-directory`
+          ? json(200, {
+              entries: [
+                entry("a-poll", {
+                  name: "轮询助手",
+                  online,
+                  computer_name: "Build-Mac",
+                }),
+              ],
+              archived_count: 0,
+              truncated: false,
+            })
+          : undefined,
+      ),
+    );
+    const card = await screen.findByTestId("directory-card-a-poll");
+    expect(within(card).getByText("在线 · Build-Mac")).toBeVisible();
+    // 电脑断开后不重新进入页面，仅靠轮询刷新
+    online = false;
+    await act(() => vi.advanceTimersByTimeAsync(30_000 + 100));
+    await waitFor(() =>
+      expect(
+        within(screen.getByTestId("directory-card-a-poll")).getByText(
+          "离线 · Build-Mac",
+        ),
+      ).toBeVisible(),
+    );
+  });
+
   it("区分离线与未绑定电脑状态；未绑定且可编辑时提供「绑定电脑」直达运行配置", async () => {
     const user = userEvent.setup();
     renderSettings(

@@ -70,6 +70,7 @@ import {
 import { SearchLauncher } from "../search/SearchLauncher";
 import { DesktopNav } from "./DesktopNav";
 import { PanelResizeHandle } from "./PanelResizeHandle";
+import { RailIcon } from "./RailIcon";
 import { SidebarCollapseButton } from "./SidebarCollapseButton";
 import { usePanelWidth } from "./panelWidth";
 import {
@@ -222,7 +223,7 @@ export function OrgLayout() {
                   side="left"
                   width="min(320px, calc(100vw - 32px))"
                 >
-                  <div className="flex h-full">
+                  <div className="flex h-full bg-surface-sidebar">
                     {rail}
                     {navigation}
                   </div>
@@ -231,7 +232,7 @@ export function OrgLayout() {
                 <div className="relative flex shrink-0">
                   <aside
                     aria-label={t("shell.a11y.sidebar")}
-                    className="flex shrink-0 overflow-hidden rounded-xl bg-surface-card"
+                    className="flex shrink-0 overflow-hidden rounded-xl bg-surface-sidebar ring-1 ring-line-floating"
                   >
                     {rail}
                     <div
@@ -267,7 +268,7 @@ export function OrgLayout() {
               )}
               <main
                 data-org-main
-                className="min-w-0 flex-1 overflow-auto rounded-xl bg-surface-card"
+                className="min-w-0 flex-1 overflow-auto rounded-xl bg-surface-card shadow-card ring-1 ring-line-floating"
               >
                 <Outlet />
               </main>
@@ -364,7 +365,7 @@ function TitleBar({
             type="button"
             aria-expanded={open}
             onClick={toggle}
-            className="flex h-7 items-center gap-2 rounded-lg py-1 pr-2 pl-1 text-body font-medium hover:bg-surface-muted"
+            className="flex h-7 items-center gap-2 rounded-lg py-1 pr-2 pl-1 text-body-sm font-semibold tracking-[-0.01em] transition-colors duration-100 hover:bg-control-hover motion-reduce:transition-none"
           >
             <OrgIcon org={org} size={20} />
             <span className="max-w-[22vw] truncate sm:max-w-[160px]">
@@ -558,11 +559,12 @@ function Rail({
           aria-current={active === item.module ? "page" : undefined}
           title={t(item.label)}
           className={cn(
-            "flex size-9 items-center justify-center rounded-lg text-fg-secondary transition-colors duration-100 not-aria-[current=page]:hover:bg-surface-hover motion-reduce:transition-none",
-            active === item.module && "bg-surface-active text-fg-default",
+            "flex size-9 items-center justify-center rounded-lg text-fg-muted transition-colors duration-100 not-aria-[current=page]:hover:bg-surface-sidebar-hover not-aria-[current=page]:hover:text-fg-default motion-reduce:transition-none",
+            active === item.module &&
+              "bg-surface-sidebar-active text-fg-default",
           )}
         >
-          <Icon name={item.icon} size={19} />
+          <RailIcon name={item.icon} active={active === item.module} />
         </Link>
       ))}
       <div className="mt-auto flex flex-col items-center gap-1">
@@ -595,14 +597,26 @@ function NavRow({
       title={title}
       className={({ isActive }) =>
         cn(
-          "flex h-[var(--density-nav-row,30px)] items-center gap-2 rounded-lg pr-1.5 pl-2 text-body transition-colors duration-100 not-aria-[current=page]:hover:bg-surface-hover motion-reduce:transition-none",
-          isActive ? "bg-surface-active font-medium" : "text-fg-default",
+          "flex h-[var(--density-nav-row,30px)] items-center gap-2 rounded-lg pr-1.5 pl-2 text-body-sm transition-colors duration-100 not-aria-[current=page]:hover:bg-surface-sidebar-hover not-aria-[current=page]:hover:text-fg-default motion-reduce:transition-none",
+          isActive
+            ? "bg-surface-sidebar-active font-medium text-fg-default"
+            : "text-fg-secondary",
         )
       }
     >
-      <Icon name={icon} className="shrink-0 text-fg-secondary" />
-      <span className="min-w-0 flex-1 truncate">{label}</span>
-      {trailing}
+      {({ isActive }) => (
+        <>
+          <Icon
+            name={icon}
+            className={cn(
+              "shrink-0",
+              isActive ? "text-fg-default" : "text-fg-muted",
+            )}
+          />
+          <span className="min-w-0 flex-1 truncate">{label}</span>
+          {trailing}
+        </>
+      )}
     </NavLink>
   );
 }
@@ -662,7 +676,7 @@ function Navigation({
       className="group/panel relative flex min-w-0 flex-1 flex-col overflow-y-auto px-1.5 pt-1.5 pb-3"
     >
       <div className="flex h-11 shrink-0 items-center gap-1 pr-1 pl-2.5">
-        <h2 className="min-w-0 flex-1 truncate text-title font-bold">
+        <h2 className="min-w-0 flex-1 truncate text-body font-semibold tracking-[-0.01em] text-fg-default">
           {t("shell.home")}
         </h2>
         <SidebarCollapseButton onClick={onCollapse} />
@@ -695,13 +709,13 @@ function Navigation({
         />
         <NavRow
           to={`${base}/agents`}
-          icon="briefcase"
+          icon="bot"
           label={t("shell.allAgents")}
           title={t("shell.allAgentsHint")}
         />
         <NavRow
           to={`${base}/market`}
-          icon="blocks"
+          icon="store"
           label={t("shell.market")}
           title={t("shell.marketHint")}
         />
@@ -776,7 +790,7 @@ function Navigation({
               type="button"
               aria-expanded={!collapsedSpaces.includes(space.id)}
               onClick={() => toggleSpace(space.id)}
-              className="group/space flex h-[30px] items-center gap-2 rounded-lg pr-1.5 pl-2 text-left text-body font-medium hover:bg-surface-hover"
+              className="group/space flex h-[30px] items-center gap-2 rounded-lg pr-1.5 pl-2 text-left text-body-sm font-medium text-fg-secondary transition-colors duration-100 hover:bg-surface-sidebar-hover hover:text-fg-default motion-reduce:transition-none"
             >
               <SpaceIcon icon={space.icon} />
               <span className="truncate">{space.name}</span>
@@ -888,12 +902,12 @@ function SectionLabel({
       type="button"
       aria-expanded={open}
       onClick={onToggle}
-      className="mt-3 flex h-7 items-center gap-1 px-2 text-body-sm text-fg-muted hover:text-fg-default"
+      className="mt-3 flex h-7 items-center gap-1 px-2 text-caption font-medium text-fg-muted transition-colors duration-100 hover:text-fg-default motion-reduce:transition-none"
     >
       {content}
     </button>
   ) : (
-    <div className="mt-3 flex h-7 items-center gap-1 px-2 text-body-sm text-fg-muted">
+    <div className="mt-3 flex h-7 items-center gap-1 px-2 text-caption font-medium text-fg-muted">
       {content}
     </div>
   );

@@ -164,7 +164,7 @@ export function ExecutedCard({ message }: { message: ConversationMessage }) {
   const linkClass =
     "rounded-lg border border-line-default px-3 py-1.5 text-body-sm hover:bg-surface-hover";
   return (
-    <div className="flex w-full flex-wrap items-center gap-2 rounded-[8px] bg-surface-card px-5 py-3 shadow-sm">
+    <div className="flex w-full flex-wrap items-center gap-2 rounded-xl border border-line-soft bg-surface-card px-5 py-3 shadow-card">
       <span className="text-body font-medium">
         {t("chat.proposal.agentReady")}
       </span>

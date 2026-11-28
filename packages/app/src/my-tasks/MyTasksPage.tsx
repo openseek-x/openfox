@@ -163,7 +163,7 @@ export function MyTasksPage() {
             icon={
               <span
                 aria-hidden
-                className="flex size-14 items-center justify-center rounded-2xl bg-surface-muted text-fg-muted"
+                className="flex size-14 items-center justify-center rounded-2xl bg-surface-muted text-fg-muted ring-1 ring-inset ring-line-floating"
               >
                 <Icon name="user-check" size={28} />
               </span>
@@ -190,7 +190,7 @@ export function MyTasksPage() {
               aria-label={`${t("myTasks.spaceFilter")}: ${spaceLabel}`}
               aria-expanded={spaceOpen}
               onClick={() => setSpaceOpen((v) => !v)}
-              className="flex h-8 items-center gap-1.5 rounded-full border border-line-default px-3 text-body-sm hover:bg-surface-hover"
+              className="flex h-8 items-center gap-1.5 rounded-full border border-line-soft bg-surface-card px-3 text-body-sm shadow-card transition-colors duration-100 hover:border-line-default hover:bg-surface-hover motion-reduce:transition-none"
             >
               <Icon name="layers" size={14} className="text-fg-muted" />
               {spaceLabel}
@@ -242,10 +242,10 @@ export function MyTasksPage() {
                   aria-checked={scope === item}
                   onClick={() => setScope(item)}
                   className={cn(
-                    "h-7 rounded-full px-3 text-body-sm",
+                    "h-7 rounded-full px-3 text-body-sm transition-colors duration-100 motion-reduce:transition-none",
                     scope === item
-                      ? "bg-surface-active font-medium"
-                      : "text-fg-secondary hover:bg-surface-hover",
+                      ? "bg-surface-active font-medium text-fg-default"
+                      : "text-fg-secondary hover:bg-surface-hover hover:text-fg-default",
                   )}
                 >
                   {t(`myTasks.scopes.${item}`)}

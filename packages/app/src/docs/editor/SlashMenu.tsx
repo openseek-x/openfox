@@ -39,7 +39,7 @@ export function SlashMenu({ state }: { state: SlashState }) {
         left: rect.left,
         maxHeight: "min(26rem, 60vh)",
       }}
-      className="fixed z-50 flex w-[232px] flex-col overflow-y-auto rounded-xl border border-line-default bg-surface-card p-1 shadow-lg"
+      className="fixed z-50 flex w-[232px] flex-col overflow-y-auto rounded-xl border border-line-floating bg-surface-card p-1.5 shadow-popover"
     >
       {state.items.length === 0 && (
         <div className="px-2.5 py-2 text-body-sm text-fg-muted">

@@ -1153,6 +1153,14 @@ func (s Service) leaveTriage(ctx context.Context, tx pgx.Tx, organizationID, spa
 	if err != nil {
 		return Task{}, err
 	}
+	return s.closeInCategory(ctx, tx, organizationID, spaceID, task, actor, version, requestID, category, "", duplicateOf)
+}
+
+// closeInCategory 把任务改到 category 类别的状态；duplicateOf 非空时同时写重复目标，并给目标任务记一条动态。
+// statusID 为空时取工作流里排序最前的该类别状态；非空时必须属于任务的工作流且类别一致。
+// 分拣台的拒绝 / 标记重复与通用的「标记为重复」共用这段逻辑。
+func (s Service) closeInCategory(ctx context.Context, tx pgx.Tx, organizationID, spaceID string, task Task, actor Actor, version uint64, requestID, category, statusID, duplicateOf string) (Task, error) {
+	taskID := task.ID
 	var targetSpace string
 	if duplicateOf != "" {
 		err := tx.QueryRow(ctx, `
@@ -1170,20 +1178,20 @@ func (s Service) leaveTriage(ctx context.Context, tx pgx.Tx, organizationID, spa
 	if err != nil {
 		return Task{}, err
 	}
-	statusID, err := categoryStatusID(ctx, tx, category, flow.statusIDs)
-	if err != nil {
+	if statusID == "" {
+		if statusID, err = categoryStatusID(ctx, tx, category, flow.statusIDs); err != nil {
+			return Task{}, err
+		}
+		if statusID == "" {
+			return Task{}, errStatusCategoryMissing
+		}
+	} else if err := requireStatusCategory(ctx, tx, flow, statusID, category); err != nil {
 		return Task{}, err
 	}
-	if statusID == "" {
-		return Task{}, errStatusCategoryMissing
-	}
-	updated, err := s.UpdateTask(ctx, tx, organizationID, spaceID, taskID, actor, TaskUpdateInput{StatusID: &statusID, Version: version, RequestID: requestID})
+	// 重复目标交给 UpdateTask，与状态在同一条 UPDATE 里写入（服务端不变量见 resolveDuplicateTarget）。
+	updated, err := s.UpdateTask(ctx, tx, organizationID, spaceID, taskID, actor, TaskUpdateInput{StatusID: &statusID, Version: version, RequestID: requestID, DuplicateOfTaskID: duplicateOf})
 	if err != nil || duplicateOf == "" {
 		return updated, err
-	}
-	if _, err := tx.Exec(ctx, `UPDATE openfox.tasks SET duplicate_of_task_id = $2::uuid
-		WHERE organization_id = openfox_private.current_organization_id() AND id = $1::uuid`, taskID, duplicateOf); err != nil {
-		return Task{}, mapDatabaseError(err)
 	}
 	// 同一请求已经给本任务写过动态（<requestID>:<序号>），目标任务的动态用独立前缀避免 source_id 冲突。
 	if err := newActivityWriter(tx, targetSpace, duplicateOf, actor.UserID, requestID+":duplicate").add(ctx, "task.duplicate_marked",

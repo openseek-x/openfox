@@ -25,6 +25,11 @@ import { Icon, IconButton, Spinner, cn } from "@openfox/ui";
 
 import { keys } from "../../context";
 import { pointerFirstCollision } from "../../dnd/collision";
+import {
+  MarkDuplicateDialog,
+  isDuplicateStatus,
+  type DuplicateTarget,
+} from "../detail/MarkDuplicateDialog";
 import { applyGroupOrder, isStatusBoard } from "../grouping";
 import { planBoardMove } from "../model";
 import { LoadMore } from "../parts";
@@ -35,6 +40,7 @@ import type { BoardProps, TaskViewProps } from "../views";
 import { CardBody, SortableCard, cardLabel as label } from "./Card";
 import { BoardColumnJump } from "./BoardColumnJump";
 import { GroupedBoard } from "./GroupedBoard";
+import { useBoardPosition } from "./useBoardPosition";
 
 const COLUMN_PREFIX = "column:";
 
@@ -44,7 +50,7 @@ const COLUMN_PREFIX = "column:";
  */
 export function Board(props: BoardProps) {
   return isStatusBoard(props.display) ? (
-    <StatusBoard {...props} />
+    <StatusBoard key={props.orgId + ":" + props.source.scope} {...props} />
   ) : (
     <GroupedBoard {...props} />
   );
@@ -58,6 +64,7 @@ function StatusBoard(props: BoardProps) {
   const queryClient = useQueryClient();
   const update = useUpdateTask(orgId);
   const [dragging, setDragging] = useState<Task | null>(null);
+  const [duplicate, setDuplicate] = useState<DuplicateTarget | null>(null);
   const allowReorder = source.manualSort && display.sort === "manual";
 
   const sensors = useSensors(
@@ -74,6 +81,11 @@ function StatusBoard(props: BoardProps) {
   );
 
   const orderedColumns = applyGroupOrder(columns, display.groupOrder?.status);
+
+  const firstColumn = orderedColumns.find(
+    (column) => (counts.get(column.id) ?? 0) > 0,
+  );
+  const board = useBoardPosition(firstColumn && `${boardId}-${firstColumn.id}`);
 
   const columnTasks = (statusId: string): Task[] => {
     const data = queryClient.getQueryData<
@@ -131,6 +143,11 @@ function StatusBoard(props: BoardProps) {
     );
     if (!patch) return;
     const status = columns.find((c) => c.id === target.statusId);
+    // OPE-17 · 拖进重复列：先选目标任务；取消时卡片留在原列。目标列里的落点不保留。
+    if (target.statusId !== task.status_id && isDuplicateStatus(status)) {
+      setDuplicate({ task, statusId: target.statusId });
+      return;
+    }
     update.mutate({
       task,
       patch,
@@ -187,6 +204,7 @@ function StatusBoard(props: BoardProps) {
         }))}
       />
       <div
+        ref={board}
         role="region"
         aria-label={t("tasks.board.label")}
         className="flex min-h-0 flex-1 gap-3 overflow-x-auto px-4 pb-4"
@@ -204,6 +222,13 @@ function StatusBoard(props: BoardProps) {
       <DragOverlay>
         {dragging && <CardBody task={dragging} display={display} overlay />}
       </DragOverlay>
+      {duplicate && (
+        <MarkDuplicateDialog
+          orgId={orgId}
+          target={duplicate}
+          onClose={() => setDuplicate(null)}
+        />
+      )}
     </DndContext>
   );
 }
@@ -227,18 +252,21 @@ function Column({
   return (
     <section
       aria-label={`${column.name} ${count}`}
-      className="flex w-[280px] shrink-0 flex-col rounded-xl bg-surface-muted/60"
+      className="of-board-lane flex w-[280px] shrink-0 flex-col rounded-xl border border-line-subtle"
     >
       <header className="flex h-10 items-center gap-2 px-3">
         <StatusIcon category={column.category} color={column.color} />
         <h3
           id={headingId}
           tabIndex={-1}
-          className="min-w-0 truncate rounded-sm text-body font-medium"
+          className="min-w-0 truncate rounded-sm text-body-sm font-semibold text-fg-default"
         >
           {column.name}
         </h3>
-        <span className="text-body-sm text-fg-muted" data-testid="column-count">
+        <span
+          className="text-caption tabular-nums text-fg-muted"
+          data-testid="column-count"
+        >
           {count}
         </span>
         {onCreate && (

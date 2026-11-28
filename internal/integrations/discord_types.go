@@ -72,28 +72,28 @@ type DiscordConfirmInput struct {
 	ApplicationID string `json:"application_id"`
 }
 type DiscordBot struct {
-	ID                    string            `json:"id"`
-	ConnectionID          string            `json:"connection_id"`
-	Kind                  string            `json:"kind"`
-	Agent                 FeishuBotRef      `json:"agent"`
-	Space                 *FeishuBotRef     `json:"space,omitempty"`
-	Runtime               *FeishuBotRuntime `json:"runtime,omitempty"`
-	ExtraPrompt           string            `json:"extra_prompt,omitempty"`
-	RemoteBotID           discord.ID        `json:"remote_bot_id"`
-	ApplicationID         discord.ID        `json:"application_id"`
-	Username              string            `json:"username"`
-	Name                  string            `json:"name"`
-	State                 string            `json:"state"`
-	GatewayState          string            `json:"gateway_state"`
-	MessageContentEnabled bool              `json:"message_content_enabled"`
-	LastError             string            `json:"last_error"`
-	Version               uint64            `json:"version"`
-	InstallationURL       string            `json:"installation_url"`
-	GapCount              int64             `json:"gap_count"`
-	GapStartedAt          *time.Time        `json:"gap_started_at,omitempty"`
-	GapFinishedAt         *time.Time        `json:"gap_finished_at,omitempty"`
-	GapReason             string            `json:"gap_reason"`
-	CanManage             bool              `json:"can_manage"`
+	ID                    string        `json:"id"`
+	ConnectionID          string        `json:"connection_id"`
+	Kind                  string        `json:"kind"`
+	Agent                 FeishuBotRef  `json:"agent"`
+	Space                 *FeishuBotRef `json:"space,omitempty"`
+	Runtime               *IMBotRuntime `json:"runtime,omitempty"`
+	ExtraPrompt           string        `json:"extra_prompt,omitempty"`
+	RemoteBotID           discord.ID    `json:"remote_bot_id"`
+	ApplicationID         discord.ID    `json:"application_id"`
+	Username              string        `json:"username"`
+	Name                  string        `json:"name"`
+	State                 string        `json:"state"`
+	GatewayState          string        `json:"gateway_state"`
+	MessageContentEnabled bool          `json:"message_content_enabled"`
+	LastError             string        `json:"last_error"`
+	Version               uint64        `json:"version"`
+	InstallationURL       string        `json:"installation_url"`
+	GapCount              int64         `json:"gap_count"`
+	GapStartedAt          *time.Time    `json:"gap_started_at,omitempty"`
+	GapFinishedAt         *time.Time    `json:"gap_finished_at,omitempty"`
+	GapReason             string        `json:"gap_reason"`
+	CanManage             bool          `json:"can_manage"`
 }
 type DiscordBotsView struct {
 	Bots []DiscordBot `json:"bots"`

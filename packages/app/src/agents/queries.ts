@@ -69,14 +69,45 @@ export function useSpaces(orgId: string) {
   });
 }
 
-/** 组织级目录（与阶段 1 的处理人选择器共用缓存） */
-export function useDirectory(orgId: string, enabled = true) {
+/** 目录卡片的在线状态按心跳计算、没有实时事件，驻留在目录页时用同一档 30 秒轮询 */
+const DIRECTORY_POLL_MS = 30_000;
+
+/**
+ * 组织级目录（与阶段 1 的处理人选择器共用缓存）。
+ * poll 仅由展示在线状态的目录页开启，其他调用方不额外轮询。
+ */
+export function useDirectory(orgId: string, enabled = true, poll = false) {
   const api = useApi();
   return useQuery({
     queryKey: keys.agentDirectory(orgId),
     queryFn: () => api.agents.directory(orgId),
     enabled,
+    refetchInterval: poll ? DIRECTORY_POLL_MS : false,
   });
+}
+
+/** 目录被截断时按 ID 核对独立条目，避免把排在上限之外的普通 Agent 当作专属成员。 */
+export function useStandaloneAgent(orgId: string, agentId: string) {
+  const api = useApi();
+  const directory = useDirectory(orgId);
+  const match = (entry: AgentDirectoryEntry) =>
+    entry.type === "agent" && entry.id === agentId && !entry.archived_at;
+  const listed = directory.data?.entries.find(match);
+  const needsLookup =
+    directory.isSuccess && directory.data.truncated && !listed;
+  const lookup = useQuery({
+    queryKey: [...keys.agentDirectory(orgId), "agent", agentId],
+    queryFn: () => api.agents.directory(orgId, false, agentId),
+    enabled: needsLookup,
+  });
+  const source = needsLookup ? lookup : directory;
+  return {
+    entry: source.isSuccess
+      ? (listed ?? source.data.entries.find(match))
+      : undefined,
+    isLoading: source.isLoading,
+    isError: source.isError,
+  };
 }
 
 export function useArchivedDirectory(orgId: string, enabled = true) {
@@ -88,14 +119,9 @@ export function useArchivedDirectory(orgId: string, enabled = true) {
   });
 }
 
-export function useDevices(orgId: string, enabled = true) {
-  const api = useApi();
-  return useQuery({
-    queryKey: keys.devices(orgId),
-    queryFn: () => api.devices.list(orgId),
-    enabled,
-  });
-}
+// 电脑列表只保留 computers 模块里的一份实现：在线状态靠心跳判定、没有实时事件，
+// 必须带 30 秒轮询，会话横幅、Agent 设置等驻留页才能收到电脑断开/重连后的新状态。
+export { useDevices } from "../computers/queries";
 
 // ---------- 抽屉的空间定位 ----------
 
@@ -151,8 +177,9 @@ export function useEntitySpace(
     : undefined;
   const spaceId = known ?? fromActive ?? fromArchived;
   const settled =
-    (directory.isSuccess || directory.isError) &&
-    (Boolean(fromActive) || archived.isSuccess || archived.isError);
+    directory.isError ||
+    (directory.isSuccess &&
+      (Boolean(fromActive) || archived.isSuccess || archived.isError));
   return { spaceId, notFound: !spaceId && settled };
 }
 

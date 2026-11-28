@@ -4,6 +4,276 @@
  */
 
 export interface paths {
+    "/v1/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 使用邮箱和密码建立会话并设置会话、CSRF Cookie */
+        post: operations["loginWithPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/device/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 使用设备 Bearer 凭据升级为 WebSocket，确认心跳后接收唤醒 */
+        get: operations["connectDeviceStream"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/device/organizations/{organizationID}/agents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationID: string;
+            };
+            cookie?: never;
+        };
+        /** 列出设备在本组织的 Agent 与槽位 */
+        get: operations["listDeviceAgentSlots"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/device/organizations/{organizationID}/offers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationID: string;
+            };
+            cookie?: never;
+        };
+        /** 列出当前设备可领取的派发 */
+        get: operations["listDeviceDispatchOffers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/device/organizations/{organizationID}/offers/{offerID}/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationID: string;
+                offerID: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 幂等领取派发并获得租约 */
+        post: operations["claimDeviceDispatchOffer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/device/organizations/{organizationID}/runs/{runID}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationID: string;
+                runID: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 确认运行已开始 */
+        post: operations["startDeviceRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/device/organizations/{organizationID}/runs/{runID}/lease": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationID: string;
+                runID: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 续约并读取取消状态 */
+        post: operations["renewDeviceRunLease"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/device/organizations/{organizationID}/runs/{runID}/prepare-failed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationID: string;
+                runID: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 记录运行准备失败 */
+        post: operations["reportDevicePreparationFailure"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/device/organizations/{organizationID}/runs/{runID}/reconciliation/fact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationID: string;
+                runID: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 提交本机进程事实 */
+        post: operations["submitDeviceSupervisorFact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/device/organizations/{organizationID}/runs/{runID}/reconciliation/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationID: string;
+                runID: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 提交运行核对证据 */
+        post: operations["submitDeviceReconciliationEvidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/organizations/{organizationID}/cleanup/previews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationID: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 管理员预览可清理的产物 */
+        post: operations["createArtifactCleanupPreview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/organizations/{organizationID}/cleanup/previews/{previewID}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationID: string;
+                previewID: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 管理员确认清理并读取执行结果 */
+        post: operations["confirmArtifactCleanupPreview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/organizations/{organizationID}/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationID: string;
+            };
+            cookie?: never;
+        };
+        /** 读取当前用户在组织内的通知 */
+        get: operations["listConversationNotifications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/organizations/{organizationID}/notifications/{notificationID}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationID: string;
+                notificationID: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 将当前用户的通知标记为已读 */
+        post: operations["markConversationNotificationRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/organizations/{organizationID}/conversations/{conversationID}/proposals": {
         parameters: {
             query?: never;
@@ -2403,6 +2673,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/healthz": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getHealthCheck"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ready": {
         parameters: {
             query?: never;
@@ -3252,11 +3538,7 @@ export interface paths {
             header?: never;
             path: {
                 organizationID: components["parameters"]["OrganizationID"];
-                /**
-                 * @description IM 服务商（阶段 7g-1：飞书、Lark、钉钉共用同一套应用 / 个人绑定 / 机器人列表接口，路径里的服务商决定使用哪家的开放平台与连接）。
-                 *     未知值 404。扫码创建接口（registrations）只有飞书和 Lark 有；钉钉官方没有扫码创建应用的接口，机器人用 POST .../dingtalk/bots 直接填 AppKey / AppSecret 连接。
-                 */
-                imProvider: components["parameters"]["IMProvider"];
+                imProvider: "feishu" | "lark";
             };
             cookie?: never;
         };
@@ -3287,11 +3569,7 @@ export interface paths {
             header?: never;
             path: {
                 organizationID: components["parameters"]["OrganizationID"];
-                /**
-                 * @description IM 服务商（阶段 7g-1：飞书、Lark、钉钉共用同一套应用 / 个人绑定 / 机器人列表接口，路径里的服务商决定使用哪家的开放平台与连接）。
-                 *     未知值 404。扫码创建接口（registrations）只有飞书和 Lark 有；钉钉官方没有扫码创建应用的接口，机器人用 POST .../dingtalk/bots 直接填 AppKey / AppSecret 连接。
-                 */
-                imProvider: components["parameters"]["IMProvider"];
+                imProvider: "feishu" | "lark";
                 registrationID: string;
             };
             cookie?: never;
@@ -3312,11 +3590,7 @@ export interface paths {
             header?: never;
             path: {
                 organizationID: components["parameters"]["OrganizationID"];
-                /**
-                 * @description IM 服务商（阶段 7g-1：飞书、Lark、钉钉共用同一套应用 / 个人绑定 / 机器人列表接口，路径里的服务商决定使用哪家的开放平台与连接）。
-                 *     未知值 404。扫码创建接口（registrations）只有飞书和 Lark 有；钉钉官方没有扫码创建应用的接口，机器人用 POST .../dingtalk/bots 直接填 AppKey / AppSecret 连接。
-                 */
-                imProvider: components["parameters"]["IMProvider"];
+                imProvider: "feishu" | "lark";
                 registrationID: string;
             };
             cookie?: never;
@@ -6559,6 +6833,30 @@ export interface paths {
         patch: operations["updateTask"];
         trace?: never;
     };
+    "/v1/organizations/{organizationID}/spaces/{spaceID}/tasks/{taskID}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationID: components["parameters"]["OrganizationID"];
+                spaceID: components["parameters"]["SpaceID"];
+                taskID: components["parameters"]["TaskID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 标记为重复任务
+         * @description 把任务改到「重复」类别的状态并记录重复目标，目标任务记一条 task.duplicate_marked 动态。 不要求任务在分拣台中（分拣台内的处理见 /triage/duplicate）。权限同更新任务；停用空间只读。 status_id 省略时取工作流里排序最前的重复类别状态；指定时须属于该任务的工作流且类别为 DUPLICATE，否则 400 INVALID_DUPLICATE_STATUS。 目标为自己、不存在、已删除或不可读时 400 INVALID_DUPLICATE；工作流没有重复类别状态时 409 STATUS_CATEGORY_MISSING；版本不符时 409 VERSION_CONFLICT。
+         */
+        post: operations["markTaskDuplicate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/organizations/{organizationID}/spaces/{spaceID}/tasks/{taskID}/restore": {
         parameters: {
             query?: never;
@@ -7261,7 +7559,8 @@ export interface paths {
         /** 组织成员（按加入时间与 user_id 排序） */
         get: operations["listOrganizationMembers"];
         put?: never;
-        post?: never;
+        /** 组织管理员添加成员，重复添加返回现有成员 */
+        post: operations["addOrganizationMember"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8421,7 +8720,8 @@ export interface paths {
         /** 电脑列表（按注册时间升序，keyset 游标） */
         get: operations["listDevices"];
         put?: never;
-        post?: never;
+        /** 组织管理员直接注册设备公钥 */
+        post: operations["registerOrganizationDevice"];
         delete?: never;
         options?: never;
         head?: never;
@@ -13761,6 +14061,252 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        PasswordLoginRequest: {
+            email: string;
+            password: string;
+            /** @description 省略时使用 WEB。 */
+            client_kind?: string;
+        };
+        AddOrganizationMemberRequest: {
+            /** Format: uuid */
+            user_id: string;
+            role: components["schemas"]["OrganizationRole"];
+        };
+        OrganizationDeviceRegistration: {
+            device_key: string;
+            name?: string;
+            install_id?: string;
+            key_id: string;
+            public_key: string;
+            max_slots?: number;
+        };
+        OrganizationDeviceRegistered: {
+            /** Format: uuid */
+            device_id: string;
+            /** Format: uuid */
+            organization_id: string;
+            key_id: string;
+        };
+        DeviceAgentSlots: {
+            /** Format: uuid */
+            id: string;
+            status: string;
+            generation: number;
+            max_slots: number;
+            reserved_slots: number;
+        };
+        DispatchOffer: {
+            /** Format: uuid */
+            organization_id: string;
+            /** Format: uuid */
+            offer_id: string;
+            /** Format: uuid */
+            run_id: string;
+            generation: number;
+            /** Format: uuid */
+            computer_id: string;
+            /** Format: date-time */
+            expires_at: string;
+        };
+        DispatchLease: {
+            /** Format: uuid */
+            run_id: string;
+            generation: number;
+            state: components["schemas"]["RunState"];
+            center_epoch: number;
+            /** Format: date-time */
+            lease_expires_at: string;
+            lease_ttl_ms: number;
+            renew_interval_ms: number;
+            cancel_requested: boolean;
+            challenge?: string;
+        };
+        DispatchGeneration: {
+            generation: number;
+        };
+        RenewDispatchLease: {
+            generation: number;
+            challenge?: string;
+        };
+        ReportPreparationFailure: {
+            generation: number;
+            failure_code: string;
+            detail?: string;
+        };
+        DeviceSupervisorFactInput: {
+            generation: number;
+            device_generation: number;
+            center_epoch: number;
+            supervisor_nonce: string;
+            process_pid?: number;
+            /** Format: date-time */
+            process_started_at?: string;
+            /** Format: uuid */
+            workdir_binding_id?: string;
+            workdir_path_hash?: string;
+            /** @enum {string} */
+            process_state: "INTENDED" | "STARTED" | "RUNNING" | "EXITED" | "NOT_FOUND" | "UNKNOWN";
+            exit_code?: number | null;
+            /** Format: date-time */
+            process_exited_at?: string;
+            last_event_sequence?: number;
+            /** Format: uuid */
+            last_result_id?: string;
+            /** Format: date-time */
+            observed_at?: string;
+            version?: number;
+        };
+        DeviceReconciliationEvidenceInput: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            case_id: string;
+            generation: number;
+            device_generation: number;
+            center_epoch: number;
+            supervisor_nonce: string;
+            process_pid?: number;
+            /** Format: date-time */
+            process_started_at?: string;
+            kind: string;
+            /** @enum {string} */
+            process_state: "INTENDED" | "STARTED" | "RUNNING" | "EXITED" | "NOT_FOUND" | "UNKNOWN";
+            process_exited?: boolean;
+            exit_code?: number | null;
+            event_sequence?: number;
+            /** Format: uuid */
+            result_id?: string;
+            payload_hash?: string;
+            detail?: string;
+            /** Format: date-time */
+            observed_at?: string;
+        };
+        DeviceSupervisorFact: {
+            /** Format: uuid */
+            organization_id: string;
+            /** Format: uuid */
+            run_id: string;
+            /** Format: uuid */
+            device_id: string;
+            generation: number;
+            device_generation: number;
+            center_epoch: number;
+            supervisor_nonce: string;
+            process_pid: number;
+            /** Format: date-time */
+            process_started_at?: string;
+            /** Format: uuid */
+            workdir_binding_id?: string;
+            workdir_path_hash?: string;
+            last_event_sequence: number;
+            /** Format: uuid */
+            result_id?: string;
+            manifest_hash: string;
+            /** @enum {string} */
+            process_state: "INTENDED" | "STARTED" | "RUNNING" | "EXITED" | "NOT_FOUND" | "UNKNOWN";
+            exit_code?: number;
+            /** Format: date-time */
+            process_exited_at?: string;
+            /** Format: date-time */
+            observed_at: string;
+            version: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        DeviceReconciliationEvidence: {
+            /** Format: uuid */
+            organization_id: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            case_id: string;
+            /** Format: uuid */
+            run_id: string;
+            generation: number;
+            device_generation: number;
+            center_epoch: number;
+            kind: string;
+            source: string;
+            /** Format: uuid */
+            device_id?: string;
+            supervisor_nonce: string;
+            process_pid?: number;
+            /** Format: date-time */
+            process_started_at?: string;
+            /** @enum {string} */
+            process_state: "INTENDED" | "STARTED" | "RUNNING" | "EXITED" | "NOT_FOUND" | "UNKNOWN";
+            process_exited: boolean;
+            exit_code?: number;
+            event_sequence: number;
+            /** Format: uuid */
+            result_id?: string;
+            payload_hash: string;
+            safe_detail: string;
+            accepted_state: string;
+            /** Format: date-time */
+            observed_at: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        ArtifactCleanupPreview: {
+            /** Format: uuid */
+            organization_id: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            requested_by: string;
+            config_version: number;
+            status: string;
+            /** Format: date-time */
+            expires_at: string;
+            candidate_count: number;
+            candidate_bytes: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            confirmed_at?: string;
+            /** Format: uuid */
+            confirmed_by?: string;
+            version: number;
+        };
+        CreateArtifactCleanupPreview: {
+            limit?: number;
+            ttl_seconds?: number;
+        };
+        ArtifactCleanupResult: {
+            preview: components["schemas"]["ArtifactCleanupPreview"];
+            deleted: number;
+            skipped: number;
+            failed: number;
+        };
+        ConversationNotification: {
+            /** Format: uuid */
+            direct_chat_id?: string;
+            /** Format: uuid */
+            direct_message_id?: string;
+            /** Format: uuid */
+            organization_id: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            recipient_user_id: string;
+            kind: string;
+            /** Format: uuid */
+            conversation_id?: string;
+            /** Format: uuid */
+            message_id?: string;
+            /** Format: uuid */
+            task_id?: string;
+            /** Format: uuid */
+            comment_id?: string;
+            safe_summary: string;
+            /** Format: date-time */
+            read_at?: string;
+            /** Format: date-time */
+            created_at: string;
+        };
         WorkspaceProposal: {
             /** Format: uuid */
             id: string;
@@ -18984,6 +19530,11 @@ export interface components {
             space_name?: string;
             /** Format: uuid */
             agent_id?: string;
+            /**
+             * Format: uuid
+             * @description 当前显示的 Agent 发起人
+             */
+            actor_agent_id?: string;
             /** @enum {string} */
             actor_kind?: "USER" | "AGENT";
             actor_name?: string;
@@ -19670,8 +20221,16 @@ export interface components {
         };
         /** @description 从心跳 capabilities.runtimes 解析出的 Runtime：codex、claude-code、opencode、pi、codebuddy、hermes、gemini（未安装的不上报） */
         DeviceRuntime: {
-            /** @description Runtime 名称：codex、claude-code、opencode、pi、codebuddy、hermes、gemini */
+            /** @description Runtime 名称：codex、claude-code、opencode、pi、codebuddy、hermes、gemini、cursor */
             provider: string;
+            /** @description 已验证的 CLI 安装入口，用户目录用 ~ 表示 */
+            install_path?: string;
+            /** @description 本地 CLI 的命中来源 */
+            discovery_source?: string;
+            /** @description 安装信息来自缓存，本次启动正在探测运行状态 */
+            discovery_cached?: boolean;
+            /** @description 已发现但没有执行适配器 */
+            discovery_only?: boolean;
             version: string | null;
             /**
              * @description READY = 可运行；NEEDS_LOGIN = 未登录；UNAVAILABLE = 其他不可运行原因（见 reason）
@@ -21578,6 +22137,10 @@ export interface components {
             session_idle_minutes: number;
             /** @default 120 */
             session_max_minutes: number;
+            /** @description 每个供应商经本机验证的 CLI 启动路径，提交空字符串恢复自动发现 */
+            runtime_paths?: {
+                [key: string]: string;
+            };
             codex_path: string;
             codex_args: string[];
             memory_guard: boolean;
@@ -22412,6 +22975,16 @@ export interface components {
             subscribe?: boolean;
             comment?: string;
         };
+        TaskDuplicateRequest: {
+            version: number;
+            /** Format: uuid */
+            duplicate_of_task_id: string;
+            /**
+             * Format: uuid
+             * @description 省略时取工作流里排序最前的重复类别状态
+             */
+            status_id?: string;
+        };
         /** @enum {string} */
         AgentVariantGroup: "instructions" | "computer" | "runtime" | "directory" | "limits" | "repos" | "env" | "run_settings";
         AgentVariantLink: {
@@ -22779,6 +23352,476 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    loginWithPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordLoginRequest"];
+            };
+        };
+        responses: {
+            /** @description 已创建 */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoginSession"];
+                };
+            };
+            /** @description 请求失败 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    connectDeviceStream: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WebSocket 已升级 */
+            101: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 请求失败 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listDeviceAgentSlots: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        agents: components["schemas"]["DeviceAgentSlots"][];
+                    };
+                };
+            };
+            /** @description 请求失败 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listDeviceDispatchOffers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        offers: components["schemas"]["DispatchOffer"][];
+                    };
+                };
+            };
+            /** @description 请求失败 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    claimDeviceDispatchOffer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationID: string;
+                offerID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DispatchLease"];
+                };
+            };
+            /** @description 请求失败 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    startDeviceRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationID: string;
+                runID: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DispatchGeneration"];
+            };
+        };
+        responses: {
+            /** @description 成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DispatchLease"];
+                };
+            };
+            /** @description 请求失败 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    renewDeviceRunLease: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationID: string;
+                runID: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RenewDispatchLease"];
+            };
+        };
+        responses: {
+            /** @description 成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DispatchLease"];
+                };
+            };
+            /** @description 请求失败 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reportDevicePreparationFailure: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationID: string;
+                runID: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportPreparationFailure"];
+            };
+        };
+        responses: {
+            /** @description 成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunResponse"];
+                };
+            };
+            /** @description 请求失败 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    submitDeviceSupervisorFact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationID: string;
+                runID: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeviceSupervisorFactInput"];
+            };
+        };
+        responses: {
+            /** @description 已受理 */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceSupervisorFact"];
+                };
+            };
+            /** @description 请求失败 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    submitDeviceReconciliationEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationID: string;
+                runID: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeviceReconciliationEvidenceInput"];
+            };
+        };
+        responses: {
+            /** @description 已受理 */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceReconciliationEvidence"];
+                };
+            };
+            /** @description 请求失败 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    createArtifactCleanupPreview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationID: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateArtifactCleanupPreview"];
+            };
+        };
+        responses: {
+            /** @description 已创建 */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArtifactCleanupPreview"];
+                };
+            };
+            /** @description 请求失败 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    confirmArtifactCleanupPreview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationID: string;
+                previewID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArtifactCleanupResult"];
+                };
+            };
+            /** @description 请求失败 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listConversationNotifications: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                organizationID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        notifications: components["schemas"]["ConversationNotification"][];
+                    };
+                };
+            };
+            /** @description 请求失败 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    markConversationNotificationRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationID: string;
+                notificationID: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已读 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 请求失败 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     listWorkspaceProposals: {
         parameters: {
             query?: {
@@ -28710,6 +29753,24 @@ export interface operations {
             };
         };
     };
+    getHealthCheck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 进程存活 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getReadiness: {
         parameters: {
             query?: never;
@@ -30015,11 +31076,7 @@ export interface operations {
             header?: never;
             path: {
                 organizationID: components["parameters"]["OrganizationID"];
-                /**
-                 * @description IM 服务商（阶段 7g-1：飞书、Lark、钉钉共用同一套应用 / 个人绑定 / 机器人列表接口，路径里的服务商决定使用哪家的开放平台与连接）。
-                 *     未知值 404。扫码创建接口（registrations）只有飞书和 Lark 有；钉钉官方没有扫码创建应用的接口，机器人用 POST .../dingtalk/bots 直接填 AppKey / AppSecret 连接。
-                 */
-                imProvider: components["parameters"]["IMProvider"];
+                imProvider: "dingtalk";
             };
             cookie?: never;
         };
@@ -30065,11 +31122,7 @@ export interface operations {
             header?: never;
             path: {
                 organizationID: components["parameters"]["OrganizationID"];
-                /**
-                 * @description IM 服务商（阶段 7g-1：飞书、Lark、钉钉共用同一套应用 / 个人绑定 / 机器人列表接口，路径里的服务商决定使用哪家的开放平台与连接）。
-                 *     未知值 404。扫码创建接口（registrations）只有飞书和 Lark 有；钉钉官方没有扫码创建应用的接口，机器人用 POST .../dingtalk/bots 直接填 AppKey / AppSecret 连接。
-                 */
-                imProvider: components["parameters"]["IMProvider"];
+                imProvider: "feishu" | "lark";
             };
             cookie?: never;
         };
@@ -30111,11 +31164,7 @@ export interface operations {
             header?: never;
             path: {
                 organizationID: components["parameters"]["OrganizationID"];
-                /**
-                 * @description IM 服务商（阶段 7g-1：飞书、Lark、钉钉共用同一套应用 / 个人绑定 / 机器人列表接口，路径里的服务商决定使用哪家的开放平台与连接）。
-                 *     未知值 404。扫码创建接口（registrations）只有飞书和 Lark 有；钉钉官方没有扫码创建应用的接口，机器人用 POST .../dingtalk/bots 直接填 AppKey / AppSecret 连接。
-                 */
-                imProvider: components["parameters"]["IMProvider"];
+                imProvider: "feishu" | "lark";
                 registrationID: string;
             };
             cookie?: never;
@@ -30142,11 +31191,7 @@ export interface operations {
             header?: never;
             path: {
                 organizationID: components["parameters"]["OrganizationID"];
-                /**
-                 * @description IM 服务商（阶段 7g-1：飞书、Lark、钉钉共用同一套应用 / 个人绑定 / 机器人列表接口，路径里的服务商决定使用哪家的开放平台与连接）。
-                 *     未知值 404。扫码创建接口（registrations）只有飞书和 Lark 有；钉钉官方没有扫码创建应用的接口，机器人用 POST .../dingtalk/bots 直接填 AppKey / AppSecret 连接。
-                 */
-                imProvider: components["parameters"]["IMProvider"];
+                imProvider: "feishu" | "lark";
                 registrationID: string;
             };
             cookie?: never;
@@ -35773,6 +36818,38 @@ export interface operations {
             409: components["responses"]["Error"];
         };
     };
+    markTaskDuplicate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationID: components["parameters"]["OrganizationID"];
+                spaceID: components["parameters"]["SpaceID"];
+                taskID: components["parameters"]["TaskID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskDuplicateRequest"];
+            };
+        };
+        responses: {
+            /** @description 任务 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskDetail"];
+                };
+            };
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
     restoreTask: {
         parameters: {
             query?: never;
@@ -37300,6 +38377,50 @@ export interface operations {
             404: components["responses"]["Error"];
         };
     };
+    addOrganizationMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationID: components["parameters"]["OrganizationID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddOrganizationMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description 成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrganizationMember"];
+                };
+            };
+            /** @description 已创建 */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrganizationMember"];
+                };
+            };
+            /** @description 请求失败 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     changeOrganizationMember: {
         parameters: {
             query?: never;
@@ -38298,6 +39419,8 @@ export interface operations {
     listAgentDirectory: {
         parameters: {
             query?: {
+                /** @description 仅查询该 Agent 的独立目录条目，应用相同的可见性与专属规则 */
+                agent_id?: string;
                 /** @description true 只看已归档 */
                 archived?: boolean;
             };
@@ -39397,6 +40520,41 @@ export interface operations {
             400: components["responses"]["Error"];
             401: components["responses"]["Error"];
             404: components["responses"]["Error"];
+        };
+    };
+    registerOrganizationDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationID: components["parameters"]["OrganizationID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrganizationDeviceRegistration"];
+            };
+        };
+        responses: {
+            /** @description 已创建 */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrganizationDeviceRegistered"];
+                };
+            };
+            /** @description 请求失败 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     getDeviceCenter: {

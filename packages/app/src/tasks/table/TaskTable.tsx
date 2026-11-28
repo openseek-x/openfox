@@ -33,6 +33,11 @@ import { PriorityIcon, type Priority } from "../primitives/PriorityIcon";
 import { StatusIcon } from "../primitives/StatusIcon";
 import { useTaskPages, useUpdateTask } from "../queries";
 import { statusFields } from "../TaskMenu";
+import {
+  MarkDuplicateDialog,
+  isDuplicateStatus,
+  type DuplicateTarget,
+} from "../detail/MarkDuplicateDialog";
 import type { TaskViewProps } from "../views";
 import { useEstimation } from "../../spaces/EstimateField";
 import { formatEstimate } from "../../spaces/estimation";
@@ -161,6 +166,7 @@ const Row = memo(function Row({
   const readOnlyReason = useTaskReadOnlyReason(orgId, task.space_id);
   const readOnly = Boolean(readOnlyReason);
   const [dateOpen, setDateOpen] = useState(false);
+  const [duplicate, setDuplicate] = useState<DuplicateTarget | null>(null);
   const dateAnchor = useRef<HTMLButtonElement | null>(null);
   const [assignOpen, setAssignOpen] = useState(false);
   const { candidates: invitations } = useInvitationAssignees(
@@ -209,7 +215,10 @@ const Row = memo(function Row({
           selected={[task.status_id]}
           onSelect={(id) => {
             const status = columns.find((c) => c.id === id);
-            if (status && id !== task.status_id)
+            if (!status || id === task.status_id) return;
+            // OPE-17 · 重复状态必须带目标任务：改走目标选择器
+            if (isDuplicateStatus(status)) setDuplicate({ task, statusId: id });
+            else
               update.mutate({
                 task,
                 patch: { status_id: id },
@@ -234,6 +243,13 @@ const Row = memo(function Row({
             </button>
           )}
         />
+        {duplicate && (
+          <MarkDuplicateDialog
+            orgId={orgId}
+            target={duplicate}
+            onClose={() => setDuplicate(null)}
+          />
+        )}
       </TableCell>
       <TableCell>
         <Picker
@@ -295,6 +311,7 @@ const Row = memo(function Row({
               {shown && (
                 <TaskAssigneeAvatar
                   name={shown.name}
+                  id={shown.id}
                   kind={shown.kind}
                   size={20}
                 />

@@ -26,12 +26,16 @@ const sizeClass: Record<IconButtonSize, string> = {
 };
 
 const idleClass: Record<IconButtonStyle, string> = {
-  round: "bg-surface-card enabled:not-aria-disabled:hover:bg-surface-hover",
-  outline: "bg-surface-card enabled:not-aria-disabled:hover:bg-surface-hover",
+  round:
+    "bg-surface-card shadow-card enabled:not-aria-disabled:hover:border-line-strong enabled:not-aria-disabled:hover:bg-surface-hover",
+  outline:
+    "bg-surface-card shadow-card enabled:not-aria-disabled:hover:border-line-strong enabled:not-aria-disabled:hover:bg-surface-hover",
   secondary:
     "bg-surface-muted enabled:not-aria-disabled:hover:bg-secondary-hover",
-  "ghost-soft": "enabled:not-aria-disabled:hover:bg-control-hover",
-  ghost: "enabled:not-aria-disabled:hover:bg-control-hover",
+  "ghost-soft":
+    "enabled:not-aria-disabled:hover:bg-control-hover enabled:not-aria-disabled:hover:text-fg-default",
+  ghost:
+    "enabled:not-aria-disabled:hover:bg-control-hover enabled:not-aria-disabled:hover:text-fg-default",
 };
 
 /** 图标按钮，对应 Figma IconButton 的 Style × Size 变体。 */

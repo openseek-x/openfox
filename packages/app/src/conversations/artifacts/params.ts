@@ -88,10 +88,11 @@ export function useArtifactPanel(
   const { tabs, selected } = session;
   const setTabs = useCallback(
     (change: string[] | ((tabs: string[]) => string[])) => {
-      setSession((current) => ({
-        ...current,
-        tabs: typeof change === "function" ? change(current.tabs) : change,
-      }));
+      setSession((current) => {
+        const next =
+          typeof change === "function" ? change(current.tabs) : change;
+        return next === current.tabs ? current : { ...current, tabs: next };
+      });
     },
     [],
   );
@@ -123,7 +124,7 @@ export function useArtifactPanel(
           : current.filter((id) => id !== NEW_PANEL);
       return retained.includes(selected) ? retained : [...retained, selected];
     });
-  }, [selected]);
+  }, [selected, setTabs]);
 
   const setSelected = useCallback(
     (value: string | null, replace = false) => {
@@ -149,7 +150,7 @@ export function useArtifactPanel(
       if (selected === id)
         setSelected(rest[index] ?? rest[index - 1] ?? null, true);
     },
-    [tabs, selected, setSelected],
+    [tabs, selected, setSelected, setTabs],
   );
 
   useEffect(() => {
@@ -173,31 +174,37 @@ export function useArtifactPanel(
       window.removeEventListener("openfox:browser-restored", restore);
   }, [conversationId, selected, setSelected, setTabs]);
 
-  const syncBrowserTabs = useCallback((ids: string[]) => {
-    const keys = ids.map(browserTabKey);
-    setTabs((current) => {
-      const retained = current.filter(
-        (id) => !isBrowserTab(id) || keys.includes(id),
-      );
-      const next = [
-        ...retained,
-        ...keys.filter((id) => !retained.includes(id)),
-      ];
-      return next.length === current.length &&
-        next.every((id, i) => id === current[i])
-        ? current
-        : next;
-    });
-  }, []);
-  const reorder = useCallback((id: string, before: string) => {
-    setTabs((current) => {
-      if (id === before || !current.includes(id) || !current.includes(before))
-        return current;
-      const next = current.filter((value) => value !== id);
-      next.splice(next.indexOf(before), 0, id);
-      return next;
-    });
-  }, []);
+  const syncBrowserTabs = useCallback(
+    (ids: string[]) => {
+      const keys = ids.map(browserTabKey);
+      setTabs((current) => {
+        const retained = current.filter(
+          (id) => !isBrowserTab(id) || keys.includes(id),
+        );
+        const next = [
+          ...retained,
+          ...keys.filter((id) => !retained.includes(id)),
+        ];
+        return next.length === current.length &&
+          next.every((id, i) => id === current[i])
+          ? current
+          : next;
+      });
+    },
+    [setTabs],
+  );
+  const reorder = useCallback(
+    (id: string, before: string) => {
+      setTabs((current) => {
+        if (id === before || !current.includes(id) || !current.includes(before))
+          return current;
+        const next = current.filter((value) => value !== id);
+        next.splice(next.indexOf(before), 0, id);
+        return next;
+      });
+    },
+    [setTabs],
+  );
 
   return useMemo(
     () => ({
@@ -218,6 +225,6 @@ export function useArtifactPanel(
         if (selected === id) setSelected(null, true);
       },
     }),
-    [selected, tabs, setSelected, closeTab, syncBrowserTabs, reorder],
+    [selected, tabs, setSelected, closeTab, syncBrowserTabs, reorder, setTabs],
   );
 }

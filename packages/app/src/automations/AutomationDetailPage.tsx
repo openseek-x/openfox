@@ -134,7 +134,7 @@ export function AutomationDetailPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex h-12 shrink-0 items-center gap-3 border-b border-line-default px-4">
+      <header className="flex h-11 shrink-0 items-center gap-3 border-b border-line-subtle px-4">
         <button
           type="button"
           onClick={() => navigate(back)}
@@ -184,7 +184,7 @@ export function AutomationDetailPage() {
           <div className="flex min-w-0 flex-col gap-6">
             <div className="flex flex-col gap-3">
               <div className="flex flex-wrap items-center gap-3">
-                <h1 className="min-w-[min(100%,240px)] flex-1 break-words text-[24px] font-bold">
+                <h1 className="min-w-[min(100%,240px)] flex-1 text-heading font-semibold tracking-[-0.015em] break-words text-fg-default">
                   {automation.title}
                 </h1>
                 {canWrite && (

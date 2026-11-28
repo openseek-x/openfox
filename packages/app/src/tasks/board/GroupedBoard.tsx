@@ -22,6 +22,11 @@ import { useT, type MessageKey } from "@openfox/i18n";
 import { Button, Icon, IconButton, Spinner, cn } from "@openfox/ui";
 
 import { pointerFirstCollision } from "../../dnd/collision";
+import {
+  MarkDuplicateDialog,
+  isDuplicateStatus,
+  type DuplicateTarget,
+} from "../detail/MarkDuplicateDialog";
 import { TaskAssigneeAvatar } from "../invitationAssignees";
 import {
   ALL_ROWS_KEY,
@@ -90,6 +95,7 @@ export function GroupGlyph({ group }: { group: TaskGroup }): ReactNode {
     return (
       <TaskAssigneeAvatar
         name={group.name}
+        id={group.key.slice(6)}
         kind={group.assigneeKind}
         size={20}
       />
@@ -185,6 +191,7 @@ export function GroupedBoard(props: BoardProps) {
   const [dragging, setDragging] = useState<{ task: Task; cell: string } | null>(
     null,
   );
+  const [duplicate, setDuplicate] = useState<DuplicateTarget | null>(null);
   // 拖动后、服务端返回前的单元格顺序（乐观显示），请求结束后清除
   const [pending, setPending] = useState<{
     cell: string;
@@ -250,6 +257,14 @@ export function GroupedBoard(props: BoardProps) {
       allowReorder,
     );
     if (!patch) return;
+    // OPE-17 · 拖进重复列：先选目标任务；取消时卡片留在原格。目标格里的落点不保留。
+    if (
+      toStatusId !== task.status_id &&
+      isDuplicateStatus(columns.find((c) => c.id === toStatusId))
+    ) {
+      setDuplicate({ task, statusId: toStatusId });
+      return;
+    }
     if (allowReorder) {
       const rest = ids.filter((id) => id !== task.id);
       rest.splice(Math.min(toIndex, rest.length), 0, task.id);
@@ -286,11 +301,14 @@ export function GroupedBoard(props: BoardProps) {
       <h3
         id={`${boardId}-${group.key}`}
         tabIndex={-1}
-        className="min-w-0 truncate rounded-sm text-body font-medium"
+        className="min-w-0 truncate rounded-sm text-body-sm font-semibold text-fg-default"
       >
         {groupName(group)}
       </h3>
-      <span className="text-body-sm text-fg-muted" data-testid="column-count">
+      <span
+        className="text-caption tabular-nums text-fg-muted"
+        data-testid="column-count"
+      >
         {columnCount(group)}
       </span>
       {onCreate && columnField === "status" && group.status && (
@@ -374,7 +392,7 @@ export function GroupedBoard(props: BoardProps) {
                 {visibleColumns.map((column) => (
                   <div
                     key={column.key}
-                    className="w-[280px] shrink-0 rounded-xl bg-surface-muted/60"
+                    className="of-board-lane w-[280px] shrink-0 rounded-xl border border-line-subtle"
                   >
                     {columnHeader(column)}
                   </div>
@@ -420,6 +438,13 @@ export function GroupedBoard(props: BoardProps) {
           <CardBody task={dragging.task} display={display} overlay />
         )}
       </DragOverlay>
+      {duplicate && (
+        <MarkDuplicateDialog
+          orgId={orgId}
+          target={duplicate}
+          onClose={() => setDuplicate(null)}
+        />
+      )}
     </DndContext>
   );
 }
@@ -450,7 +475,7 @@ function Cell({
   return (
     <section
       aria-label={label}
-      className="flex w-[280px] shrink-0 flex-col rounded-xl bg-surface-muted/60"
+      className="of-board-lane flex w-[280px] shrink-0 flex-col rounded-xl border border-line-subtle"
     >
       {header}
       <div
