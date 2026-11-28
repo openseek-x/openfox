@@ -1,15 +1,20 @@
 import { RestoreProposal } from "../proposals/RestoreProposal";
+import { peekFileLocation } from "./fileLocation";
 import { previewCapabilities } from "./previewProtocol";
 import { useViewState, usePreviewScroll } from "./viewState";
 import { ArtifactReview } from "./ArtifactReview";
-import { PreviewNavigationTarget } from "./PreviewNavigation";
+import {
+  PreviewNavigationTarget,
+  useWorkspaceToolbarTarget,
+} from "./PreviewNavigation";
 import { OfficeReview } from "./OfficeReview";
 import { VisualReview } from "./VisualReview";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { isApiError, type RunArtifact } from "@openfox/api";
 import { useI18n, useT } from "@openfox/i18n";
-import { Icon, IconButton, Popover, Skeleton } from "@openfox/ui";
+import { Icon, IconButton, Popover, Skeleton, cn } from "@openfox/ui";
 
 import { useApi } from "../../context";
 import {
@@ -22,13 +27,16 @@ import {
 import { ChatMarkdown } from "../ChatMarkdown";
 import { fileKindOf, formatBytes } from "../steps/cards";
 import { HtmlPreview } from "./HtmlPreview";
+import { VideoPlayer } from "./VideoPreview";
 import {
   ARTIFACT_LARGE_TEXT_BYTES,
+  artifactAnnotatable,
   artifactExpired,
   artifactPreviewKind,
   artifactPreviewable,
 } from "./model";
 import { useArtifactContent } from "./queries";
+import { useDraftFileContexts } from "../drafts";
 
 // Reuse the authenticated attachment download. HTML is static and sandboxed;
 // source and copy always retain the original file, including omitted scripts.
@@ -54,7 +62,12 @@ export function ArtifactPreview({
   const capabilities = previewCapabilities(artifact);
   const historical = artifact.id !== artifact.head_artifact_id;
   const previewable = !expired && artifactPreviewable(artifact);
-  const content = useArtifactContent(orgId, artifact, previewable);
+  // 视频直接用下载地址分段播放，不取回内容。
+  const content = useArtifactContent(
+    orgId,
+    artifact,
+    previewable && kind !== "video",
+  );
   const downloadUrl = api.runs.artifactUrl(orgId, artifact.run_id, artifact.id);
   // 下载时中心返回 404（已被清理但列表还没刷新）也按失效显示
   const gone =
@@ -65,21 +78,35 @@ export function ArtifactPreview({
   const text = content.data?.text ?? "";
   const hasText =
     previewable &&
-    !["image", "pdf", "office"].includes(kind) &&
+    !["image", "pdf", "office", "video"].includes(kind) &&
     Boolean(content.data);
   const [source, setSource] = useViewState("source", false);
   const [annotate, setAnnotate] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [navigation, setNavigation] = useState<HTMLDivElement | null>(null);
+  const draftFiles = useDraftFileContexts(conversationId ?? "");
+  const pendingCount = draftFiles
+    .filter(
+      (item) =>
+        item.artifact_id === artifact.id && item.sha256 === artifact.sha256,
+    )
+    .reduce((sum, item) => sum + item.comments.length, 0);
   const infoRef = useRef<HTMLButtonElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const hasPendingLocation = Boolean(
+    conversationId &&
+    peekFileLocation(conversationId, artifact.id, artifact.sha256),
+  );
   usePreviewScroll(
     scrollRef,
     Boolean(content.data),
     source ? "source" : "preview",
+    hasPendingLocation,
   );
   const large = artifact.size_bytes > ARTIFACT_LARGE_TEXT_BYTES;
-  const canSwitch = hasText && !large && capabilities.sourceToggle;
+  // HTML 报告超过大文件阈值仍渲染（只有源码视图按大文件模式显示前 500 行），因此保留源码切换。
+  const canSwitch =
+    hasText && (!large || kind === "html") && capabilities.sourceToggle;
   const fileType =
     kind === "html"
       ? "HTML"
@@ -87,174 +114,199 @@ export function ArtifactPreview({
           `steps.attachment.types.${fileKindOf(artifact.name, artifact.mime_type)}`,
         );
 
+  const toolbarTarget = useWorkspaceToolbarTarget();
+  const toolbarControls = (
+    <>
+      <div ref={setNavigation} className="shrink-0 empty:hidden" />
+      {canSwitch && (
+        <div
+          role="group"
+          aria-label={t("artifacts.preview.mode")}
+          className="flex h-7 shrink-0 items-center rounded-lg border border-line-subtle bg-surface-muted p-0.5"
+        >
+          {([false, true] as const).map((showSource) => (
+            <IconButton
+              key={String(showSource)}
+              label={t(
+                showSource
+                  ? "artifacts.preview.source"
+                  : "artifacts.preview.rendered",
+              )}
+              icon={<Icon name={showSource ? "code" : "eye"} size={14} />}
+              size="28"
+              active={source === showSource}
+              aria-pressed={source === showSource}
+              className={cn(
+                "size-6 rounded-md!",
+                source === showSource && "bg-surface-card! shadow-card",
+              )}
+              onClick={() => setSource(showSource)}
+            />
+          ))}
+        </div>
+      )}
+      {conversationId &&
+        capabilities.selection.length > 0 &&
+        artifactAnnotatable(artifact) &&
+        !historical &&
+        previewable &&
+        !gone &&
+        content.data && (
+          <div className="relative shrink-0">
+            <IconButton
+              label={t("artifacts.review.annotate")}
+              icon={<Icon name="hifox-scan-eye" size={16} />}
+              size="28"
+              variant="ghost"
+              active={annotate}
+              aria-pressed={annotate}
+              onClick={() => setAnnotate((value) => !value)}
+              className={cn(
+                "rounded-lg!",
+                annotate && "bg-accent-soft! text-accent!",
+              )}
+            />
+            {pendingCount > 0 && (
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute -top-0.5 -right-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-medium leading-none text-fg-inverse"
+              >
+                {pendingCount > 99 ? "99+" : pendingCount}
+              </span>
+            )}
+          </div>
+        )}
+      {!toolbarTarget && (
+        <div
+          className="flex min-w-0 flex-1 items-center gap-1.5 px-1 text-caption text-fg-muted"
+          title={artifact.name}
+        >
+          {kind === "video" && (
+            <Icon name="play" size={15} className="shrink-0" />
+          )}
+          <span className="truncate">{artifact.name}</span>
+        </div>
+      )}
+      {!gone && (
+        <a
+          href={downloadUrl}
+          download={artifact.name}
+          aria-label={t("artifacts.preview.download")}
+          title={t("artifacts.preview.download")}
+          className="flex size-7 shrink-0 items-center justify-center rounded-lg text-fg-muted transition-colors hover:bg-control-hover hover:text-fg-default"
+        >
+          <Icon name="download" size={15} />
+        </a>
+      )}
+      <IconButton
+        ref={infoRef}
+        label={t("artifacts.preview.more")}
+        icon={<Icon name="more" size={16} />}
+        size="28"
+        variant="ghost"
+        aria-expanded={infoOpen}
+        aria-haspopup="dialog"
+        onClick={() => setInfoOpen((open) => !open)}
+      />
+      <Popover
+        open={infoOpen}
+        onOpenChange={setInfoOpen}
+        anchorRef={infoRef}
+        placement="bottom-end"
+        role="dialog"
+        aria-label={t("artifacts.preview.info")}
+        className="w-64 space-y-2 p-3 text-body-sm"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-caption text-fg-muted">
+            {t("artifacts.preview.info")}
+          </span>
+          {hasText && <CopyButton text={text} />}
+        </div>
+        <p className="break-words font-medium text-fg-default">
+          {artifact.name}
+        </p>
+        <p className="text-fg-secondary">
+          {fileType} · {formatBytes(artifact.size_bytes)}
+        </p>
+        <time
+          className="block text-caption text-fg-muted"
+          dateTime={artifact.created_at}
+        >
+          {formatDate(artifact.created_at, {
+            dateStyle: "medium",
+            timeStyle: "short",
+          })}
+        </time>
+        <p className="text-caption text-fg-muted">
+          {t(
+            versionMode === "current"
+              ? "artifacts.version.following"
+              : "artifacts.version.fixed",
+            { version: artifact.content_revision },
+          )}
+        </p>
+        {onOpenVersion && (
+          <button
+            type="button"
+            onClick={() => {
+              setInfoOpen(false);
+              onOpenVersion();
+            }}
+            className="text-accent hover:underline"
+          >
+            {t(
+              versionMode === "current"
+                ? "artifacts.version.openFixed"
+                : "artifacts.version.openCurrent",
+            )}
+          </button>
+        )}
+        {historical && conversationId && !gone && (
+          <RestoreProposal
+            orgId={orgId}
+            conversationId={conversationId}
+            artifact={artifact}
+          />
+        )}
+        {kind === "office" && (
+          <p className="text-caption text-fg-muted">
+            {t("artifacts.review.officeHint")}
+          </p>
+        )}
+        {kind === "html" && (
+          <p className="border-t border-line-default pt-2 text-caption text-fg-muted">
+            {t("artifacts.preview.htmlHint")}
+          </p>
+        )}
+      </Popover>
+    </>
+  );
+
   return (
     <PreviewNavigationTarget.Provider value={navigation}>
       <section
         aria-label={artifact.name}
         className="flex min-h-0 min-w-0 flex-1 flex-col"
       >
-        <div
-          aria-label={t("artifacts.preview.toolbar")}
-          className="flex h-[52px] min-w-0 shrink-0 items-center gap-1.5 border-b border-line-default px-2"
-        >
-          <div ref={setNavigation} className="shrink-0 empty:hidden" />
-          {canSwitch && (
+        {toolbarTarget ? (
+          createPortal(
             <div
-              role="group"
-              aria-label={t("artifacts.preview.mode")}
-              className="flex shrink-0 items-center rounded-full border border-line-default bg-surface-muted p-0.5"
+              aria-label={t("artifacts.preview.toolbar")}
+              className="flex shrink-0 items-center gap-1"
             >
-              {([false, true] as const).map((showSource) => (
-                <IconButton
-                  key={String(showSource)}
-                  label={t(
-                    showSource
-                      ? "artifacts.preview.source"
-                      : "artifacts.preview.rendered",
-                  )}
-                  icon={<Icon name={showSource ? "code" : "eye"} size={16} />}
-                  size="28"
-                  active={source === showSource}
-                  aria-pressed={source === showSource}
-                  className="rounded-full!"
-                  onClick={() => setSource(showSource)}
-                />
-              ))}
-            </div>
-          )}
-          {conversationId &&
-            capabilities.selection.length > 0 &&
-            !historical &&
-            previewable &&
-            !gone &&
-            content.data && (
-              <IconButton
-                label={t("artifacts.review.annotate")}
-                icon={<Icon name="hifox-scan-eye" size={18} />}
-                size="32"
-                variant="round"
-                active={annotate}
-                aria-pressed={annotate}
-                onClick={() => setAnnotate((value) => !value)}
-                className={
-                  annotate
-                    ? "border-accent! bg-accent-soft! text-accent!"
-                    : "bg-surface-muted"
-                }
-              />
-            )}
+              {toolbarControls}
+            </div>,
+            toolbarTarget,
+          )
+        ) : (
           <div
-            className="flex min-w-0 flex-1 items-center justify-center gap-1.5 text-caption text-fg-muted"
-            title={artifact.name}
+            aria-label={t("artifacts.preview.toolbar")}
+            className="flex h-10 min-w-0 shrink-0 items-center gap-1 border-b border-line-subtle bg-surface-canvas/70 px-2"
           >
-            <Icon
-              name={
-                kind === "image"
-                  ? "image"
-                  : kind === "table"
-                    ? "file-spreadsheet"
-                    : "file-text"
-              }
-              size={15}
-              className="shrink-0"
-            />
-            <span className="truncate">{artifact.name}</span>
+            {toolbarControls}
           </div>
-          {!gone && (
-            <a
-              href={downloadUrl}
-              download={artifact.name}
-              aria-label={t("artifacts.preview.download")}
-              title={t("artifacts.preview.download")}
-              className="flex size-8 shrink-0 items-center justify-center rounded-full border border-line-default bg-surface-muted text-fg-muted hover:bg-surface-hover hover:text-fg-default"
-            >
-              <Icon name="download" size={16} />
-            </a>
-          )}
-          <IconButton
-            ref={infoRef}
-            label={t("artifacts.preview.more")}
-            icon={<Icon name="more" size={18} />}
-            size="32"
-            variant="round"
-            className="bg-surface-muted"
-            aria-expanded={infoOpen}
-            aria-haspopup="dialog"
-            onClick={() => setInfoOpen((open) => !open)}
-          />
-          <Popover
-            open={infoOpen}
-            onOpenChange={setInfoOpen}
-            anchorRef={infoRef}
-            placement="bottom-end"
-            role="dialog"
-            aria-label={t("artifacts.preview.info")}
-            className="w-64 space-y-2 p-3 text-body-sm"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-caption text-fg-muted">
-                {t("artifacts.preview.info")}
-              </span>
-              {hasText && <CopyButton text={text} />}
-            </div>
-            <p className="break-words font-medium text-fg-default">
-              {artifact.name}
-            </p>
-            <p className="text-fg-secondary">
-              {fileType} · {formatBytes(artifact.size_bytes)}
-            </p>
-            <time
-              className="block text-caption text-fg-muted"
-              dateTime={artifact.created_at}
-            >
-              {formatDate(artifact.created_at, {
-                dateStyle: "medium",
-                timeStyle: "short",
-              })}
-            </time>
-            <p className="text-caption text-fg-muted">
-              {t(
-                versionMode === "current"
-                  ? "artifacts.version.following"
-                  : "artifacts.version.fixed",
-                { version: artifact.content_revision },
-              )}
-            </p>
-            {onOpenVersion && (
-              <button
-                type="button"
-                onClick={() => {
-                  setInfoOpen(false);
-                  onOpenVersion();
-                }}
-                className="text-accent hover:underline"
-              >
-                {t(
-                  versionMode === "current"
-                    ? "artifacts.version.openFixed"
-                    : "artifacts.version.openCurrent",
-                )}
-              </button>
-            )}
-            {historical && conversationId && !gone && (
-              <RestoreProposal
-                orgId={orgId}
-                conversationId={conversationId}
-                artifact={artifact}
-              />
-            )}
-            {kind === "office" && (
-              <p className="text-caption text-fg-muted">
-                {t("artifacts.review.officeHint")}
-              </p>
-            )}
-            {kind === "html" && (
-              <p className="border-t border-line-default pt-2 text-caption text-fg-muted">
-                {t("artifacts.preview.htmlHint")}
-              </p>
-            )}
-          </Popover>
-        </div>
+        )}
         <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto">
           {gone ? (
             <div role="status" className="flex flex-col items-start gap-1 p-6">
@@ -288,6 +340,8 @@ export function ArtifactPreview({
                 </a>
               </div>
             )
+          ) : kind === "video" ? (
+            <VideoPlayer src={downloadUrl} name={artifact.name} />
           ) : content.isError ? (
             <div>
               {kind === "office" && (
@@ -311,6 +365,7 @@ export function ArtifactPreview({
               artifact={artifact}
               embedded
               sourceMode={source}
+              onSourceChange={setSource}
               annotate={!historical && annotate}
             />
           ) : kind === "office" ? (
@@ -332,7 +387,7 @@ export function ArtifactPreview({
             <VisualReview blob={content.data.blob!} name={artifact.name} pdf />
           ) : kind === "image" ? (
             <ImageBlob blob={content.data.blob!} name={artifact.name} />
-          ) : kind === "html" && !source && !large ? (
+          ) : kind === "html" && !source ? (
             <HtmlPreview text={text} name={artifact.name} />
           ) : kind === "markdown" && !source && !large ? (
             <MarkdownView

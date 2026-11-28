@@ -190,17 +190,105 @@ describe("全部 Agent 目录", () => {
     );
   });
 
-  it("置顶在前、按空间分组；meta 行显示模型 · Runtime · 所有者（自己显示你）", async () => {
+  it("置顶在前、按空间分组；显示在线状态与 Runtime · 模型 · 所有者（自己显示你）", async () => {
     renderSettings("/o/o1/agents", routes);
     const pinned = await screen.findByRole("region", { name: "置顶" });
     expect(within(pinned).getByText("熊孩子")).toBeInTheDocument();
-    expect(within(pinned).getByText("默认 · Codex · 你")).toBeInTheDocument();
+    expect(within(pinned).getByText("在线 · MacBook")).toBeInTheDocument();
+    expect(
+      within(pinned).getByText("Codex · 默认模型 · 你"),
+    ).toBeInTheDocument();
     const space = screen.getByRole("region", { name: "OpenFox" });
     expect(
-      within(space).getByText("默认 · Codex · fox@openfox.dev"),
+      within(space).getByText("Codex · 默认模型 · fox@openfox.dev"),
     ).toBeInTheDocument();
     expect(within(space).getByText("你 · 3 个成员")).toBeInTheDocument();
     expect(screen.getByText("显示已归档（2）→")).toBeInTheDocument();
+  });
+
+  it("目录页驻留时按 30 秒轮询刷新卡片的电脑在线状态，无需重新进入页面（UI-09）", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    let online = true;
+    renderSettings(
+      "/o/o1/agents",
+      base((call) =>
+        call.method === "GET" && call.path === `${ORG}/agent-directory`
+          ? json(200, {
+              entries: [
+                entry("a-poll", {
+                  name: "轮询助手",
+                  online,
+                  computer_name: "Build-Mac",
+                }),
+              ],
+              archived_count: 0,
+              truncated: false,
+            })
+          : undefined,
+      ),
+    );
+    const card = await screen.findByTestId("directory-card-a-poll");
+    expect(within(card).getByText("在线 · Build-Mac")).toBeVisible();
+    // 电脑断开后不重新进入页面，仅靠轮询刷新
+    online = false;
+    await act(() => vi.advanceTimersByTimeAsync(30_000 + 100));
+    await waitFor(() =>
+      expect(
+        within(screen.getByTestId("directory-card-a-poll")).getByText(
+          "离线 · Build-Mac",
+        ),
+      ).toBeVisible(),
+    );
+  });
+
+  it("区分离线与未绑定电脑状态；未绑定且可编辑时提供「绑定电脑」直达运行配置", async () => {
+    const user = userEvent.setup();
+    renderSettings(
+      "/o/o1/agents",
+      base((call) => {
+        if (call.method === "GET" && call.path === `${ORG}/agent-directory`)
+          return json(200, {
+            entries: [
+              entry("a-offline", {
+                name: "离线助手",
+                online: false,
+                computer_name: "Build-Mac",
+              }),
+              entry("a-unbound", {
+                name: "待绑定助手",
+                online: false,
+                runtime: "",
+                model: "default",
+                computer_name: "",
+              }),
+            ],
+            archived_count: 0,
+            truncated: false,
+          });
+        if (
+          call.method === "GET" &&
+          call.path === `${ORG}/spaces/s1/agents/a-unbound`
+        )
+          return json(200, agent("a-unbound", { name: "待绑定助手" }));
+        return undefined;
+      }),
+    );
+    const offlineCard = await screen.findByTestId("directory-card-a-offline");
+    expect(within(offlineCard).getByText("离线 · Build-Mac")).toBeVisible();
+    const unboundCard = screen.getByTestId("directory-card-a-unbound");
+    expect(within(unboundCard).getByText("未绑定电脑")).toBeVisible();
+    expect(within(unboundCard).getByText("所有者：你")).toBeVisible();
+    expect(within(unboundCard).queryByText(/默认 · 你/)).toBeNull();
+    const bindBtn = within(unboundCard).getByRole("button", {
+      name: "绑定电脑",
+    });
+    await user.click(bindBtn);
+    const drawer = await screen.findByRole("complementary", {
+      name: "待绑定助手 的设置",
+    });
+    expect(
+      within(drawer).getByRole("button", { name: /电脑 & Runtime/ }),
+    ).toHaveAttribute("aria-expanded", "true");
   });
 
   it("筛选小队、搜索成员名，无匹配时显示设计稿文案", async () => {

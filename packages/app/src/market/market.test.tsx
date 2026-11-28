@@ -384,7 +384,7 @@ describe("纯函数", () => {
 });
 
 describe("市场列表", () => {
-  it("目录为空时显示「市场还没有内容」", async () => {
+  it("目录为空时显示页头「市场」、空态指引与「前往组织 Agent」入口", async () => {
     setup("/o/o1/market", {
       catalog: {
         ...catalog,
@@ -393,7 +393,18 @@ describe("市场列表", () => {
         counts: { skills: 0, templates: 0 },
       },
     });
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "市场" }),
+    ).toBeVisible();
     expect(await screen.findByText("市场还没有内容")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "可联系平台管理员导入目录，或先在空间内手动创建技能与 Agent。",
+      ),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "前往组织 Agent" }),
+    ).toBeVisible();
   });
 
   it("默认请求技能（limit=30，无 sort / category / q），卡片显示名称、发布者与下载量；多语言缺失取另一种", async () => {

@@ -286,6 +286,7 @@ export const stepsZh = {
       image: "图片",
       text: "文本文件",
       archive: "压缩包",
+      video: "视频",
       other: "文件",
     },
   },

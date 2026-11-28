@@ -122,6 +122,20 @@ func buildClaude(a *Adapter, req runtime.RunRequest, bridge *toolbridge.Server, 
 		// 写工具是否放行仍由权限档位决定；plan（READ_ONLY / PLAN）不加，保持只读档位与改动前一致。
 		args = append(args, "--add-dir", req.ArtifactDirectory)
 	}
+	if len(req.Skills) > 0 {
+		// 将本次运行装配的技能放入独立插件，避免写入用户配置或任务仓库。
+		plugin := filepath.Join(stateDir, "openfox-skills")
+		if err := os.Mkdir(plugin, 0700); err != nil {
+			return invocation{}, err
+		}
+		if err := runtime.WriteSkills(plugin, req.Skills); err != nil {
+			return invocation{}, err
+		}
+		args = append(args, "--plugin-dir", plugin)
+		for _, skill := range req.Skills {
+			allowed += ",Skill(openfox-skills:" + skill.Name + ")"
+		}
+	}
 	args = append(args, "--strict-mcp-config")
 	servers := map[string]any{}
 	var names []string

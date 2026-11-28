@@ -69,6 +69,7 @@ export type AttachmentKind =
   | "pdf"
   | "image"
   | "archive"
+  | "video"
   | "text"
   | "file";
 
@@ -82,6 +83,7 @@ export function attachmentKind(name: string): AttachmentKind {
   if (ext === "pdf") return "pdf";
   if (["png", "jpg", "jpeg", "gif", "webp"].includes(ext)) return "image";
   if (ext === "zip") return "archive";
+  if (["webm", "mp4"].includes(ext)) return "video";
   if (
     [
       "txt",
@@ -113,6 +115,7 @@ export const KIND_BADGE: Record<
   pdf: { badge: "PDF", className: "bg-[#d93831] text-white" },
   image: { badge: "", className: "bg-surface-muted text-fg-muted" },
   archive: { badge: "ZIP", className: "bg-[#6b7280] text-white" },
+  video: { badge: "", className: "bg-surface-muted text-fg-muted" },
   text: { badge: "", className: "bg-surface-muted text-fg-muted" },
   file: { badge: "", className: "bg-surface-muted text-fg-muted" },
 };

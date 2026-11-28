@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+import { IconButton } from "./IconButton";
 import { Tooltip } from "./Tooltip";
 
 beforeEach(() => vi.useFakeTimers());
@@ -82,4 +83,18 @@ it("dismisses ordinary action hints on click and clears timers on unmount", () =
   fireEvent.mouseEnter(trigger);
   mounted.unmount();
   expect(vi.getTimerCount()).toBe(0);
+});
+
+it("IconButton with tooltip renders Tooltip on hover and focus without native title", () => {
+  render(<IconButton label="筛选" tooltip icon={<span aria-hidden>F</span>} />);
+  const trigger = screen.getByRole("button", { name: "筛选" });
+  expect(trigger).not.toHaveAttribute("title");
+  fireEvent.mouseEnter(trigger);
+  advance();
+  expect(screen.getByRole("tooltip")).toHaveTextContent("筛选");
+  fireEvent.mouseLeave(trigger);
+  expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+  fireEvent.focus(trigger);
+  advance();
+  expect(screen.getByRole("tooltip")).toHaveTextContent("筛选");
 });

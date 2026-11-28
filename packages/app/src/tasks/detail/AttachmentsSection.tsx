@@ -35,6 +35,7 @@ import { keys, useApi } from "../../context";
 import { ReadOnlyTip, useReadOnly } from "../../spaces/readonly";
 import { formatRelativeTime } from "../primitives/dates";
 import { Section } from "./Sections";
+import { AttachmentPreview } from "../../attachments/AttachmentPreview";
 
 // 阶段 7c · 任务详情的「附件」区：列表（文件名、大小、上传人、时间）、上传（按钮 / 拖拽 / 粘贴图片）、
 // 图片预览、下载、删除（上传人或空间管理员，由服务端 can_delete 决定）。
@@ -223,7 +224,7 @@ export function AttachmentsSection({
                   size={14}
                   className="shrink-0 text-fg-muted"
                 />
-                {attachment.previewable ? (
+                {attachment.preview_kind !== "none" ? (
                   <button
                     type="button"
                     aria-label={t("attachments.preview", {
@@ -296,15 +297,9 @@ export function AttachmentsSection({
         open={Boolean(preview)}
         onClose={() => setPreview(null)}
         title={preview?.name ?? ""}
-        width={720}
+        width={preview?.preview_kind === "image" ? 720 : 960}
       >
-        {preview && (
-          <img
-            src={api.attachments.previewUrl(orgId, preview.id)}
-            alt={preview.name}
-            className="mx-auto max-h-[70vh] max-w-full object-contain"
-          />
-        )}
+        {preview && <AttachmentPreview orgId={orgId} attachment={preview} />}
       </Dialog>
       <ConfirmDialog
         open={Boolean(removing)}

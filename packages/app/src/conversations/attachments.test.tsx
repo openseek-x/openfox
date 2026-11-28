@@ -21,10 +21,12 @@ const attachment = (extra: Partial<Attachment> = {}): Attachment => ({
   name: "notes.txt",
   content_type: "text/plain; charset=utf-8",
   size_bytes: 5,
+  uploader_kind: "USER",
   uploaded_by: "u1",
   uploader_name: "林",
   created_at: "2026-10-30T00:00:00Z",
   previewable: false,
+  preview_kind: "none",
   can_delete: true,
   ...extra,
 });
@@ -202,6 +204,7 @@ describe("对话 · 附件", () => {
               content_type: "image/png",
               size_bytes: 2048,
               previewable: true,
+              preview_kind: "image",
             }),
             attachment({
               id: "att-3",

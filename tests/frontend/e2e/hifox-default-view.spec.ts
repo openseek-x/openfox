@@ -176,13 +176,9 @@ test("T03 dynamic shared defaults preserve old overrides and follow current filt
     });
     await tasks(reader, true, false);
     await layout(reader, "表格");
-    await reader
-      .getByRole("button", { name: "改用个人视图", exact: true })
-      .click();
+    await reader.getByRole("button", { name: "个人视图", exact: true }).click();
     await tasks(reader, true, true);
-    await reader
-      .getByRole("button", { name: "使用空间默认", exact: true })
-      .click();
+    await reader.getByRole("button", { name: "空间默认", exact: true }).click();
     await tasks(reader, true, false);
     await layout(reader, "列表");
 

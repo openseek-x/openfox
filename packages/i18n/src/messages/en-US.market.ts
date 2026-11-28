@@ -8,6 +8,11 @@ export const marketEn: Messages["market"] = {
   emptyTitle: "The market is empty",
   emptyDesc:
     "Skills and agent templates appear here once an administrator imports the catalog.",
+  emptyNextStep:
+    "Ask a platform administrator to import the catalog, or create skills and agents directly in your spaces.",
+  emptyPickerNextStep:
+    "Ask a platform administrator to import the catalog, or close this dialog to create a skill manually.",
+  emptyActionAgents: "Go to Org Agents",
   noResults: 'No results for "{q}"',
   noItems: "Nothing in this category yet",
   resultCount: "{count} results",

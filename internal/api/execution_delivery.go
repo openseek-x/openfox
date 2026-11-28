@@ -212,6 +212,17 @@ func (h *Handler) listRunArtifacts(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"artifacts": items})
 }
 
+// verifiedVideoReader 复核视频产物的文件头：视频会以 <video> 在线播放，嗅探结果必须与声明的类型一致
+// （与电脑端分类规则相同）。只预读 512 字节，其余字节继续流式写入存储。
+func verifiedVideoReader(body io.Reader, mimeType string) (io.Reader, bool) {
+	head := make([]byte, 512)
+	n, err := io.ReadFull(body, head)
+	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) || n == 0 || http.DetectContentType(head[:n]) != mimeType {
+		return nil, false
+	}
+	return io.MultiReader(bytes.NewReader(head[:n]), body), true
+}
+
 func (h *Handler) downloadArtifact(w http.ResponseWriter, r *http.Request) {
 	auth, selection, role, ok := h.conversationAuth(w, r)
 	if !ok {
@@ -244,9 +255,7 @@ func (h *Handler) downloadArtifact(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 	setArtifactDownloadHeaders(w.Header(), artifact)
 	setFileTransferDeadline(w, artifact.SizeBytes, false)
-	if _, err := io.Copy(w, file); err != nil && !errors.Is(err, context.Canceled) {
-		return
-	}
+	serveStoredContent(w, r, file)
 }
 
 // streamEvents 是统一事件流：同一连接推送 Run 执行事件（event: run.event）与组织事件（event: <type>）。
@@ -472,6 +481,14 @@ func (h *Handler) uploadArtifact(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		uploadReader = bytes.NewReader(data)
+	}
+	if executiondelivery.VideoMIME(mimeType) {
+		verified, ok := verifiedVideoReader(r.Body, mimeType)
+		if !ok {
+			writeDeliveryError(w, r, executiondelivery.ErrInvalidRequest)
+			return
+		}
+		uploadReader = verified
 	}
 	if office.MIME(mimeType) {
 		data, readErr := io.ReadAll(io.LimitReader(r.Body, min(uploadLimit, office.MaxBytes)+1))

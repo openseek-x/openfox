@@ -9,7 +9,6 @@ import { Icon, cn, type IconName } from "@openfox/ui";
 import { GetStartedNavCount } from "../me/GetStartedPage";
 import { useBetaTier } from "../me/queries";
 import { MySpacesNavGroup } from "../spaces/SpacesNav";
-import { SidebarCollapseButton } from "../shell/SidebarCollapseButton";
 
 interface SettingsItem {
   /** 相对 /o/:orgId/settings 的路径 */
@@ -126,13 +125,7 @@ export const settingsGroups: SettingsGroup[] = [
  * 设置导航（Figma 16 页 Sidebar/Panel View=Settings）：进入设置后替换外壳侧栏里的主导航面板，
  * 宽度与主导航一致；设置子页面直接渲染在主区域。
  */
-export function SettingsNavigation({
-  orgId,
-  onCollapse,
-}: {
-  orgId: string;
-  onCollapse: () => void;
-}) {
+export function SettingsNavigation({ orgId }: { orgId: string }) {
   const t = useT();
   const [proxyOpen, setProxyOpen] = useState(false);
   const bridge = desktopBridge();
@@ -141,13 +134,12 @@ export function SettingsNavigation({
   return (
     <nav
       aria-label={t("settings.a11y.nav")}
-      className="group/panel flex min-w-0 flex-1 flex-col gap-3 overflow-y-auto px-1.5 pt-1.5 pb-3"
+      className="flex min-w-0 flex-1 flex-col gap-3 overflow-y-auto px-1.5 pt-1.5 pb-3"
     >
       <div className="flex h-11 shrink-0 items-center gap-1 pr-1 pl-2.5">
         <h2 className="min-w-0 flex-1 truncate text-body font-semibold tracking-[-0.01em] text-fg-default">
           {t("settings.title")}
         </h2>
-        <SidebarCollapseButton onClick={onCollapse} />
       </div>
       {settingsGroups.map((group) => (
         <Fragment key={group.label}>

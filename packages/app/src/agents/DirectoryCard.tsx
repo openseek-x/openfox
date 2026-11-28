@@ -15,6 +15,7 @@ import { runtimeLabel } from "./model";
 
 export interface CardActions {
   onOpen: (entry: AgentDirectoryEntry) => void;
+  onBindComputer?: (entry: AgentDirectoryEntry) => void;
   onChat: (entry: AgentDirectoryEntry) => void;
   onFavorite: (entry: AgentDirectoryEntry) => void;
   onPin: (entry: AgentDirectoryEntry) => void;
@@ -32,32 +33,48 @@ export function ownerLabel(
 }
 
 /**
- * 目录卡片（Figma Agent/DirectoryCard）：头像、「名称 - 职位」、meta 行；
- * 悬停显示「对话 | ☆」组合按钮与「···」菜单。点击卡片打开设置抽屉。
+ * 目录卡片（Figma Agent/DirectoryCard）：头像、「名称 - 职位」、运行状态与 meta 行；
+ * 悬停显示「对话 | ☆」组合按钮与「···」菜单；未绑定电脑且可编辑时常驻「绑定电脑」入口。点击卡片打开设置抽屉。
  */
 export function DirectoryCard({
   entry,
   actions,
+  canEdit = false,
 }: {
   entry: AgentDirectoryEntry;
   actions: CardActions;
+  canEdit?: boolean;
 }) {
   const t = useT();
   const crew = entry.type === "crew";
   const noChat = entry.allow_direct_chat === false;
+  const unbound =
+    !crew && !entry.runtime && !entry.computer_name && !entry.online;
   const owner = ownerLabel(entry, t("agents.you"));
   const meta = crew
     ? [owner, t("agents.members", { count: entry.member_count })]
-    : [
-        entry.model && entry.model !== "default"
-          ? entry.model
-          : t("agents.modelDefault"),
-        runtimeLabel(entry.runtime),
-        owner,
-      ].filter(Boolean);
+    : unbound
+      ? [t("agents.card.owner", { owner })]
+      : [
+          runtimeLabel(entry.runtime),
+          entry.model && entry.model !== "default"
+            ? entry.model
+            : t("agents.modelDefaultLabel"),
+          owner,
+        ].filter(Boolean);
+  const statusLabel = unbound
+    ? t("agents.status.unbound")
+    : entry.online
+      ? entry.computer_name
+        ? t("agents.status.onlineOn", { computer: entry.computer_name })
+        : t("agents.status.online")
+      : entry.computer_name
+        ? t("agents.status.offlineOn", { computer: entry.computer_name })
+        : t("agents.status.offline");
+  const statusTone = unbound ? "warning" : entry.online ? "success" : "muted";
   return (
     <div
-      className="group relative flex h-[74px] items-center gap-3 rounded-xl border border-line-soft bg-surface-card px-4 shadow-card transition-[border-color,background-color,box-shadow] duration-150 hover:border-line-strong hover:bg-surface-hover/60 focus-within:border-line-strong focus-within:bg-surface-hover/60 has-[[aria-expanded=true]]:border-line-strong has-[[aria-expanded=true]]:bg-surface-hover/60 motion-reduce:transition-none"
+      className="group relative flex min-h-[76px] items-center gap-3 rounded-xl border border-line-soft bg-surface-card px-4 py-2.5 shadow-card transition-[border-color,background-color,box-shadow] duration-150 hover:border-line-strong hover:bg-surface-hover/60 focus-within:border-line-strong focus-within:bg-surface-hover/60 has-[[aria-expanded=true]]:border-line-strong has-[[aria-expanded=true]]:bg-surface-hover/60 motion-reduce:transition-none"
       data-testid={`directory-card-${entry.id}`}
     >
       <button
@@ -78,28 +95,68 @@ export function DirectoryCard({
           name={entry.name}
           avatar={entry.avatar}
           locked={entry.visibility === "PRIVATE"}
+          offline={!entry.online}
         />
       )}
-      <div className="pointer-events-none flex min-w-0 flex-1 flex-col gap-0.5">
+      <div className="pointer-events-none flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex min-w-0 items-center gap-1.5">
-          <span className="truncate text-body font-medium text-fg-default">
+          <span
+            title={entry.name}
+            className="truncate text-body font-medium text-fg-default"
+          >
             {entry.name}
           </span>
           {entry.title && (
-            <span className="truncate text-body text-fg-muted">
+            <span
+              title={entry.title}
+              className="truncate text-body text-fg-muted"
+            >
               - {entry.title}
             </span>
           )}
           {crew && (
-            <Badge tone="neutral" className="gap-0.5">
+            <Badge tone="neutral" className="shrink-0 gap-0.5">
               <Icon name="users" size={12} />
               {t("agents.crewBadge")}
             </Badge>
           )}
         </div>
-        <div className="flex min-w-0 items-center gap-1 text-caption text-fg-muted">
-          {!crew && <Icon name="bot" size={12} />}
-          <span className="truncate">{meta.join(" · ")}</span>
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-caption text-fg-muted">
+          {!crew && (
+            <span
+              title={statusLabel}
+              className={cn(
+                "inline-flex max-w-full min-w-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-caption leading-none font-medium",
+                statusTone === "success" && "bg-success-soft text-success",
+                statusTone === "warning" && "bg-warning-soft text-warning",
+                statusTone === "muted" && "bg-surface-muted text-fg-muted",
+              )}
+            >
+              <span
+                aria-hidden
+                className={cn(
+                  "size-1.5 shrink-0 rounded-full",
+                  statusTone === "success" && "bg-success",
+                  statusTone === "warning" && "bg-warning",
+                  statusTone === "muted" && "bg-fg-subtle",
+                )}
+              />
+              <span className="truncate">{statusLabel}</span>
+            </span>
+          )}
+          {unbound && canEdit && actions.onBindComputer && (
+            <button
+              type="button"
+              onClick={() => actions.onBindComputer!(entry)}
+              className="pointer-events-auto relative z-[1] inline-flex h-6 shrink-0 items-center rounded-md border border-line-default bg-surface-card px-2 text-caption font-medium whitespace-nowrap text-fg-default hover:bg-control-hover"
+            >
+              {t("agents.card.bindComputer")}
+            </button>
+          )}
+          <span className="flex min-w-0 items-center gap-1">
+            {!crew && <Icon name="bot" size={12} className="shrink-0" />}
+            <span className="truncate">{meta.join(" · ")}</span>
+          </span>
         </div>
       </div>
       <div className="of-row-actions relative flex shrink-0 items-center gap-1 pointer-fine:absolute pointer-fine:group-hover:relative pointer-fine:group-focus-within:relative pointer-fine:has-[[aria-expanded=true]]:relative">

@@ -72,6 +72,13 @@ export class WorkspaceStore {
   get durable() {
     return Boolean(this.db);
   }
+  /** 当前是否有尚未落盘的用户输入内容（排除 workspace/view/browser 视图态） */
+  get hasDirtyContent() {
+    for (const key of this.dirty.keys()) {
+      if (!/^(workspace|view|browser):/.test(key)) return true;
+    }
+    return false;
+  }
   async hydrate() {
     if (!this.db) return;
     const tx = this.db.transaction("records", "readonly");

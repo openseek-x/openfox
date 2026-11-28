@@ -22,6 +22,7 @@ import type {
 import { useI18n, useT, type Translate } from "@openfox/i18n";
 import { Avatar, Badge, Drawer, cn, Button, Icon } from "@openfox/ui";
 import { Markdown } from "../../conversations/Markdown";
+import { CommentAttachments } from "./CommentAttachments";
 import { keys, useApi } from "../../context";
 import { formatRelativeTime } from "../primitives/dates";
 import { Link } from "react-router-dom";
@@ -656,6 +657,7 @@ function CommentContent({
         ) : (
           <CommentText text={c.body} orgId={orgId} task={task} />
         )}
+        <CommentAttachments orgId={orgId} attachments={c.attachments} />
         {c.reactions.length > 0 && (
           <Reactions
             orgId={orgId}

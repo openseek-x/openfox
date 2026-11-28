@@ -175,7 +175,7 @@ describe("human direct chat", () => {
   it.each(["新建对话", "选择成员、Agent 或小队"])(
     "opens a human conversation from %s",
     async (trigger) => {
-      open(
+      const calls = open(
         (c) =>
           c.path === `${ORG}/contacts`
             ? json(200, {
@@ -193,9 +193,9 @@ describe("human direct chat", () => {
             : undefined,
         "/o/o1/chat",
       );
-      await userEvent.click(
-        await screen.findByRole("button", { name: trigger }),
-      );
+      const button = await screen.findByRole("button", { name: trigger });
+      expect(calls.some((call) => call.path === `${ORG}/contacts`)).toBe(false);
+      await userEvent.click(button);
       await userEvent.type(
         await screen.findByRole("combobox", { name: "搜索成员、Agent 或小队" }),
         "Carol",

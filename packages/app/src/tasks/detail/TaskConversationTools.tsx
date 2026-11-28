@@ -1,6 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
 import type {
   ConversationSummary,
   ConversationWorkspaceSelection,
@@ -38,10 +37,10 @@ import {
 } from "../../conversations/queries";
 import {
   useOpenArtifactList,
-  ARTIFACT_PARAM,
   BROWSER_PANEL,
 } from "../../conversations/artifacts/params";
 import { desktopBridge } from "../../desktop";
+import { WorkspaceHeaderButtons } from "../../conversations/WorkspaceHeaderButtons";
 import { useWorkspaceReviewMenu } from "../../conversations/WorkspaceReviewMenu";
 import { taskPagePath, useOpenTaskPage } from "../navigation";
 import { copyText } from "../parts";
@@ -68,9 +67,7 @@ export function TaskConversationTools({
     toast = useToast();
   const [mode, setMode] = useState<OfferKind | "new" | "rename" | null>(null);
   const [name, setName] = useState("");
-  const [params] = useSearchParams();
-  const openArtifacts = useOpenArtifactList(),
-    actions = useConversationActions(orgId);
+  const actions = useConversationActions(orgId);
   const openBrowser = useOpenArtifactList(BROWSER_PANEL);
   const owner = !!me.data && me.data.id === c.owner_user_id;
   const open = !readOnly && !c.archived_at && c.lifecycle === "OPEN";
@@ -154,14 +151,10 @@ export function TaskConversationTools({
         {workspaceReview.items}
       </Menu>
       {workspaceReview.dialog}
-      {!params.has(ARTIFACT_PARAM) && (
-        <IconButton
-          label={t("tasks.detail.artifactRail")}
-          size="28"
-          icon={<Icon name="panel-left" className="rotate-180" />}
-          onClick={openArtifacts}
-        />
-      )}
+      <WorkspaceHeaderButtons
+        conversationId={c.id}
+        workspaceLabel={t("tasks.detail.artifactRail")}
+      />
       {mode === "rename" && (
         <Dialog
           open

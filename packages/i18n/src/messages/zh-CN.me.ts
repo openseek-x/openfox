@@ -171,6 +171,14 @@ export const meZh = {
     },
     saved: "快捷键偏好已更新",
     saveFailed: "更新快捷键失败",
+    sidebar: {
+      title: "侧边栏与工作区",
+      description: "快速展开或收起左右侧栏，保持对话、浏览与批注体验连贯。",
+      toggleLeft: "展开或收起左侧导航栏",
+      toggleLeftHelp: "快速隐藏或恢复主导航侧栏，腾出更多阅读与对话空间。",
+      toggleRight: "展开或收起右侧工作区",
+      toggleRightHelp: "在对话中快速切换产物、浏览器与批注侧栏。",
+    },
   },
   // 阶段 4c · 个人访问令牌
   tokens: {

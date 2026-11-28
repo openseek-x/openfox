@@ -148,7 +148,11 @@ export function ExecutedCard({ message }: { message: ConversationMessage }) {
                 </span>
               )}
               <LabelPills task={task} max={task.label_items.length} />
-              <DueChip date={task.start_date} />
+              <DueChip
+                date={task.start_date}
+                label={t("tasks.fields.startDate")}
+                checkOverdue={false}
+              />
               <DueChip date={task.due_date} />
             </div>
           )}

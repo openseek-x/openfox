@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 
 const ts = "2026-11-16T08:00:00Z";
@@ -148,6 +149,10 @@ async function mockArtifacts(
         next_cursor: 0,
       };
     else if (path.endsWith("/artifacts")) body = { artifacts };
+    else if (path.endsWith("/comments"))
+      body = { threads: [], next_cursor: "" };
+    else if (path.endsWith("/proposals"))
+      body = { proposals: [], next_cursor: "" };
     else if (path === `${org}/runs/r1`)
       body = {
         id: "r1",
@@ -241,7 +246,7 @@ test("HTML static sandbox blocks script, navigation and all network resources un
       headers: {
         ...response.headers(),
         "Content-Security-Policy":
-          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'",
+          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'",
       },
     });
   });
@@ -318,9 +323,10 @@ test("artifact reader: dark HTML, light Markdown, narrow panel and source switch
   const initialHeader = (await header.boundingBox())!;
   expect(initialPanel.y).toBe(initialHeader.y);
   expect(initialHeader.x + initialHeader.width).toBe(initialPanel.x);
+  // 宽工作区采用单行 44px 统一顶栏，消除双层工具栏并严格与会话顶栏齐平
   expect(
     (await panel.locator("iframe").boundingBox())!.y - initialPanel.y,
-  ).toBe(96);
+  ).toBe(44);
   const handle = page.getByRole("separator", { name: "调整产物面板宽度" });
   const handleBox = (await handle.boundingBox())!;
   await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + 20);
@@ -389,7 +395,7 @@ test("artifact reader: dark HTML, light Markdown, narrow panel and source switch
   const box = await panel.boundingBox();
   expect(box!.width).toBeGreaterThan(280);
   expect(box!.x + box!.width).toBeLessThanOrEqual(950);
-  expect((await panel.locator("iframe").boundingBox())!.y - box!.y).toBe(96);
+  expect((await panel.locator("iframe").boundingBox())!.y - box!.y).toBe(44);
   await page.screenshot({ path: testInfo.outputPath("artifacts-narrow.png") });
 });
 
@@ -451,4 +457,486 @@ test("long conversation scrolls independently while split headers and composer s
   await expect(panel).toHaveCount(0);
   await assertContained();
   expect((await header.boundingBox())!.width).toBe(mainBox.width);
+});
+
+test("dual sidebars: top-right workspace toggle, inline comments/proposals tabs and keyboard shortcuts", async ({
+  page,
+}) => {
+  await mockArtifacts(page, "dark");
+  await page.goto("/o/o1/chat/c1");
+  const panel = page.getByRole("complementary", { name: "会话产物" });
+  await expect(panel).toHaveCount(0);
+
+  // 点击顶栏工作区按钮打开启动页，展示最近产物与内联评论/提案入口
+  await page.getByRole("button", { name: "打开工作区", exact: true }).click();
+  await expect(panel).toBeVisible();
+  await expect(panel.getByText("最近产物")).toBeVisible();
+  await panel.getByRole("button", { name: "已保存评论", exact: true }).click();
+  await expect(
+    panel.getByRole("tab", { name: "已保存评论", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  await expect(panel.getByText("还没有保存的评论")).toBeVisible();
+
+  // 从「更多」菜单切到修改提案内联标签（不弹模态框）
+  await page.getByRole("button", { name: "更多操作", exact: true }).click();
+  await page.getByRole("menuitem", { name: "修改提案", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(
+    panel.getByRole("tab", { name: "修改提案", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  await expect(panel.getByText("暂无修改提案")).toBeVisible();
+
+  // ⌘⇧\ / Ctrl+Shift+\ 收起并恢复工作区
+  const mod = process.platform === "darwin" ? "Meta" : "Control";
+  await page.keyboard.press(`${mod}+Shift+Backslash`);
+  await expect(panel).toHaveCount(0);
+  await page.keyboard.press(`${mod}+Shift+Backslash`);
+  await expect(panel).toBeVisible();
+  await expect(
+    panel.getByRole("tab", { name: "修改提案", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+
+  // ⌘\ / Ctrl+\ 切换左侧导航栏收起并恢复
+  await page.keyboard.press(`${mod}+Backslash`);
+  await expect(
+    page.getByRole("button", { name: "展开侧边栏", exact: true }),
+  ).toBeVisible();
+  await page.keyboard.press(`${mod}+Backslash`);
+  await expect(
+    page.getByRole("button", { name: "展开侧边栏", exact: true }),
+  ).toHaveCount(0);
+});
+
+test("W01: right workspace switches cleanly between 2-row (459px) and single 44px row (460px) from both sides", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  for (const theme of ["dark", "light"] as const) {
+    await mockArtifacts(page, theme);
+    await page.goto("/o/o1/chat/c1?artifact=md");
+    const panel = page.getByRole("complementary", { name: "会话产物" });
+    await expect(
+      panel.getByRole("heading", { name: "产物预览" }),
+    ).toBeVisible();
+    const handle = page.getByRole("separator", { name: "调整产物面板宽度" });
+    const dragToWidth = async (target: number) => {
+      const box = (await panel.boundingBox())!;
+      const handleBox = (await handle.boundingBox())!;
+      const delta = box.width - target;
+      const cx = handleBox.x + handleBox.width / 2;
+      const cy = handleBox.y + 40;
+      await page.mouse.move(cx, cy);
+      await page.mouse.down();
+      await page.mouse.move(cx + delta, cy, { steps: 6 });
+      await page.mouse.up();
+      await expect
+        .poll(async () => Math.round((await panel.boundingBox())!.width))
+        .toBe(target);
+      await expect(handle).toHaveAttribute("aria-valuenow", String(target));
+    };
+    const isSingleRow = async () => {
+      const panelBox = (await panel.boundingBox())!;
+      const previewBtn = panel.getByRole("button", {
+        name: "预览",
+        exact: true,
+      });
+      const btnBox = (await previewBtn.boundingBox())!;
+      return btnBox.y - panelBox.y < 44;
+    };
+
+    for (const [width, expectedSingle] of [
+      [461, true],
+      [460, true],
+      [459, false],
+      [280, false],
+      [460, true],
+    ] as const) {
+      await dragToWidth(width);
+      expect(await isSingleRow()).toBe(expectedSingle);
+      const overflowX = await page.evaluate(
+        () => document.documentElement.scrollWidth > window.innerWidth,
+      );
+      expect(overflowX).toBe(false);
+    }
+  }
+});
+
+test("W02 & W05: locating a long-document annotation from draft tray and saved comments scrolls into view and retains selection", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const longMarkdown = [
+    "# 季度验收报告",
+    ...Array.from(
+      { length: 80 },
+      (_, i) => `第 ${i + 1} 段：核对长文审阅、定位滚动与选区保持能力。`,
+    ),
+    "请修改**原文**位置。",
+  ].join("\n\n");
+  const start = Buffer.byteLength(
+    longMarkdown.slice(0, longMarkdown.indexOf("原文")),
+  );
+  const end = Buffer.byteLength(
+    longMarkdown.slice(0, longMarkdown.indexOf("原文") + 2),
+  );
+  const longArtifact = {
+    ...artifacts[1]!,
+    id: "md-long",
+    name: "报告.md",
+    content_id: "content-md-long",
+    head_artifact_id: "md-long",
+    size_bytes: Buffer.byteLength(longMarkdown),
+  };
+  await mockArtifacts(page, "dark");
+  await page.route("**/api/**", async (route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    if (pathname === `${org}/conversations/c1/artifacts`)
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ artifacts: [longArtifact] }),
+      });
+    if (pathname === `${org}/runs/r1/artifacts/md-long`)
+      return route.fulfill({
+        status: 200,
+        contentType: "text/markdown",
+        body: longMarkdown,
+      });
+    if (pathname === `${org}/conversations/c1/comments`)
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          threads: [
+            {
+              id: "thread-1",
+              version: 1,
+              status: "OPEN",
+              source: {
+                name: "报告.md",
+                file: {
+                  id: "fc-1",
+                  artifact_id: "md-long",
+                  sha256: longArtifact.sha256,
+                  comments: [
+                    {
+                      thread_id: "thread-1",
+                      body: "请核对末段",
+                      anchor: { kind: "text", start, end, quote: "原文" },
+                    },
+                  ],
+                },
+              },
+              comments: [
+                {
+                  id: "post-1",
+                  author_id: "u1",
+                  body: "请核对末段",
+                  created_at: ts,
+                },
+              ],
+            },
+          ],
+          next_cursor: "",
+        }),
+      });
+    return route.fallback();
+  });
+
+  await page.goto("/o/o1/chat/c1?artifact=md-long");
+  const panel = page.getByRole("complementary", { name: "会话产物" });
+  await expect(
+    panel.getByRole("heading", { name: "季度验收报告" }),
+  ).toBeVisible();
+
+  // 开启批注，滚至末段并选「原文」创建待发送草稿，再就地修改意见
+  await panel.getByRole("button", { name: "批注", exact: true }).click();
+  const target = panel.getByText("原文", { exact: true }).last();
+  await target.scrollIntoViewIfNeeded();
+  await target.evaluate((el) => {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection()!;
+    sel.removeAllRanges();
+    sel.addRange(range);
+  });
+  await target.dispatchEvent("mouseup");
+  await page
+    .getByRole("textbox", { name: "针对选区的修改意见" })
+    .fill("第一版");
+  await page.getByRole("button", { name: "添加到聊天", exact: true }).click();
+  await page.getByRole("button", { name: "编辑批注", exact: true }).click();
+  await page.getByRole("textbox", { name: "编辑批注" }).fill("修改后的意见");
+  await page.getByRole("button", { name: "保存", exact: true }).click();
+
+  const assertLocatedAndRetained = async () => {
+    await expect
+      .poll(async () =>
+        page.evaluate(() => {
+          const code = document.querySelector("pre > code");
+          const state = code?.getAttribute("data-highlight-state");
+          const sel = window.getSelection();
+          if (!sel || sel.rangeCount === 0)
+            return { state, text: "", visible: false };
+          const range = sel.getRangeAt(0);
+          const rect = range.getBoundingClientRect();
+          const scroller = code?.closest("div.overflow-auto");
+          const sRect = scroller?.getBoundingClientRect();
+          const visible = Boolean(
+            sRect &&
+            rect.height > 0 &&
+            rect.top >= sRect.top - 1 &&
+            rect.bottom <= sRect.bottom + 1,
+          );
+          return { state, text: sel.toString(), visible };
+        }),
+      )
+      .toEqual({ state: "ready", text: "原文", visible: true });
+    // 停留 500ms 后复检，确认不会被异步高亮或父级滚动恢复清空
+    await page.waitForTimeout(500);
+    const stable = await page.evaluate(() => {
+      const code = document.querySelector("pre > code");
+      const sel = window.getSelection();
+      const rect = sel?.rangeCount
+        ? sel.getRangeAt(0).getBoundingClientRect()
+        : null;
+      const sRect = code?.closest("div.overflow-auto")?.getBoundingClientRect();
+      return {
+        text: sel?.toString() ?? "",
+        visible: Boolean(
+          rect &&
+          sRect &&
+          rect.top >= sRect.top - 1 &&
+          rect.bottom <= sRect.bottom + 1,
+        ),
+      };
+    });
+    expect(stable).toEqual({ text: "原文", visible: true });
+  };
+
+  // 路径 A（W02 已关）：滚回文首并关闭面板后，从草稿托盘定位原文
+  await panel
+    .locator("div.overflow-auto")
+    .first()
+    .evaluate((el) => {
+      el.scrollTop = 0;
+    });
+  await page.evaluate(() => window.getSelection()?.removeAllRanges());
+  await panel
+    .getByRole("button", { name: "关闭产物面板", exact: true })
+    .click();
+  await expect(panel).toHaveCount(0);
+  await page.getByText("修改后的意见").click();
+  await page.getByRole("button", { name: "打开 报告.md", exact: true }).click();
+  await assertLocatedAndRetained();
+
+  // 路径 B（W02 已开）：面板保持打开、切回预览并滚回文首，再次从草稿托盘定位原文
+  await panel.getByRole("button", { name: "预览", exact: true }).click();
+  await panel
+    .locator("div.overflow-auto")
+    .first()
+    .evaluate((el) => {
+      el.scrollTop = 0;
+    });
+  await page.evaluate(() => window.getSelection()?.removeAllRanges());
+  await page.getByRole("button", { name: "打开 报告.md", exact: true }).click();
+  await assertLocatedAndRetained();
+
+  // W05：从已保存评论标签点击「查看来源」，打开原文并滚入视口保留选区
+  await page.getByRole("button", { name: "更多操作", exact: true }).click();
+  await page
+    .getByRole("menuitem", { name: "已保存的评论", exact: true })
+    .click();
+  await panel.locator("summary").filter({ hasText: "请核对末段" }).click();
+  await panel.getByRole("button", { name: "查看来源", exact: true }).click();
+  await assertLocatedAndRetained();
+});
+
+// 测试证据交付（OPE-19）：单文件 HTML 报告（> 7,447,186 字节，步骤截图内嵌）与真实 WebM 录像，
+// 在部署 CSP（deploy/nginx-web.example.conf）下渲染与播放。
+test("test evidence: large HTML report renders and a recorded WebM plays under the deployed CSP", async ({
+  page,
+  browser,
+}) => {
+  // 用 Playwright 录制一段真实 WebM（与测试智能体的用例录像同源）。
+  const recordDir = test.info().outputPath("recording");
+  const recorder = await browser.newContext({
+    recordVideo: { dir: recordDir, size: { width: 320, height: 240 } },
+    viewport: { width: 320, height: 240 },
+  });
+  const recorded = await recorder.newPage();
+  await recorded.setContent(
+    `<body style="margin:0"><div id="b" style="width:320px;height:240px;background:#28756c"></div></body>`,
+  );
+  for (const color of ["#d93025", "#2b579a", "#f0bf00", "#7c3aed"]) {
+    await recorded.evaluate(
+      (c) => (document.getElementById("b")!.style.background = c),
+      color,
+    );
+    await recorded.waitForTimeout(400);
+  }
+  // 步骤截图同样取自录制页面（真实 PNG），重复内嵌以达到报告体积。
+  await recorded.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 256;
+    canvas.height = 180;
+    const ctx = canvas.getContext("2d")!;
+    const image = ctx.createImageData(256, 180);
+    for (let i = 0; i < image.data.length; i++)
+      image.data[i] = i % 4 === 3 ? 255 : Math.floor(Math.random() * 256);
+    ctx.putImageData(image, 0, 0);
+    document.body.replaceChildren(canvas);
+  });
+  const step = (await recorded.locator("canvas").screenshot()).toString(
+    "base64",
+  );
+  await recorded.close();
+  const webm = readFileSync((await recorded.video()!.path())!);
+  await recorder.close();
+  expect(webm.subarray(0, 4)).toEqual(Buffer.from([0x1a, 0x45, 0xdf, 0xa3]));
+
+  const cases = Array.from(
+    { length: 14 },
+    (_, c) =>
+      `<section><h2>TC-${String(c + 1).padStart(2, "0")} ${c === 2 ? "失败" : "通过"}</h2><table><tr><th>步骤</th><th>预期</th><th>实际</th></tr>` +
+      Array.from(
+        { length: 3 },
+        (_, s) =>
+          `<tr><td>${s + 1}</td><td>出现弹窗</td><td>${c === 2 && s === 2 ? "未出现" : "符合"}</td></tr><tr><td colspan="3"><figure><img alt="TC-${c + 1} 步骤 ${s + 1}" src="data:image/png;base64,${step}"><figcaption>步骤 ${s + 1}</figcaption></figure></td></tr>`,
+      ).join("") +
+      "</table></section>",
+  ).join("");
+  const report = `<!doctype html><html lang="zh-CN"><head><title>测试报告</title><style>img{width:96px}</style></head><body><h1>测试报告</h1><p>13 通过 · 1 失败</p>${cases}</body></html>`;
+  expect(Buffer.byteLength(report)).toBeGreaterThan(7_447_186);
+
+  const extra = [
+    {
+      id: "report",
+      name: "测试报告.html",
+      mime_type: "text/plain",
+      body: Buffer.from(report),
+    },
+    {
+      id: "video",
+      name: "TC-03-弹窗.webm",
+      mime_type: "video/webm",
+      body: webm,
+    },
+  ].map(({ body, ...file }) => ({
+    ...artifacts[0]!,
+    ...file,
+    content: "",
+    content_id: `content-${file.id}`,
+    head_artifact_id: file.id,
+    size_bytes: body.length,
+    body,
+  }));
+  await mockArtifacts(page, "light");
+  // 后注册的路由优先：扩展产物列表与内容。
+  await page.route(
+    (url) =>
+      url.pathname.startsWith("/api/") && url.pathname.endsWith("/artifacts"),
+    (route) =>
+      route.fulfill({
+        json: {
+          artifacts: [
+            ...artifacts,
+            ...extra.map(({ body: _, ...file }) => file),
+          ],
+        },
+      }),
+  );
+  // 与服务端 http.ServeContent 一致：声明 Accept-Ranges，并按 Range 头返回 206 分段；视频直连下载地址，拖动依赖它。
+  const rangeRequests: string[] = [];
+  for (const file of extra)
+    await page.route(`**${org}/runs/r1/artifacts/${file.id}`, (route) => {
+      const size = file.body.length;
+      const header = route.request().headers()["range"];
+      const range = header ? /^bytes=(\d*)-(\d*)$/.exec(header) : null;
+      const headers = { "Accept-Ranges": "bytes" };
+      if (!range || (!range[1] && !range[2]))
+        return route.fulfill({
+          body: file.body,
+          contentType: file.mime_type,
+          headers,
+        });
+      rangeRequests.push(header!);
+      const start = range[1]
+        ? Number(range[1])
+        : Math.max(size - Number(range[2]), 0);
+      const end =
+        range[1] && range[2] ? Math.min(Number(range[2]), size - 1) : size - 1;
+      if (start >= size || start > end)
+        return route.fulfill({
+          status: 416,
+          headers: { ...headers, "Content-Range": `bytes */${size}` },
+        });
+      return route.fulfill({
+        status: 206,
+        body: file.body.subarray(start, end + 1),
+        contentType: file.mime_type,
+        headers: {
+          ...headers,
+          "Content-Range": `bytes ${start}-${end}/${size}`,
+        },
+      });
+    });
+  const csp = readFileSync("deploy/nginx-web.example.conf", "utf8").match(
+    /Content-Security-Policy "([^"]+)"/,
+  )![1]!;
+  expect(csp).toContain("media-src 'self' blob:");
+  await page.route(/\/o\/o1\/chat\/c1\?artifact=/, async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({
+      response,
+      headers: {
+        ...response.headers(),
+        "Content-Security-Policy": csp,
+      },
+    });
+  });
+  const violations: string[] = [];
+  page.on("console", (message) => {
+    if (/Content Security Policy/i.test(message.text()))
+      violations.push(message.text());
+  });
+
+  await page.goto("/o/o1/chat/c1?artifact=report");
+  const frame = page.frameLocator('iframe[title="HTML 预览：测试报告.html"]');
+  await expect(frame.getByRole("heading", { name: "测试报告" })).toBeVisible({
+    timeout: 20000,
+  });
+  await expect(frame.locator("h2")).toHaveCount(14);
+  await expect(frame.locator("img[src^='data:image/png']")).toHaveCount(42);
+  await expect(page.getByRole("button", { name: "批注" })).toHaveCount(0);
+  await page.screenshot({ path: test.info().outputPath("report.png") });
+
+  await page.goto("/o/o1/chat/c1?artifact=video");
+  const video = page.getByLabel("视频：TC-03-弹窗.webm");
+  await expect(video).toBeVisible();
+  await expect
+    .poll(() => video.evaluate((v: HTMLVideoElement) => v.readyState), {
+      timeout: 15000,
+    })
+    .toBeGreaterThanOrEqual(1);
+  expect(await video.evaluate((v: HTMLVideoElement) => v.videoWidth)).toBe(320);
+  // 拖动：跳到 1 秒处并完成 seeked。
+  const seeked = await video.evaluate(
+    (v: HTMLVideoElement) =>
+      new Promise<number>((resolve) => {
+        v.addEventListener("seeked", () => resolve(v.currentTime), {
+          once: true,
+        });
+        v.currentTime = 1;
+      }),
+  );
+  expect(seeked).toBeGreaterThan(0.5);
+  // 视频确实走了 Range 分段，而不是整段下载后再拖动。
+  expect(rangeRequests.length).toBeGreaterThan(0);
+  await expect(page.getByRole("link", { name: "下载" })).toHaveAttribute(
+    "download",
+    "TC-03-弹窗.webm",
+  );
+  await page.screenshot({ path: test.info().outputPath("video.png") });
+  expect(violations).toEqual([]);
 });

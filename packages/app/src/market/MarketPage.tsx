@@ -37,9 +37,11 @@ export function MarketPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <h1 className="sr-only">{t("market.title")}</h1>
+      <header className="flex min-h-11 shrink-0 items-center gap-2 border-b border-line-default px-4">
+        <h1 className="truncate text-body font-medium">{t("market.title")}</h1>
+      </header>
       <div className="flex min-h-0 flex-1 flex-col overflow-auto">
-        <div className="mx-auto flex w-full max-w-[1100px] flex-1 flex-col px-8 pt-4 pb-10">
+        <div className="mx-auto flex w-full max-w-[1100px] flex-1 flex-col px-6 pt-4 pb-10">
           <MarketBrowser
             orgId={orgId}
             onOpenSkill={(id) => open("skill", id)}

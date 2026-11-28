@@ -9,11 +9,13 @@ export function PanelResizeHandle({
   min,
   max,
   side,
+  resizing = false,
   onWidthChange,
   onWidthPreview,
   onCollapse,
   collapsed = false,
   onExpand,
+  onReset,
   className,
 }: {
   label: string;
@@ -22,11 +24,13 @@ export function PanelResizeHandle({
   min: number;
   max: number;
   side: "left" | "right";
+  resizing?: boolean;
   onWidthChange: (width: number) => void;
   onWidthPreview: (width: number | null) => void;
   onCollapse: () => void;
   collapsed?: boolean;
   onExpand?: () => void;
+  onReset?: () => void;
   className: string;
 }) {
   const start = useRef<{
@@ -83,9 +87,14 @@ export function PanelResizeHandle({
       aria-valuenow={collapsed ? 0 : width}
       tabIndex={0}
       className={cn(
-        "z-30 cursor-col-resize touch-none select-none focus-visible:bg-surface-muted focus-visible:shadow-none",
+        "group/resize z-30 flex cursor-col-resize touch-none items-stretch justify-center select-none focus-visible:bg-surface-muted focus-visible:shadow-none",
         className,
       )}
+      onDoubleClick={() => {
+        if (!onReset) return;
+        if (collapsed) onExpand?.();
+        onReset();
+      }}
       onPointerDown={(event) => {
         if (event.button !== 0 || start.current) return;
         event.preventDefault();
@@ -152,6 +161,17 @@ export function PanelResizeHandle({
           else onCollapse();
         }
       }}
-    />
+    >
+      {/* 悬停与拖拽时显示柔和 2px 分割指示线，减少视觉干扰同时提供清晰可拖拽反馈 */}
+      <span
+        aria-hidden="true"
+        className={cn(
+          "pointer-events-none my-2 w-0.5 rounded-full transition-colors duration-150 motion-reduce:transition-none",
+          resizing
+            ? "bg-accent/70"
+            : "bg-transparent group-hover/resize:bg-line-strong group-focus-visible/resize:bg-line-focus",
+        )}
+      />
+    </div>
   );
 }

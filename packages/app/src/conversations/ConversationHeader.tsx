@@ -51,6 +51,7 @@ import {
   useConversations,
 } from "./queries";
 import { elapsedMs, formatDuration } from "./steps";
+import { WorkspaceHeaderButtons } from "./WorkspaceHeaderButtons";
 import { useWorkspaceReviewMenu } from "./WorkspaceReviewMenu";
 
 /** 每秒刷新的当前时间（工作中计时） */
@@ -80,7 +81,7 @@ export function StatusBadge({
     ? elapsedMs(conversation.run?.started_at, new Date(now))
     : null;
   return (
-    <Badge tone={meta.tone} className="gap-1">
+    <Badge tone={meta.tone} className="shrink-0 gap-1 whitespace-nowrap">
       <Icon name={meta.icon} size={12} />
       {elapsed !== null
         ? t("chat.header.working", {
@@ -208,6 +209,7 @@ function SessionSwitcher({
         type="button"
         aria-label={t("chat.header.switchSession")}
         aria-expanded={open}
+        title={label}
         onClick={() => setOpen((value) => !value)}
         className="flex h-7 min-w-0 items-center gap-1 rounded-md px-1.5 text-body font-medium not-aria-expanded:hover:bg-control-hover aria-expanded:bg-surface-active"
       >
@@ -470,15 +472,18 @@ export function ConversationHeader({
         size={20}
         offline={!agent.online}
       />
-      <span className="truncate text-body font-semibold text-fg-default">
+      <span
+        title={crew?.name ?? agent.name}
+        className="min-w-0 max-w-[40%] truncate text-body font-semibold text-fg-default"
+      >
         {crew?.name ?? agent.name}
       </span>
       {crew && (
-        <span className="shrink-0 rounded bg-surface-muted px-1.5 text-caption text-fg-muted">
+        <span className="shrink-0 whitespace-nowrap rounded bg-surface-muted px-1.5 text-caption text-fg-muted">
           {t("chat.crew.badge")}
         </span>
       )}
-      <span className="text-fg-subtle">/</span>
+      <span className="shrink-0 text-fg-subtle">/</span>
       <div className="flex min-w-0 flex-col">
         {renaming && conversation ? (
           <div className="w-56">
@@ -504,7 +509,7 @@ export function ConversationHeader({
         <button
           type="button"
           onClick={() => taskParam.open(conversation.task!.display_id)}
-          className="ml-1 flex h-6 items-center gap-1 rounded-md px-1.5 text-caption text-fg-secondary hover:bg-control-hover"
+          className="ml-1 flex h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-1.5 text-caption text-fg-secondary hover:bg-control-hover"
         >
           <Icon name="hifox-clipboard-task" size={12} className="text-accent" />
           {conversation.task.display_id.toUpperCase()}
@@ -585,13 +590,14 @@ export function ConversationHeader({
         type="button"
         onClick={() => settings.open(agent.id, spaceId)}
         title={t("chat.header.settings")}
-        className="flex h-7 shrink-0 items-center gap-1 rounded-md px-1.5 text-body-sm text-fg-secondary hover:bg-control-hover"
+        className="flex h-7 shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-1.5 text-body-sm text-fg-secondary hover:bg-control-hover"
       >
-        <Icon name="hifox-settings-sliders" size={14} />
-        <span className="sr-only @lg:not-sr-only">
+        <Icon name="hifox-settings-sliders" size={14} className="shrink-0" />
+        <span className="sr-only whitespace-nowrap @2xl:not-sr-only">
           {t("chat.header.settings")}
         </span>
       </button>
+      <WorkspaceHeaderButtons conversationId={conversation?.id} />
       {conversation && (
         <>
           {sharing && (

@@ -74,7 +74,7 @@ afterEach(() => {
 
 describe("普通 / 任务对话导航", () => {
   it.each(["/o/o1/chat/c1", panelPath])(
-    "评论和提案从更多菜单按需打开，不占用输入区：%s",
+    "评论和提案从更多菜单按需在右侧工作区标签打开，不占用输入区：%s",
     async (path) => {
       const user = userEvent.setup();
       const server = renderAt(path, (call) => {
@@ -91,17 +91,28 @@ describe("普通 / 任务对话导航", () => {
         server.calls.some((call) => /\/(comments|proposals)$/.test(call.path)),
       ).toBe(false);
       const scope = path === panelPath ? within(await panel()) : screen;
-      for (const [name, empty] of [
-        ["已保存的评论", "还没有保存的评论"],
-        ["修改提案", "暂无修改提案"],
+      for (const [name, tabTitle, empty] of [
+        ["已保存的评论", "已保存评论", "还没有保存的评论"],
+        ["修改提案", "修改提案", "暂无修改提案"],
       ]) {
         await user.click(scope.getByRole("button", { name: "更多操作" }));
         await user.click(screen.getByRole("menuitem", { name }));
-        const dialog = await screen.findByRole("dialog", { name });
-        expect(await within(dialog).findByText(empty!)).toBeVisible();
-        await user.keyboard("{Escape}");
+        const workspace = await screen.findByRole("complementary", {
+          name: "会话产物",
+        });
         expect(screen.queryByRole("dialog", { name })).not.toBeInTheDocument();
-        expect(screen.queryByText(name!)).not.toBeInTheDocument();
+        expect(
+          within(workspace).getByRole("tab", { name: tabTitle }),
+        ).toHaveAttribute("aria-selected", "true");
+        expect(await within(workspace).findByText(empty!)).toBeVisible();
+        await user.click(
+          within(workspace).getByRole("button", { name: `关闭 ${tabTitle}` }),
+        );
+        await waitFor(() =>
+          expect(
+            screen.queryByRole("complementary", { name: "会话产物" }),
+          ).not.toBeInTheDocument(),
+        );
       }
     },
   );

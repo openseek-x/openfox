@@ -38,7 +38,7 @@ import (
 const (
 	publishToolName = toolPrefix + "publish_artifact"
 	// maxRunArtifacts 与中心 executiondelivery.MaxRunArtifacts 一致；maxArtifactFileBytes 是单个产物的绝对上限（中心另按组织策略再校验）。
-	maxRunArtifacts      = 10
+	maxRunArtifacts      = 20
 	maxArtifactFileBytes = 20 << 20
 	maxArtifactPathBytes = 4096
 	maxArtifactTitle     = 100
@@ -138,6 +138,11 @@ var imageExts = map[string]string{
 	".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp",
 }
 
+// videoExts 是按视频预览的扩展名 → MIME（测试录像）；与图片一样，内容嗅探必须得到同一类型。
+var videoExts = map[string]string{
+	".webm": "video/webm", ".mp4": "video/mp4",
+}
+
 // classifyArtifact 按扩展名白名单与内容嗅探决定 MIME：图片要求嗅探结果完全一致；文本要求是合法 UTF-8 且不含 NUL；
 // 其他情况（未知扩展名、内容与扩展名不符）一律 application/octet-stream（只能下载）。
 func classifyArtifact(name string, content []byte) string {
@@ -154,7 +159,11 @@ func classifyArtifact(name string, content []byte) string {
 		}
 		return octetStream
 	}
-	if expected, ok := imageExts[ext]; ok {
+	expected, ok := imageExts[ext]
+	if !ok {
+		expected, ok = videoExts[ext]
+	}
+	if ok {
 		if http.DetectContentType(content) == expected {
 			return expected
 		}
@@ -474,9 +483,10 @@ func publishedText(artifact UploadedArtifact, duplicate bool) string {
 func publishTool() runtime.Tool {
 	return runtime.Tool{
 		Name: publishToolName,
-		Description: "Deliver a file to the user as an artifact of this run. The user can preview Markdown, images, text, code and CSV, " +
-			"and download any other file. Writing a local path in your reply does not deliver it. The file must be inside the working " +
-			"directory or this run's artifact directory; secrets (.env, keys, .git, .ssh) are refused. At most 10 artifacts per run, 20 MB each.",
+		Description: "Deliver a file to the user as an artifact of this run. The user can preview Markdown, images, text, code, CSV, " +
+			"static HTML reports and WebM/MP4 videos, and download any other file. Writing a local path in your reply does not deliver it. " +
+			"The file must be inside the working directory or this run's artifact directory; secrets (.env, keys, .git, .ssh) are refused. " +
+			fmt.Sprintf("At most %d artifacts per run, %d MB each.", maxRunArtifacts, maxArtifactFileBytes>>20),
 		InputSchema: json.RawMessage(`{"type":"object","properties":{"path":{"type":"string","minLength":1,"maxLength":4096,"description":"File path, absolute or relative to the working directory."},"title":{"type":"string","maxLength":100,"description":"Optional display name; the file extension is kept."}},"required":["path"],"additionalProperties":false}`),
 	}
 }
@@ -488,7 +498,7 @@ func buildArtifactSection(dir string) string {
 	b.WriteString("To hand a file to the user, call openfox_publish_artifact with its path. Writing a local path in your reply does not deliver the file: the user cannot open paths on this computer.\n")
 	fmt.Fprintf(&b, "Save files meant for the user in the working directory or in this run's artifact directory: %s\n", dir)
 	b.WriteString("Only files inside these two directories can be published; secrets such as .env files, private keys, .git and .ssh are refused. ")
-	fmt.Fprintf(&b, "At most %d artifacts per run, %d MB each. Markdown, PNG/JPEG/GIF/WebP images, plain text, code and CSV can be previewed; other files can be downloaded.\n\n", maxRunArtifacts, maxArtifactFileBytes>>20)
+	fmt.Fprintf(&b, "At most %d artifacts per run, %d MB each. Markdown, PNG/JPEG/GIF/WebP images, plain text, code, CSV, static HTML reports (scripts are not run; embed images as data: URIs) and WebM/MP4 videos can be previewed; other files can be downloaded.\n\n", maxRunArtifacts, maxArtifactFileBytes>>20)
 	return b.String()
 }
 

@@ -46,6 +46,12 @@ export function usePanelWidth({
     setPreferred(value);
     writeLocal(storageKey, String(value));
   };
+  /** 双击分割线恢复为默认舒适宽度并清除自定义覆盖。 */
+  const reset = () => {
+    setPreview(null);
+    setPreferred(initial);
+    writeLocal(storageKey, null);
+  };
   return {
     width,
     availableWidth: available ?? 0,
@@ -54,6 +60,7 @@ export function usePanelWidth({
     resizing: preview !== null,
     onWidthPreview,
     onWidthChange,
+    reset,
     containerRef,
   };
 }

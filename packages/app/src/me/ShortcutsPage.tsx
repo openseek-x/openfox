@@ -245,6 +245,48 @@ function ShortcutsBody({ prefs }: { prefs: UserPreferences }) {
           })}
         </SettingsCard>
       </SettingsSection>
+
+      <SettingsSection
+        title={t("me.shortcuts.sidebar.title")}
+        description={t("me.shortcuts.sidebar.description")}
+      >
+        <SettingsCard>
+          {(
+            [
+              {
+                key: "left",
+                title: "me.shortcuts.sidebar.toggleLeft" as const,
+                help: "me.shortcuts.sidebar.toggleLeftHelp" as const,
+                caps: mac ? ["⌘", "\\"] : ["Ctrl", "\\"],
+              },
+              {
+                key: "right",
+                title: "me.shortcuts.sidebar.toggleRight" as const,
+                help: "me.shortcuts.sidebar.toggleRightHelp" as const,
+                caps: mac ? ["⌘", "⇧", "\\"] : ["Ctrl", "Shift", "\\"],
+              },
+            ] as const
+          ).map((item) => (
+            <SettingRow
+              key={item.key}
+              title={t(item.title)}
+              description={t(item.help)}
+              control={
+                <span className="flex items-center gap-1">
+                  {item.caps.map((cap, index) => (
+                    <kbd
+                      key={index}
+                      className="inline-flex h-5 min-w-5 items-center justify-center rounded-sm border border-line-soft bg-surface-muted/85 px-1 font-sans text-caption text-fg-muted"
+                    >
+                      {cap}
+                    </kbd>
+                  ))}
+                </span>
+              }
+            />
+          ))}
+        </SettingsCard>
+      </SettingsSection>
     </SettingsColumn>
   );
 }

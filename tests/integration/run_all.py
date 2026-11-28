@@ -121,7 +121,10 @@ def main():
             permitted_skips.add('TestRealOfficeStage8')
         permitted_skips.update(test for test, variable in OPTIONAL_FIXTURES.items() if not test_env.get(variable))
         summary['unexpected_skips'] = sorted(set(summary['skip']) - permitted_skips)
-        print(json.dumps({k: len(v) if isinstance(v, list) else v for k, v in summary.items()}), flush=True)
+        counts = {k: len(v) if isinstance(v, list) else v for k, v in summary.items()}
+        if summary['fail']:
+            counts['failed_tests'] = summary['fail']
+        print(json.dumps(counts), flush=True)
         return summary
 
     try:

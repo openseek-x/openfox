@@ -613,19 +613,17 @@ func TestGitLab(t *testing.T) {
 	t.Run("merge request backlink", func(t *testing.T) {
 		task := w.task(w.foxSpace, "Backlink flow")
 		w.deliver("Merge Request Hook", mrSpec{Action: "open", IID: 21, Title: task.DisplayID + " backlink", Branch: "b"}.payload())
-		waitFor(t, "backlink note", func() bool {
+		// GitLab 收到回链评论后，后台事务才会写入这条评论的 ID。
+		waitFor(t, "persisted backlink comment id", func() bool {
 			for _, note := range w.fake.Notes() {
 				if note.Kind == "merge_requests" && note.IID == 21 && strings.Contains(note.Body, task.DisplayID) {
-					return true
+					var recorded string
+					w.scan(&recorded, `SELECT backlink_comment_id FROM openfox.task_git_links WHERE task_id = $1::uuid`, task.ID)
+					return recorded == fmt.Sprint(note.ID)
 				}
 			}
 			return false
 		})
-		var comment string
-		w.scan(&comment, `SELECT backlink_comment_id FROM openfox.task_git_links WHERE task_id = $1::uuid`, task.ID)
-		if comment == "" {
-			t.Fatal("backlink comment id must be recorded")
-		}
 	})
 
 	t.Run("commit links", func(t *testing.T) {

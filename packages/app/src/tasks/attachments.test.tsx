@@ -36,10 +36,12 @@ const attachment = (extra: Record<string, unknown> = {}) => ({
   name: "设计稿.pdf",
   content_type: "application/pdf",
   size_bytes: 1536,
+  uploader_kind: "USER",
   uploaded_by: "u1",
   uploader_name: "林",
   created_at: "2026-10-30T00:00:00Z",
   previewable: false,
+  preview_kind: "none",
   can_delete: true,
   ...extra,
 });
@@ -235,6 +237,7 @@ describe("任务详情 · 附件", () => {
                 name: "截图.png",
                 content_type: "image/png",
                 previewable: true,
+                preview_kind: "image",
               }),
             ],
           })
@@ -246,6 +249,73 @@ describe("任务详情 · 附件", () => {
     );
     const image = await screen.findByRole("img", { name: "截图.png" });
     expect(image.getAttribute("src")).toContain("disposition=inline");
+  });
+
+  it("视频可预览：弹窗里是 video，直接指向下载地址（Range 分段播放），不取回整段内容", async () => {
+    const server = renderAt(detailPath, (call) =>
+      call.path.endsWith(LIST)
+        ? json(200, {
+            attachments: [
+              attachment({
+                id: "v1",
+                name: "TC-01-登录.webm",
+                content_type: "video/webm",
+                preview_kind: "video",
+              }),
+            ],
+          })
+        : undefined,
+    );
+    const section = await region();
+    await userEvent.click(
+      await within(section).findByRole("button", {
+        name: "预览 TC-01-登录.webm",
+      }),
+    );
+    const video = await screen.findByLabelText("视频：TC-01-登录.webm");
+    expect(video.tagName).toBe("VIDEO");
+    expect(video).toHaveAttribute("controls");
+    expect(video.getAttribute("src")).toContain(
+      "/v1/organizations/o1/attachments/v1",
+    );
+    expect(video.getAttribute("src")).not.toContain("disposition");
+    expect(video.getAttribute("src")).not.toMatch(/^blob:/);
+    expect(
+      server.calls.some((call) => call.path.endsWith("/attachments/v1")),
+    ).toBe(false);
+  });
+
+  it("HTML 报告可预览：取回内容后渲染为隔离预览", async () => {
+    const server = renderAt(detailPath, (call) => {
+      if (call.path.endsWith(LIST))
+        return json(200, {
+          attachments: [
+            attachment({
+              id: "h1",
+              name: "report.html",
+              content_type: "text/plain; charset=utf-8",
+              size_bytes: 7_447_186,
+              preview_kind: "html",
+            }),
+          ],
+        });
+      if (call.path.endsWith("/attachments/h1"))
+        return new Response("<h1>测试报告</h1><p>14 例通过</p>", {
+          status: 200,
+          headers: { "Content-Type": "text/plain; charset=utf-8" },
+        });
+      return undefined;
+    });
+    const section = await region();
+    await userEvent.click(
+      await within(section).findByRole("button", { name: "预览 report.html" }),
+    );
+    const frame = await screen.findByTitle("HTML 预览：report.html");
+    expect(frame).toHaveAttribute("sandbox");
+    expect(frame.getAttribute("srcdoc")).toContain("测试报告");
+    expect(
+      server.calls.filter((call) => call.path.endsWith("/attachments/h1")),
+    ).toHaveLength(1);
   });
 
   it("评论框可以插入已有附件的链接", async () => {

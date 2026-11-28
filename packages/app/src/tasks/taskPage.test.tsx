@@ -343,6 +343,31 @@ describe("对话记录与 AI 面板", () => {
     await waitFor(() => expect(where()).toBe(page));
   });
 
+  it("AI 面板页头的长标题被截断时，title 提供「名称 · 会话标题」全文（UI-02）", async () => {
+    const longTitle = "很长的会话标题用于验证页头截断后仍可悬停读到全称";
+    renderAt(
+      [panel],
+      conversations((call) =>
+        call.method === "GET" && call.path === `${o}/conversations/c9`
+          ? json(
+              200,
+              summary("c9", {
+                task_id: "task-1",
+                status: "REVIEW",
+                title: longTitle,
+              }),
+            )
+          : undefined,
+      ),
+    );
+    const aside = await screen.findByRole("complementary", {
+      name: "AI 面板",
+    });
+    expect(
+      await within(aside).findByTitle(`熊猫 · ${longTitle}`),
+    ).toBeInTheDocument();
+  });
+
   it("刷新后任务与 AI 面板都恢复", async () => {
     renderAt([panel], conversations());
     expect(

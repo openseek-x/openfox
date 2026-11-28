@@ -235,6 +235,8 @@ describe("CSP", () => {
     assert.match(csp, /worker-src 'self';/);
     assert.doesNotMatch(csp, /'unsafe-eval'/);
     assert.match(csp, /connect-src 'self';/);
+    // 视频产物以 Blob 播放，只放行同源与 blob:
+    assert.match(csp, /media-src 'self' blob:;/);
   });
 
   it("网页地址必须是不带账号、查询串和片段的 HTTP(S)", () => {

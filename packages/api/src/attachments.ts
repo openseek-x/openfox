@@ -54,6 +54,17 @@ export function createAttachmentsApi(http: HttpClient) {
           `${org(orgId)}/attachments/${encodeURIComponent(attachmentId)}`,
           { method: "DELETE" },
         ),
+      /** 取回附件内容为 Blob（HTML 预览用）：同源鉴权，超时与大小上限由 requestBlob 负责。 */
+      blob: (
+        orgId: string,
+        attachmentId: string,
+        maxBytes: number,
+        signal?: AbortSignal,
+      ) =>
+        http.requestBlob(
+          `${org(orgId)}/attachments/${encodeURIComponent(attachmentId)}`,
+          { maxBytes, signal },
+        ),
       /** 下载地址（attachment）；浏览器直接访问。 */
       url: (orgId: string, attachmentId: string) =>
         http.url(

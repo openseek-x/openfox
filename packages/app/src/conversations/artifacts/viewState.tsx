@@ -28,6 +28,7 @@ export function usePreviewScroll(
   ref: RefObject<HTMLElement | null>,
   ready = true,
   page = "",
+  skipRestore = false,
 ) {
   const scope = useContext(PreviewStateKey),
     store = workspaceStore();
@@ -39,7 +40,8 @@ export function usePreviewScroll(
     if (!scope || !ready || !el) return;
     const position =
       store.read<Record<string, { x: number; y: number }>>(key)?.[field];
-    if (restored.current !== key + field && position)
+    // 存在待定位批注时跳过历史滚动恢复，避免父级效应覆盖子级定位后的滚动位置
+    if (restored.current !== key + field && position && !skipRestore)
       el.scrollTo?.(position.x, position.y);
     restored.current = key + field;
     const save = () =>
@@ -49,5 +51,5 @@ export function usePreviewScroll(
       });
     el.addEventListener("scroll", save, { passive: true });
     return () => el.removeEventListener("scroll", save);
-  }, [store, key, field, ready, scope, ref]);
+  }, [store, key, field, ready, scope, ref, skipRestore]);
 }
