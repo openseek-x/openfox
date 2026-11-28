@@ -293,8 +293,6 @@ export const enUS: Messages = {
     market: "Market",
     marketHint: "Skills · Agent templates",
     chat: "Chats",
-    chatViewAll: "View all",
-    chatViewAllLabel: "View all chats",
     newChat: "New chat",
     noConversations: "No chats yet",
     mySpaces: "My spaces",

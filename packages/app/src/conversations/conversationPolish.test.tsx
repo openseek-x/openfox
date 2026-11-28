@@ -167,7 +167,7 @@ describe("OPE-24 对话顶栏、本地保存状态与空会话引导", () => {
     await store.close();
   });
 
-  it("对话面板空态提供「新建对话」入口", async () => {
+  it("对话面板空态只显示提示文案，新建入口统一留在标题栏", async () => {
     renderSettings(
       "/o/o1/chat",
       chatBase((call) => {
@@ -180,9 +180,7 @@ describe("OPE-24 对话顶栏、本地保存状态与空会话引导", () => {
     const emptyText = await within(nav).findByText("暂无 Agent 会话");
     expect(emptyText).toBeVisible();
     expect(
-      within(emptyText.parentElement!).getByRole("button", {
-        name: "新建对话",
-      }),
-    ).toBeInTheDocument();
+      within(nav).getAllByRole("button", { name: "新建对话" }),
+    ).toHaveLength(1);
   });
 });

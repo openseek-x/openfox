@@ -47,7 +47,7 @@ import {
 } from "../conversations/ChatPanel";
 import { conversationDestination } from "../conversations/chatNavigation";
 import { ConversationItem } from "../conversations/ConversationItem";
-import { EmptyAgentConversations } from "../conversations/NewChatPopover";
+import { NewChatButton } from "../conversations/NewChatPopover";
 import { useConversations } from "../conversations/queries";
 import { keys, useApi } from "../context";
 import { useInboxStats } from "../inbox/queries";
@@ -736,27 +736,23 @@ function Navigation({
             ))}
         </>
       )}
-      <div className="flex items-center pr-1.5">
+      <div className="flex items-center pr-1">
         <SectionLabel label={t("shell.chat")} />
-        <Link
-          to={`${base}/chat`}
-          aria-label={t("shell.chatViewAllLabel")}
-          className="mt-3 ml-auto text-caption text-fg-muted hover:text-fg-default"
-        >
-          {t("shell.chatViewAll")}
-        </Link>
+        <NewChatButton
+          orgId={orgId}
+          variant="section"
+          className="mt-3 ml-auto"
+        />
       </div>
       <DirectChatList orgId={orgId} compact rail="home" />
       {conversations.isLoading ? (
         <RowsSkeleton rows={2} />
       ) : conversations.list.length === 0 ? (
-        conversations.isError ? (
-          <p className="px-2.5 py-1 text-body-sm text-fg-muted">
-            {t("chat.list.loadFailed")}
-          </p>
-        ) : (
-          <EmptyAgentConversations orgId={orgId} />
-        )
+        <p className="px-2.5 py-1 text-body-sm text-fg-muted">
+          {conversations.isError
+            ? t("chat.list.loadFailed")
+            : t("chat.list.noAgentConversations")}
+        </p>
       ) : (
         conversations.list
           .slice(0, 5)

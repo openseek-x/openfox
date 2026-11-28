@@ -53,7 +53,7 @@
 | --- | --- | --- | --- |
 | **1. 左侧图标栏「对话」** | **主入口（Primary）** | `/o/:orgId/chat` | 进入完整对话工作台（支持微信 / Slack / 多会话三种组织模式、搜索、置顶、归档与私聊管理）。 |
 | **2. 首页侧栏「小助手」** | **专用入口（Dedicated）** | `/o/:orgId/assistant` | 组织级统一默认助手入口，面向日常问答与任务调度，不与普通 Agent 会话混排。 |
-| **3. 首页侧栏「对话」分节** | **快捷回访（Quick Resume）** | 最近 5 条会话 + 右侧弱链「查看全部」→ `/o/:orgId/chat`；空态提供「新建对话」 | 在任务/收件箱工作流中快速切回最近会话；不展开完整列表，更多会话通过「查看全部」承接。 |
+| **3. 首页侧栏「对话」分节** | **快捷回访与原地新建（Quick Resume & Create）** | 最近 5 条会话 + 分节标题右侧常驻「+」新建按钮（打开 `NewChatPopover`）；空态仅展示「暂无 Agent 会话」纯文字提示 | 在任务/收件箱工作流中快速切回最近会话或直接点「+」发起新会话；完整列表仍由左侧图标栏「对话」承接。 |
 | **4. 对话模块内「新建对话」** | **模块内发起（In-module Creation）** | 打开 `NewChatPopover` 选人/选 Agent/选小队 | 在对话页签顶栏、主区空态或「暂无 Agent 会话」空态中原地发起新会话。 |
 | **5. Agent 卡片 / 成员页 / 任务详情** | **上下文发起（Contextual Entry）** | `/o/:orgId/chat?agent=...` 或任务关联对话 | 在明确上下文对象（某个 Agent、某位成员或某条任务）时直接发起定向对话，无需重新选择对象。 |
 
@@ -137,3 +137,27 @@
 - 电脑由离线变在线后，驻留的会话横幅与目录卡片自动刷新：夹具设备没有心跳，无法在真实页面上让设备上线。
 - UI-02 在真实页面的 700px / 900px 表现：夹具里没有任务和关联会话，仅有模拟 E2E 覆盖。
 - Electron 960×640 窗口。
+
+---
+
+## 八、用户截图标注返修（侧栏「对话」分组标题「+」与空态去重）
+
+### 8.1 触发与改动
+
+按用户回传截图标注（`image-01a22253-05cb-7246-aeb9-f68ca1759465.png`）调整侧栏「对话」分节与空态：
+
+1. **`packages/app/src/conversations/NewChatPopover.tsx`**：`NewChatButton` 新增 `variant="section"` 变体（`size-5`、`rounded-md`、`<Icon name="plus" size={14} />`，复用与「我的空间」分节 `+` 一致的侧栏语义令牌），删除不再使用的 `EmptyAgentConversations`。
+2. **`packages/app/src/shell/OrgLayout.tsx`**：首页侧栏「对话」分组标题行右侧由「查看全部」链接替换为常驻 `<NewChatButton orgId={orgId} variant="section" className="mt-3 ml-auto" />`；空会话态恢复为纯文字「暂无 Agent 会话」，不再在空态下方重复渲染「新建对话」按钮。
+3. **`packages/app/src/conversations/ChatPanel.tsx`**：对话侧栏已有顶栏 `<NewChatButton>`，空态同步恢复纯文字「暂无 Agent 会话」并移除无用 `orgId` 传参。
+4. **`packages/i18n/src/messages/{zh-CN,en-US}.ts`**：同步清理不再使用的 `shell.chatViewAll` / `shell.chatViewAllLabel`。
+5. **测试同步**：更新 `navLayout.test.tsx`、`conversationPolish.test.tsx` 与 `tests/frontend/e2e/ope24-ui-optimization.spec.ts`（断言「查看全部对话」移除、「+」按钮与「对话」标题同排且空态不重复放按钮）。
+
+### 8.2 验证记录
+
+| 校验项 | 实际命令 | 结果 |
+| --- | --- | --- |
+| 单元与组件测试 | `pnpm exec vitest run packages/i18n/ packages/app/src/shell/ packages/app/src/conversations/` | **通过**（58 文件全过） |
+| 格式、Lint 与类型检查 | `pnpm lint` | **通过**（退出码 0） |
+| Web 生产构建 | `pnpm build` | **通过**（退出码 0） |
+| OPE-24 Playwright E2E（`SIMULATED`） | `OPENFOX_WEB_PORT=4203 OPE24_CAPTURE_DIR=.hifox-task/evidence pnpm exec playwright test tests/frontend/e2e/ope24-ui-optimization.spec.ts` | **通过**（5/5，7.6s） |
+| 真实后端视觉与交互复验（4193 → 18094） | Playwright 连接 `http://127.0.0.1:4193`，覆盖 1440×900 浅色/深色与 680×800 窄屏抽屉（DPR=1） | **通过**（`dy=1px`，点击「+」正常弹出选人浮层，浅/深/窄屏溢出均为 `[0, 0]`） |

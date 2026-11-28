@@ -285,8 +285,6 @@ export const zhCN = {
     market: "市场",
     marketHint: "技能 · Agent 模板",
     chat: "对话",
-    chatViewAll: "查看全部",
-    chatViewAllLabel: "查看全部对话",
     newChat: "新建对话",
     noConversations: "暂无对话",
     mySpaces: "我的空间",

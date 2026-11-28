@@ -368,7 +368,7 @@ describe("侧栏进阶指引", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("首页侧栏清理行尾副文案、区分组织 Agent 与空间 Agents，并补对话空态与查看全部入口", async () => {
+  it("首页侧栏清理行尾副文案、区分组织 Agent 与空间 Agents，对话分组标题放「+」新建按钮且空态不重复放按钮", async () => {
     renderAt("/o/o1/inbox", handler());
     const nav = await screen.findByRole("navigation", { name: "页面导航" });
     const orgAgentsLink = await within(nav).findByRole("link", {
@@ -381,12 +381,21 @@ describe("侧栏进阶指引", () => {
     ).not.toBeInTheDocument();
     expect(within(nav).queryByText("自主工作")).not.toBeInTheDocument();
     expect(
-      within(nav).getByRole("link", { name: "查看全部对话" }),
-    ).toHaveAttribute("href", "/o/o1/chat");
-    expect(await within(nav).findByText("暂无 Agent 会话")).toBeVisible();
+      within(nav).queryByRole("link", { name: "查看全部对话" }),
+    ).not.toBeInTheDocument();
+    // 对话分组标题右侧直接放「新建对话」+ 按钮，空态只保留提示文案不重复放按钮
+    const chatHeading = within(nav).getByText("对话");
+    const chatHeaderRow = chatHeading.parentElement!.parentElement!;
+    const newChatBtn = within(chatHeaderRow).getByRole("button", {
+      name: "新建对话",
+    });
+    expect(newChatBtn).toHaveAttribute("aria-haspopup", "dialog");
     expect(
-      within(nav).getByRole("button", { name: "新建对话" }),
-    ).toBeInTheDocument();
+      within(nav).getAllByRole("button", { name: "新建对话" }),
+    ).toHaveLength(1);
+    const emptyText = await within(nav).findByText("暂无 Agent 会话");
+    expect(emptyText).toBeVisible();
+    expect(emptyText.tagName).toBe("P");
     expect(
       within(nav).queryByRole("link", { name: "更多设置" }),
     ).not.toBeInTheDocument();

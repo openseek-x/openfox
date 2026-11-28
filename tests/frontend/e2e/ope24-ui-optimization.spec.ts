@@ -460,8 +460,19 @@ test("OPE-24 light desktop: inbox, tasks, agents, market, and unbound chat", asy
   await expect(nav.getByRole("link", { name: "组织 Agent" })).toBeVisible();
   await expect(nav.getByRole("link", { name: "更多设置" })).toHaveCount(0);
   await expect(nav.getByText("AI 队友")).toHaveCount(0);
-  await expect(nav.getByRole("link", { name: "查看全部对话" })).toBeVisible();
-  await expect(nav.getByRole("button", { name: "新建对话" })).toBeVisible();
+  await expect(nav.getByRole("link", { name: "查看全部对话" })).toHaveCount(0);
+  const newChatBtn = nav.getByRole("button", { name: "新建对话" });
+  await expect(newChatBtn).toHaveCount(1);
+  await expect(newChatBtn).toBeVisible();
+  // 「+」按钮位于「对话」分组标题同一行，而不是空态文案下方
+  const chatLabelBox = await nav
+    .getByText("对话", { exact: true })
+    .boundingBox();
+  const newChatBox = await newChatBtn.boundingBox();
+  expect(chatLabelBox).not.toBeNull();
+  expect(newChatBox).not.toBeNull();
+  expect(Math.abs(newChatBox!.y - chatLabelBox!.y)).toBeLessThanOrEqual(8);
+  await expect(nav.getByText("暂无 Agent 会话")).toBeVisible();
   await expect(nav.getByRole("button", { name: "更多任务项…" })).toBeVisible();
   await expect(nav.getByRole("button", { name: "空间设置" })).toBeVisible();
   await expectWindowFits(page);
