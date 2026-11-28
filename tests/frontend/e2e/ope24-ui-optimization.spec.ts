@@ -252,6 +252,19 @@ const conversation = {
   },
 };
 
+// UI-02：关联任务 task-1 的会话，Agent 名称与会话标题都很长，用于验证 AI 面板页头截断后的悬停全称
+const linkedConversation = {
+  ...conversation,
+  id: "c2",
+  title: "关联任务的超长会话标题用于验证 AI 面板页头截断后仍可悬停读全",
+  task_id: "task-1",
+  task: {
+    id: "task-1",
+    display_id: "OPENFOX-1234",
+    title: "无优先级任务行与日期列对齐验证",
+  },
+};
+
 async function snap(page: Page, name: string) {
   if (!captureDir) return;
   fs.mkdirSync(captureDir, { recursive: true });
@@ -364,6 +377,25 @@ async function mockApp(
     [org + "/conversations/c1"]: conversation,
     [org + "/conversations/c1/messages"]: { messages: [], next_cursor: 0 },
     [org + "/conversations/c1/artifacts"]: { artifacts: [] },
+    [org + "/conversations/c2"]: linkedConversation,
+    [org + "/conversations/c2/messages"]: { messages: [], next_cursor: 0 },
+    [org + "/conversations/c2/artifacts"]: { artifacts: [] },
+    [org + "/tasks/by-display-id/OPENFOX-1234"]: {
+      ...tasks[0],
+      description_reactions: [],
+    },
+    [org + "/spaces/s1/tasks/task-1/timeline"]: {
+      items: [],
+      next_cursor: null,
+    },
+    [org + "/spaces/s1/tasks/task-1/followers"]: {
+      followers: [],
+      following: false,
+    },
+    [org + "/spaces/s1/tasks/task-1/relations"]: { relations: [] },
+    [org + "/spaces/s1/tasks/task-1/links"]: { links: [] },
+    [org + "/spaces/s1/tasks/task-1/fields"]: { fields: [] },
+    [org + "/task-relation-types"]: { relation_types: [] },
     [org + "/direct-chats"]: { chats: [], next_before: "" },
     [org + "/inbox/stats"]: {
       counts: {
@@ -604,4 +636,24 @@ test("OPE-24 en-US narrow desktop (960x640): i18n parity and zero overflow", asy
   ).toBeVisible();
   await expectWindowFits(page);
   await snap(page, "en-space-tasks");
+});
+
+test("OPE-24 UI-02: linked-task AI panel header exposes the full title at 700px and 900px", async ({
+  page,
+}) => {
+  await mockApp(page, { locale: "zh-CN", theme: "light" });
+  const fullTitle = `${linkedConversation.agent.name} · ${linkedConversation.title}`;
+
+  for (const width of [700, 900]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto("/o/o1/tasks/OPENFOX-1234?view=chat&conversationId=c2");
+    const panel = page.getByRole("complementary", { name: "AI 面板" });
+    await expect(panel).toBeVisible();
+    // 标题被 truncate 截断后，悬停提示必须带「名称 · 会话标题」全文
+    await expect(
+      panel.locator("header").first().getByTitle(fullTitle, { exact: true }),
+    ).toBeVisible();
+    await expectWindowFits(page);
+    await snap(page, `ui02-linked-panel-${width}`);
+  }
 });
