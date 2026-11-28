@@ -99,7 +99,15 @@ export const agentsEn: Messages["agents"] = {
   privateLock: "Private",
   offline: "Offline",
   online: "Online",
+  status: {
+    online: "Online",
+    offline: "Offline",
+    unbound: "No computer bound",
+    onlineOn: "Online · {computer}",
+    offlineOn: "Offline · {computer}",
+  },
   modelDefault: "Default",
+  modelDefaultLabel: "Default model",
   members: "{count} members",
   none: "None",
   unknownSpace: "Unknown space",
@@ -110,9 +118,10 @@ export const agentsEn: Messages["agents"] = {
     privateDesc: "Only you can use and chat with it",
   },
   directory: {
-    title: "All agents and crews",
+    title: "Organization agents and crews",
     // 阶段 9d-1 · 空间 Agents 页
     spaceTitle: "Agents",
+    spaceScope: "This space",
     breadcrumb: "Breadcrumb",
     more: "More actions",
     viewArchived: "View archived agents",
@@ -143,6 +152,8 @@ export const agentsEn: Messages["agents"] = {
   },
   card: {
     chat: "Chat",
+    bindComputer: "Bind computer",
+    owner: "Owner: {owner}",
     favorite: "Add to favorites",
     unfavorite: "Remove from favorites",
     menu: "More actions for {name}",

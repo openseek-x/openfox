@@ -21,8 +21,9 @@ export function ConversationFrame({
     <ArtifactOpenContext.Provider
       value={conversationId ? panel.openArtifact : null}
     >
-      <div className="relative flex h-full min-h-0 min-w-0 flex-1 @container">
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="relative flex h-full min-h-0 min-w-0 flex-1">
+        {/* @container 挂在聊天列本身，确保打开产物面板时头部仍按聊天列实际宽度折叠 */}
+        <div className="@container flex min-h-0 min-w-0 flex-1 flex-col">
           {header}
           {children}
         </div>

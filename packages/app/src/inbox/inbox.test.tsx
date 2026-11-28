@@ -277,4 +277,28 @@ describe("收件箱", () => {
       section: "inbox",
     });
   });
+
+  it("显示统一页头与紧凑标签键盘切换；空态展示说明与下一步按钮", async () => {
+    const user = userEvent.setup();
+    renderInbox([]);
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "收件箱" }),
+    ).toBeVisible();
+    expect(await screen.findByText("暂无通知")).toBeVisible();
+    expect(
+      screen.getByText("任务指派、@提及和 Agent 回复会出现在这里。"),
+    ).toBeVisible();
+    expect(screen.getByRole("button", { name: "前往我的任务" })).toBeVisible();
+
+    const inboxTab = screen.getByRole("tab", { name: /收件箱/ });
+    inboxTab.focus();
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByRole("tab", { name: "稍后" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(
+      await screen.findByRole("button", { name: "返回收件箱" }),
+    ).toBeVisible();
+  });
 });

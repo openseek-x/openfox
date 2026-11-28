@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { useT } from "@openfox/i18n";
-import { Icon, SearchMenu, type SearchMenuOption } from "@openfox/ui";
+import { Icon, SearchMenu, Tooltip, type SearchMenuOption } from "@openfox/ui";
 
 export function BoardColumnJump({
   toolbar,
@@ -37,19 +37,20 @@ export function BoardColumnJump({
   if (!toolbar || options.length === 0) return null;
   return createPortal(
     <>
-      <button
-        ref={anchor}
-        type="button"
-        aria-label={label}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        title={label}
-        onClick={() => setOpen(!open)}
-        className="inline-flex size-8 shrink-0 items-center justify-center gap-1.5 rounded-full border border-line-default text-body-sm text-fg-secondary not-aria-expanded:hover:bg-surface-hover aria-expanded:bg-surface-active @2xl:w-auto @2xl:px-3"
-      >
-        <Icon name="target" />
-        <span className="hidden @2xl:inline">{label}</span>
-      </button>
+      <Tooltip content={label}>
+        <button
+          ref={anchor}
+          type="button"
+          aria-label={label}
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          onClick={() => setOpen(!open)}
+          className="inline-flex size-8 shrink-0 items-center justify-center gap-1.5 rounded-full border border-line-default text-body-sm text-fg-secondary not-aria-expanded:hover:bg-surface-hover aria-expanded:bg-surface-active @2xl:w-auto @2xl:px-3"
+        >
+          <Icon name="target" />
+          <span className="hidden @2xl:inline">{label}</span>
+        </button>
+      </Tooltip>
       <SearchMenu
         open={open}
         onOpenChange={setOpen}

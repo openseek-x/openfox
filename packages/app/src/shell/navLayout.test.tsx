@@ -359,9 +359,36 @@ describe("侧栏进阶指引", () => {
     localStorage.setItem("openfox:advanced-guide-open", "1");
     renderAt("/o/o1/inbox", handler());
     await screen.findByRole("link", { name: "首页" });
-    await screen.findByRole("link", { name: "更多设置" });
+    await screen.findByRole("link", { name: "外部应用集成" });
+    expect(
+      screen.queryByRole("link", { name: "更多设置" }),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /进阶指引/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("首页侧栏清理行尾副文案、区分组织 Agent 与空间 Agents，并补对话空态与查看全部入口", async () => {
+    renderAt("/o/o1/inbox", handler());
+    const nav = await screen.findByRole("navigation", { name: "页面导航" });
+    const orgAgentsLink = await within(nav).findByRole("link", {
+      name: "组织 Agent",
+    });
+    expect(orgAgentsLink).toHaveAttribute("title", "AI 队友");
+    expect(within(nav).queryByText("AI 队友")).not.toBeInTheDocument();
+    expect(
+      within(nav).queryByText("技能 · Agent 模板"),
+    ).not.toBeInTheDocument();
+    expect(within(nav).queryByText("自主工作")).not.toBeInTheDocument();
+    expect(
+      within(nav).getByRole("link", { name: "查看全部对话" }),
+    ).toHaveAttribute("href", "/o/o1/chat");
+    expect(await within(nav).findByText("暂无 Agent 会话")).toBeVisible();
+    expect(
+      within(nav).getByRole("button", { name: "新建对话" }),
+    ).toBeInTheDocument();
+    expect(
+      within(nav).queryByRole("link", { name: "更多设置" }),
     ).not.toBeInTheDocument();
   });
 });

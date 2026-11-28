@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
 
 import type {
   InfiniteData,
@@ -59,6 +60,7 @@ export function MarketBrowser({
 }) {
   const t = useT();
   const { locale } = useI18n();
+  const navigate = useNavigate();
   const catalog = useMarketCatalog(orgId);
   const [kind, setKind] = useState<Kind>("skills");
   // 退出中的面板沿用点击时的内容，避免新分类或加载状态出现在旧画面里。
@@ -136,10 +138,27 @@ export function MarketBrowser({
   if (catalog.data.counts.skills === 0 && catalog.data.counts.templates === 0)
     return (
       <div className="flex flex-1 items-center justify-center p-6">
-        <div className="flex w-[420px] max-w-full flex-col items-start gap-3">
+        <div className="flex w-[420px] max-w-full flex-col items-start gap-2.5">
           <Icon name="store" size={48} className="text-fg-muted" />
           <h2 className="text-body font-medium">{t("market.emptyTitle")}</h2>
           <p className="text-body-sm text-fg-muted">{t("market.emptyDesc")}</p>
+          <p className="text-body-sm text-fg-secondary">
+            {t(
+              skillsOnly
+                ? "market.emptyPickerNextStep"
+                : "market.emptyNextStep",
+            )}
+          </p>
+          {!skillsOnly && (
+            <Button
+              variant="outline"
+              size="28"
+              className="mt-1"
+              onClick={() => navigate(`/o/${orgId}/agents`)}
+            >
+              {t("market.emptyActionAgents")}
+            </Button>
+          )}
         </div>
       </div>
     );

@@ -131,7 +131,19 @@ export function MyTasksPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <h1 className="sr-only">{t("myTasks.title")}</h1>
+      <header className="flex min-h-11 shrink-0 flex-wrap items-center gap-2 border-b border-line-default px-4 py-1">
+        <h1 className="min-w-0 flex-1 truncate text-body font-medium">
+          {t("myTasks.title")}
+        </h1>
+        <Button
+          size="28"
+          leading={<Icon name="plus" />}
+          className="shrink-0 whitespace-nowrap"
+          onClick={() => openCreate()}
+        >
+          {t("tasks.new")}
+        </Button>
+      </header>
       <TaskWorkspace
         key={`${labelParam ?? ""}`}
         orgId={orgId}

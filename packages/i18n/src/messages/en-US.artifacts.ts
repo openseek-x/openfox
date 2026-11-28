@@ -113,6 +113,7 @@ export const artifactsEn: Messages["artifacts"] = {
     loading: "Restoring workspace…",
     loadFailed: "Local drafts could not be loaded. Please retry.",
     saving: "Saving locally…",
+    saved: "Saved locally",
     failed:
       "Draft not saved locally. Keep this window open and retry. Storage may be full.",
     conflict:

@@ -132,7 +132,10 @@ export const CardBody = memo(function CardBody({
     >
       <div className="flex h-5 items-center gap-2">
         {show("id") && (
-          <span className="min-w-0 truncate text-caption text-fg-muted">
+          <span
+            title={displayIdOf(task)}
+            className="min-w-0 truncate text-caption text-fg-muted tabular-nums"
+          >
             {displayIdOf(task)}
           </span>
         )}

@@ -119,6 +119,7 @@ export function FilterButton({
       <IconButton
         ref={anchor}
         label={t("tasks.filter")}
+        tooltip
         icon={<Icon name="list-filter" />}
         variant="round"
         active={stage !== null || active}

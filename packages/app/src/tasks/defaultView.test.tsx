@@ -161,20 +161,52 @@ it("preserves inherited filters after personal display changes and reload; expli
     "true",
   );
   await user.keyboard("{Escape}");
-  await user.click(screen.getByRole("button", { name: "改用个人视图" }));
-  await screen.findByText("个人视图");
+  await user.click(screen.getByRole("button", { name: "个人视图" }));
+  expect(screen.getByRole("button", { name: "个人视图" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await waitFor(() =>
     expect(
       f.server.find("GET", "/tasks/counts").at(-1)?.query.has("view_id"),
     ).toBe(false),
   );
   expect(localStorage.getItem(defaultViewModeKey(ORG, SPACE))).toBeNull();
-  await user.click(screen.getByRole("button", { name: "使用空间默认" }));
-  await screen.findByText("空间默认：Default A");
+  await user.click(screen.getByRole("button", { name: "空间默认" }));
+  expect(
+    await screen.findByRole("button", { name: "空间默认：Default A" }),
+  ).toHaveAttribute("aria-pressed", "true");
   await screen.findByRole("checkbox", { name: "全选" });
   expect(
     localStorage.getItem(displayStorageKey(ORG, `space:${SPACE}`)),
   ).toBeNull();
+});
+
+it("keeps space default active when switching toolbar layouts without a shared default view", async () => {
+  const f = fixture();
+  f.space = { ...f.space, default_view_id: null };
+  f.mount();
+  const user = userEvent.setup();
+  const defaultTab = await screen.findByRole("button", { name: "空间默认" });
+  expect(defaultTab).toHaveAttribute("aria-pressed", "true");
+  // 工具栏直接暴露 4 种布局切换，切换列表不误退到个人视图
+  const layoutGroup = screen.getByRole("group", { name: "布局" });
+  await user.click(within(layoutGroup).getByRole("button", { name: "列表" }));
+  expect(
+    within(layoutGroup).getByRole("button", { name: "列表" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  expect(screen.getByRole("button", { name: "空间默认" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  expect(screen.getByRole("button", { name: "个人视图" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  // 顶栏提供文字「新建任务」按钮
+  expect(
+    screen.getAllByRole("button", { name: "新建任务" }).length,
+  ).toBeGreaterThanOrEqual(1);
 });
 
 it("blocks on source 5xx and falls back only when the source is unavailable", async () => {
@@ -195,7 +227,9 @@ it("blocks on source 5xx and falls back only when the source is unavailable", as
   status = 404;
   f.space = { ...f.space, default_view_id: null };
   await userEvent.setup().click(screen.getByRole("button", { name: "重试" }));
-  await screen.findByText("系统默认");
+  expect(
+    await screen.findByRole("button", { name: "空间默认" }),
+  ).toHaveAttribute("aria-pressed", "true");
   await waitFor(() =>
     expect(f.server.find("GET", "/tasks/counts").length).toBeGreaterThan(0),
   );

@@ -43,7 +43,12 @@ import {
   type ChatMode,
   type DirectRow,
 } from "./model";
-import { NewChatButton, SmallCrewIcon, newChatPath } from "./NewChatPopover";
+import {
+  EmptyAgentConversations,
+  NewChatButton,
+  SmallCrewIcon,
+  newChatPath,
+} from "./NewChatPopover";
 import { useConversationActions, useConversations } from "./queries";
 import { conversationDestination } from "./chatNavigation";
 
@@ -197,11 +202,13 @@ export function RowsSkeleton({ rows = 4 }: { rows?: number }) {
 
 /** 初次加载失败（Row/LoadError）或刷新失败（保留旧列表，顶部提示） */
 function LoadState({
+  orgId,
   query,
   children,
   empty,
   skeleton,
 }: {
+  orgId: string;
   query: {
     isLoading: boolean;
     isError: boolean;
@@ -245,13 +252,7 @@ function LoadState({
           </button>
         </div>
       )}
-      {empty ? (
-        <p className="px-2.5 py-2 text-body-sm text-fg-muted">
-          {t("chat.list.noAgentConversations")}
-        </p>
-      ) : (
-        children
-      )}
+      {empty ? <EmptyAgentConversations orgId={orgId} /> : children}
     </>
   );
 }
@@ -332,7 +333,7 @@ function RecentsMode({ orgId }: { orgId: string }) {
   };
 
   return (
-    <LoadState query={query} empty={query.list.length === 0}>
+    <LoadState orgId={orgId} query={query} empty={query.list.length === 0}>
       {pinned.length > 0 ? (
         <>
           <GroupLabel
@@ -434,7 +435,7 @@ function OrganizedMode({ orgId }: { orgId: string }) {
   if (directory.isLoading) return <RowsSkeleton />;
   if (directory.isError && !directory.data)
     return (
-      <LoadState query={directory} empty={false}>
+      <LoadState orgId={orgId} query={directory} empty={false}>
         {null}
       </LoadState>
     );
@@ -593,6 +594,7 @@ function SessionsMode({ orgId }: { orgId: string }) {
 
   return (
     <LoadState
+      orgId={orgId}
       query={query}
       empty={groups.length === 0}
       skeleton={<RowsSkeleton rows={3} />}

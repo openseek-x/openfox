@@ -59,7 +59,7 @@ export function SpaceMoreMenu({
             props.open && "bg-surface-active",
           )}
         >
-          <Icon name="more" className="text-fg-secondary" />
+          <Icon name="settings" className="shrink-0 text-fg-secondary" />
           <span className="min-w-0 flex-1 truncate">
             {t("shell.space.more")}
           </span>

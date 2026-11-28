@@ -247,3 +247,34 @@ export function NewChatButton({
     </>
   );
 }
+
+/** 侧栏空会话态的「新建对话」入口：带文案按钮 + 复用选人浮层 */
+export function EmptyAgentConversations({ orgId }: { orgId: string }) {
+  const t = useT();
+  const ref = useRef<HTMLButtonElement | null>(null);
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="flex flex-col items-start gap-1.5 px-2.5 py-1.5">
+      <p className="text-body-sm text-fg-muted">
+        {t("chat.list.noAgentConversations")}
+      </p>
+      <Button
+        ref={ref}
+        size="28"
+        variant="outline"
+        leading={<Icon name="hifox-new-chat" size={14} />}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+      >
+        {t("chat.newChat")}
+      </Button>
+      <NewChatPopover
+        orgId={orgId}
+        open={open}
+        onOpenChange={setOpen}
+        anchorRef={ref}
+      />
+    </div>
+  );
+}

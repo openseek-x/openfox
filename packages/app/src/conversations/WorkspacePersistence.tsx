@@ -1,11 +1,12 @@
 import {
   useEffect,
+  useRef,
   useState,
   useSyncExternalStore,
   type ReactNode,
 } from "react";
 import { useT } from "@openfox/i18n";
-import { Button } from "@openfox/ui";
+import { Button, cn } from "@openfox/ui";
 import { useMe } from "../agents/queries";
 import {
   bindWorkspaceStore,
@@ -70,9 +71,13 @@ export function WorkspacePersistence({
   return <>{children}</>;
 }
 
+const SAVED_VISIBLE_MS = 1500;
+const SAVED_FADE_MS = 300;
+
 export function DraftStorageStatus() {
   const t = useT(),
     store = workspaceStore();
+  // 仅用户草稿/批注等内容的写入才显示保存中状态；失败与冲突告警覆盖所有写入
   const status = useSyncExternalStore(
     (listener) => {
       store.listeners.add(listener);
@@ -80,8 +85,41 @@ export function DraftStorageStatus() {
         store.listeners.delete(listener);
       };
     },
-    () => store.status,
+    () =>
+      store.status === "saving" && !store.hasDirtyContent
+        ? "saved"
+        : store.status,
   );
+  const wasSaving = useRef(false);
+  const [savedPhase, setSavedPhase] = useState<"hidden" | "shown" | "fading">(
+    "hidden",
+  );
+  useEffect(() => {
+    if (status === "saving") {
+      wasSaving.current = true;
+      setSavedPhase("hidden");
+      return undefined;
+    }
+    if (status === "saved" && wasSaving.current) {
+      wasSaving.current = false;
+      setSavedPhase("shown");
+      const fadeTimer = window.setTimeout(
+        () => setSavedPhase("fading"),
+        SAVED_VISIBLE_MS - SAVED_FADE_MS,
+      );
+      const hideTimer = window.setTimeout(
+        () => setSavedPhase("hidden"),
+        SAVED_VISIBLE_MS,
+      );
+      return () => {
+        window.clearTimeout(fadeTimer);
+        window.clearTimeout(hideTimer);
+      };
+    }
+    wasSaving.current = false;
+    setSavedPhase("hidden");
+    return undefined;
+  }, [status]);
   useEffect(() => {
     const flush = () => {
       void store.flush().catch(() => {});
@@ -101,11 +139,28 @@ export function DraftStorageStatus() {
       document.removeEventListener("visibilitychange", flush);
     };
   }, [store]);
-  if (!store.durable || status === "saved") return null;
+  if (!store.durable) return null;
+  if (status === "saved") {
+    if (savedPhase === "hidden") return null;
+    return (
+      <div
+        role="status"
+        className={cn(
+          "mb-2 text-caption text-fg-muted transition-opacity duration-300 motion-reduce:transition-none",
+          savedPhase === "fading" ? "opacity-0" : "opacity-100",
+        )}
+      >
+        {t("artifacts.persistence.saved")}
+      </div>
+    );
+  }
   return (
     <div
       role={status === "saving" ? "status" : "alert"}
-      className="mb-2 text-caption text-fg-secondary"
+      className={cn(
+        "mb-2 text-caption",
+        status === "saving" ? "text-fg-secondary" : "text-danger",
+      )}
     >
       {t(`artifacts.persistence.${status}`)}
       {status === "failed" && (

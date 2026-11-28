@@ -168,13 +168,19 @@ export function Pill({
   children,
   tone,
   className,
+  title,
+  "aria-label": ariaLabel,
 }: {
   children: React.ReactNode;
   tone?: "danger";
   className?: string;
+  title?: string;
+  "aria-label"?: string;
 }) {
   return (
     <span
+      title={title}
+      aria-label={ariaLabel}
       className={cn(
         "inline-flex h-5 max-w-[160px] items-center gap-1 truncate rounded-full border border-line-default px-1.5 text-caption",
         tone === "danger"
@@ -188,13 +194,35 @@ export function Pill({
   );
 }
 
-export function DueChip({ date }: { date: string | null }) {
+export function DueChip({
+  date,
+  label,
+  checkOverdue = true,
+  className,
+}: {
+  date: string | null;
+  /** 日期语义说明，默认「截止日期」 */
+  label?: string;
+  checkOverdue?: boolean;
+  className?: string;
+}) {
+  const t = useT();
   const { locale } = useI18n();
   if (!date) return null;
+  const formatted = formatMonthDay(date, locale);
+  const tip = t("tasks.list.dateTip", {
+    label: label ?? t("tasks.fields.dueDate"),
+    date: formatted,
+  });
   return (
-    <Pill tone={isOverdue(date) ? "danger" : undefined}>
+    <Pill
+      tone={checkOverdue && isOverdue(date) ? "danger" : undefined}
+      title={tip}
+      aria-label={tip}
+      className={className}
+    >
       <Icon name="calendar" size={12} />
-      {formatMonthDay(date, locale)}
+      {formatted}
     </Pill>
   );
 }

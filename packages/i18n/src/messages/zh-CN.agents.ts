@@ -93,7 +93,15 @@ export const agentsZh = {
   privateLock: "私有",
   offline: "离线",
   online: "在线",
+  status: {
+    online: "在线",
+    offline: "离线",
+    unbound: "未绑定电脑",
+    onlineOn: "在线 · {computer}",
+    offlineOn: "离线 · {computer}",
+  },
   modelDefault: "默认",
+  modelDefaultLabel: "默认模型",
   members: "{count} 个成员",
   none: "无",
   unknownSpace: "未知空间",
@@ -104,9 +112,10 @@ export const agentsZh = {
     privateDesc: "仅你可以使用和对话",
   },
   directory: {
-    title: "全部 Agent 和小队",
+    title: "组织 Agent 和小队",
     // 阶段 9d-1 · 空间 Agents 页
     spaceTitle: "Agents",
+    spaceScope: "当前空间",
     breadcrumb: "面包屑",
     more: "更多操作",
     viewArchived: "查看已归档 Agent",
@@ -135,6 +144,8 @@ export const agentsZh = {
   },
   card: {
     chat: "对话",
+    bindComputer: "绑定电脑",
+    owner: "所有者：{owner}",
     favorite: "收藏",
     unfavorite: "取消收藏",
     menu: "{name} 的更多操作",

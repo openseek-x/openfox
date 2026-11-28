@@ -87,7 +87,7 @@ async function verifyHistoryGuard(
   const input = page.getByRole("textbox", { name: label, exact: true });
   // Keep two prior entries in this SPA document, including rapid Back.
   await page.goto(`/o/${org}/inbox`);
-  await page.getByRole("link", { name: /^全部 Agent/ }).click();
+  await page.getByRole("link", { name: /^组织 Agent/ }).click();
   await page.getByRole("button", { name: entity.name, exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${parameter}=${entity.id}`));
   const drawerURL = page.url();
@@ -339,7 +339,7 @@ test("real Agent/Crew native consecutive history keeps drafts and restores exact
     ] as const) {
       // Five natural same-document entries: inbox → list → drawer → tasks → inbox.
       await page.goto(`/o/${org}/inbox`);
-      await page.getByRole("link", { name: /^全部 Agent/ }).click();
+      await page.getByRole("link", { name: /^组织 Agent/ }).click();
       await page
         .getByRole("button", { name: entity.name, exact: true })
         .click();
@@ -416,7 +416,7 @@ for (const action of ["reload", "navigate", "close"] as const) {
   }) => {
     const { agent } = await setupInstructions(page);
     await page.goto(`/o/${org}/inbox`);
-    await page.getByRole("link", { name: /^全部 Agent/ }).click();
+    await page.getByRole("link", { name: /^组织 Agent/ }).click();
     await page.getByRole("button", { name: agent.name, exact: true }).click();
     const original = page.url();
     await page.getByRole("button", { name: /^Agent 指令/ }).click();
@@ -465,7 +465,7 @@ test("actual logout and expired authentication release dirty or held settings be
   for (const action of ["logout", "expired"] as const) {
     const { agent } = await setupInstructions(page);
     await page.goto(`/o/${org}/inbox`);
-    await page.getByRole("link", { name: /^全部 Agent/ }).click();
+    await page.getByRole("link", { name: /^组织 Agent/ }).click();
     await page.getByRole("button", { name: agent.name, exact: true }).click();
     await page.getByRole("button", { name: /^Agent 指令/ }).click();
     const input = page.getByRole("textbox", {

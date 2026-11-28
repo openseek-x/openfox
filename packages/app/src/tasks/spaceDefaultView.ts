@@ -87,8 +87,8 @@ export function useSpaceDefaultView(
     leave: () => store(value, false),
     control: {
       value,
-      onChange: (display: DisplaySettings) =>
-        store(display, marked || Boolean(view && follow)),
+      // 处于空间默认（含系统默认）时修改布局或显示设置，保持默认视图范围不误跳个人视图
+      onChange: (display: DisplaySettings) => store(display, marked || follow),
       onReset: reset,
     },
   };

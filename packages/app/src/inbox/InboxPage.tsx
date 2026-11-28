@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { memo, useMemo, useRef, useState } from "react";
+import { memo, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import type { InboxGroup, InboxListQuery, InboxSection } from "@openfox/api";
@@ -183,53 +183,86 @@ export function InboxPage() {
         : t("inbox.empty.other")
     : t(`inbox.empty.${section}`);
 
+  const tabListRef = useRef<HTMLDivElement | null>(null);
+  const switchSection = (next: InboxSection) => {
+    setSection(next);
+    setImportance("all");
+  };
+  const onTabsKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const index = SECTIONS.findIndex((item) => item.id === section);
+    let next: number;
+    if (event.key === "ArrowRight") next = (index + 1) % SECTIONS.length;
+    else if (event.key === "ArrowLeft")
+      next = (index - 1 + SECTIONS.length) % SECTIONS.length;
+    else if (event.key === "Home") next = 0;
+    else if (event.key === "End") next = SECTIONS.length - 1;
+    else return;
+    event.preventDefault();
+    const target = SECTIONS[next];
+    if (!target) return;
+    switchSection(target.id);
+    tabListRef.current
+      ?.querySelector<HTMLElement>(`[data-tab="${target.id}"]`)
+      ?.focus();
+  };
+
+  const emptyDesc = filtered
+    ? t("inbox.empty.filteredDesc")
+    : section === "later"
+      ? t("inbox.empty.laterDesc")
+      : section === "cleared"
+        ? t("inbox.empty.clearedDesc")
+        : t("inbox.empty.inboxDesc");
+
   return (
     <div className="flex h-full min-w-0 flex-col bg-surface-canvas">
-      <h1 className="sr-only">{t("inbox.title")}</h1>
-      <div
-        role="tablist"
-        aria-label={t("inbox.title")}
-        className="flex shrink-0 gap-2 border-b border-line-default p-2"
-      >
-        {SECTIONS.map((item) => {
-          const selected = item.id === section;
-          const count = item.id === "inbox" ? unread : (counts?.[item.id] ?? 0);
-          const sub =
-            item.id === "inbox"
-              ? t("inbox.unreadCount", { count: unread })
-              : t("inbox.itemCount", { count: counts?.[item.id] ?? 0 });
-          return (
-            <button
-              key={item.id}
-              type="button"
-              role="tab"
-              aria-selected={selected}
-              onClick={() => {
-                setSection(item.id);
-                setImportance("all");
-              }}
-              className={cn(
-                "relative flex h-15 min-w-0 flex-1 items-center gap-4 rounded-lg px-4 text-left transition-colors sm:max-w-64",
-                selected
-                  ? "bg-surface-selected text-fg-default after:absolute after:-bottom-[9px] after:inset-x-0.5 after:h-0.5 after:rounded-full after:bg-fg-default"
-                  : "text-fg-muted hover:bg-surface-hover",
-              )}
-            >
-              <Icon name={item.icon} />
-              <span className="flex min-w-0 flex-col">
-                <span className="text-body font-medium">
-                  {t(`inbox.sections.${item.id}`)}
-                </span>
+      <header className="flex min-h-11 shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b border-line-default px-4">
+        <h1 className="shrink-0 text-body font-medium">{t("inbox.title")}</h1>
+        <span aria-hidden className="h-4 w-px shrink-0 bg-line-soft" />
+        <div
+          ref={tabListRef}
+          role="tablist"
+          aria-label={t("inbox.title")}
+          onKeyDown={onTabsKeyDown}
+          className="flex min-w-0 items-center gap-4"
+        >
+          {SECTIONS.map((item) => {
+            const selected = item.id === section;
+            const count =
+              item.id === "inbox" ? unread : (counts?.[item.id] ?? 0);
+            const sub =
+              item.id === "inbox"
+                ? t("inbox.unreadCount", { count: unread })
+                : t("inbox.itemCount", { count: counts?.[item.id] ?? 0 });
+            return (
+              <button
+                key={item.id}
+                type="button"
+                role="tab"
+                data-tab={item.id}
+                aria-selected={selected}
+                tabIndex={selected ? 0 : -1}
+                onClick={() => switchSection(item.id)}
+                className={cn(
+                  "-mb-px flex h-11 shrink-0 items-center gap-1.5 border-b-2 text-body-sm whitespace-nowrap transition-colors motion-reduce:transition-none",
+                  selected
+                    ? "border-primary font-medium text-fg-default"
+                    : "border-transparent text-fg-muted hover:text-fg-default",
+                )}
+              >
+                <Icon name={item.icon} size={14} />
+                <span>{t(`inbox.sections.${item.id}`)}</span>
                 {count > 0 && (
-                  <span className="text-body-sm text-fg-muted tabular-nums">
+                  <span className="rounded-full bg-surface-muted px-1.5 py-0.5 text-caption leading-none text-fg-muted tabular-nums">
+                    {" "}
                     {sub}
                   </span>
                 )}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+              </button>
+            );
+          })}
+        </div>
+      </header>
 
       <div
         role="toolbar"
@@ -407,14 +440,56 @@ export function InboxPage() {
       ) : groups.length === 0 && offers.length === 0 ? (
         <div
           role="status"
-          className="flex flex-1 flex-col items-center gap-4 px-6 pt-16 text-fg-muted"
+          className="flex flex-1 flex-col items-center gap-2 px-6 pt-16 text-center text-fg-muted"
         >
           <Icon
             name={section === "cleared" ? "check-check" : "inbox"}
             size={32}
-            className="text-fg-subtle"
+            className="mb-1 text-fg-subtle"
           />
-          <p className="text-body">{emptyTitle}</p>
+          <p className="text-body font-medium text-fg-default">{emptyTitle}</p>
+          <p className="max-w-sm text-body-sm text-fg-muted">{emptyDesc}</p>
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+            {filtered ? (
+              <Button
+                variant="outline"
+                size="28"
+                onClick={() => {
+                  setImportance("all");
+                  setSpaceIds([]);
+                  setQ("");
+                  setSearching(false);
+                }}
+              >
+                {t("inbox.empty.clearFilters")}
+              </Button>
+            ) : section !== "inbox" ? (
+              <>
+                <Button
+                  variant="outline"
+                  size="28"
+                  onClick={() => switchSection("inbox")}
+                >
+                  {t("inbox.empty.backToInbox")}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="28"
+                  onClick={() => navigate(`/o/${orgId}/my-tasks`)}
+                >
+                  {t("inbox.empty.goMyTasks")}
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="outline"
+                size="28"
+                onClick={() => navigate(`/o/${orgId}/my-tasks`)}
+              >
+                {t("inbox.empty.goMyTasks")}
+              </Button>
+            )}
+          </div>
         </div>
       ) : (
         <ul

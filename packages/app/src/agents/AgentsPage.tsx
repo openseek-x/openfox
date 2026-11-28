@@ -29,12 +29,19 @@ import { CreateAgentDialog } from "./CreateAgentDialog";
 import { CreateVariantDialog } from "./CreateVariantDialog";
 import { CreateCrewEntry } from "./CreateCrewDialog";
 import { DirectoryCard, type CardActions } from "./DirectoryCard";
-import { filterDirectory, groupDirectory, type DirectoryFilter } from "./model";
+import {
+  canEditAgent,
+  filterDirectory,
+  groupDirectory,
+  type DirectoryFilter,
+} from "./model";
 import { useAgentSettingsParam, useCrewSettingsParam } from "./params";
 import {
   useArchivedDirectory,
   useDirectory,
   useAgent,
+  useMe,
+  useOrgRole,
   useSpaces,
 } from "./queries";
 
@@ -69,6 +76,8 @@ export function AgentsPage({ space }: { space?: AgentsPageSpace } = {}) {
   // 空间页的「显示已归档（N）」只数本空间；全局页沿用目录接口给的总数，不多发请求
   const archivedInSpace = useArchivedDirectory(orgId, Boolean(space));
   const spaces = useSpaces(orgId);
+  const me = useMe();
+  const orgRole = useOrgRole(orgId);
   const agentDrawer = useAgentSettingsParam();
   const crewDrawer = useCrewSettingsParam();
   const pin = usePinEntry(orgId);
@@ -122,6 +131,8 @@ export function AgentsPage({ space }: { space?: AgentsPageSpace } = {}) {
 
   const actions: CardActions = {
     onOpen: open,
+    onBindComputer: (entry) =>
+      agentDrawer.open(entry.id, entry.space_id, "runtime-settings"),
     onChat: (entry) => navigate(chatPath(orgId, entry)),
     onFavorite: (entry) =>
       favorite.mutate({ target: entry, favorite: !entry.favorite }),
@@ -142,8 +153,8 @@ export function AgentsPage({ space }: { space?: AgentsPageSpace } = {}) {
       return next;
     });
 
-  // 空间页页头矮一些（与任务、技能页一致），按钮用 28 尺寸
-  const buttonSize = space ? "28" : undefined;
+  // 组织页与空间页统一采用 44px 页头与 28 尺寸操作按钮
+  const buttonSize = "28" as const;
   const headerActions = (
     <>
       <Menu
@@ -190,11 +201,11 @@ export function AgentsPage({ space }: { space?: AgentsPageSpace } = {}) {
 
   const body = (
     <>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <div
           role="radiogroup"
           aria-label={t("agents.directory.filters.label")}
-          className="flex flex-1 gap-2"
+          className="flex min-w-0 flex-1 flex-wrap gap-2"
         >
           {FILTERS.map((value) => (
             <button
@@ -322,6 +333,11 @@ export function AgentsPage({ space }: { space?: AgentsPageSpace } = {}) {
                       key={`${entry.type}:${entry.id}`}
                       entry={entry}
                       actions={actions}
+                      canEdit={
+                        entry.type === "agent" &&
+                        me.isSuccess &&
+                        canEditAgent(entry, me.data?.id, orgRole)
+                      }
                     />
                   ))}
                 </div>
@@ -409,21 +425,27 @@ export function AgentsPage({ space }: { space?: AgentsPageSpace } = {}) {
 
   if (!space)
     return (
-      <div className="@container mx-auto flex max-w-[1100px] flex-col gap-4 px-8 pt-3 pb-10">
-        <header className="flex min-h-16 flex-wrap items-center gap-2 border-b border-line-default">
-          <h1 className="flex-auto text-heading font-medium">
+      <div className="flex h-full flex-col">
+        <header className="flex min-h-11 shrink-0 flex-wrap items-center gap-2 border-b border-line-default px-4 py-1">
+          <h1 className="min-w-0 flex-1 truncate text-body font-medium">
             {t("agents.directory.title")}
           </h1>
-          {headerActions}
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {headerActions}
+          </div>
         </header>
-        {body}
+        <div className="min-h-0 flex-1 overflow-auto">
+          <div className="@container mx-auto flex max-w-[1100px] flex-col gap-4 px-6 pt-4 pb-10">
+            {body}
+          </div>
+        </div>
       </div>
     );
 
   // 空间页：面包屑页头沿用任务、技能页的写法（空间图标 · 空间名 › Agents）
   return (
     <div className="flex h-full flex-col">
-      <header className="flex h-11 shrink-0 items-center gap-2 border-b border-line-default px-4">
+      <header className="flex min-h-11 shrink-0 flex-wrap items-center gap-2 border-b border-line-default px-4 py-1">
         <nav
           aria-label={t("agents.directory.breadcrumb")}
           className="flex min-w-0 flex-1 items-center gap-1.5 text-body"
@@ -432,15 +454,24 @@ export function AgentsPage({ space }: { space?: AgentsPageSpace } = {}) {
           <span className="truncate text-fg-muted" title={space.name}>
             {space.name}
           </span>
-          <Icon name="chevron-right" size={12} className="text-fg-subtle" />
+          <Icon
+            name="chevron-right"
+            size={12}
+            className="shrink-0 text-fg-subtle"
+          />
           <h1 className="shrink-0 font-medium">
             {t("agents.directory.spaceTitle")}
           </h1>
+          <span className="hidden shrink-0 rounded-full bg-surface-muted px-2 py-0.5 text-caption text-fg-muted sm:inline">
+            {t("agents.directory.spaceScope")}
+          </span>
         </nav>
-        {headerActions}
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {headerActions}
+        </div>
       </header>
       <div className="min-h-0 flex-1 overflow-auto">
-        <div className="@container mx-auto flex max-w-[1100px] flex-col gap-4 px-8 pt-3 pb-10">
+        <div className="@container mx-auto flex max-w-[1100px] flex-col gap-4 px-6 pt-4 pb-10">
           {body}
         </div>
       </div>
