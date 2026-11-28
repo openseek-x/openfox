@@ -108,6 +108,7 @@ function createBrowserHost({
     if (mounted) {
       mounted.control?.takeOver();
       mounted.visible = false;
+      mounted.occluded = false;
       show(mounted);
     }
     mounted = null;
@@ -442,6 +443,7 @@ function createBrowserHost({
             active: null,
             bounds: null,
             visible: false,
+            occluded: false,
             downloads: [],
           };
           group.annotations = createAnnotations({
@@ -460,15 +462,21 @@ function createBrowserHost({
               open: (url) => openTab(group, url),
               focus: (id) => setActive(group, id),
               closeTab: (id) => removeTab(group, id),
-              visible: () =>
-                Boolean(
+              visible: () => {
+                const active = group.tabs.get(group.active);
+                return Boolean(
                   mounted === group &&
+                  !suspended &&
                   window.isVisible() &&
                   !window.isMinimized() &&
-                  group.visible &&
                   group.bounds &&
-                  group.tabs.get(group.active)?.surface.view.getVisible(),
-                ),
+                  active &&
+                  !active.error &&
+                  active.url !== "about:blank" &&
+                  (group.occluded ||
+                    (group.visible && active.surface.view.getVisible())),
+                );
+              },
               changed: () => {
                 show(group);
                 emit(group);
@@ -521,15 +529,23 @@ function createBrowserHost({
         emit(group);
         return state(group);
       }
+      const transientOcclusion =
+        input.action === "layout" &&
+        input.visible !== true &&
+        input.occluded === true &&
+        Boolean(group.bounds);
       if (
         !["layout", "reveal-download", "open-external"].includes(
           input.action,
         ) ||
-        (input.action === "layout" && input.visible !== true)
+        (input.action === "layout" &&
+          input.visible !== true &&
+          !transientOcclusion)
       )
         group.control?.takeOver();
       if (input.action === "layout") {
         group.visible = input.visible === true;
+        group.occluded = transientOcclusion;
         if (input.bounds) {
           const zoom = window.webContents.getZoomFactor();
           const bounds = Object.fromEntries(
@@ -543,6 +559,7 @@ function createBrowserHost({
         show(group);
       } else if (input.action === "hide") {
         group.visible = false;
+        group.occluded = false;
         show(group);
       } else if (input.action === "open") openTab(group, input.url);
       else if (input.action === "focus") setActive(group, input.tabId);

@@ -50,6 +50,7 @@ export function BrowserPanel({ session }: { session: BrowserSession }) {
   const addressInput = useRef<HTMLInputElement>(null);
   const lastLayout = useRef<{
     visible: boolean;
+    occluded: boolean;
     x: number;
     y: number;
     width: number;
@@ -214,29 +215,42 @@ export function BrowserPanel({ session }: { session: BrowserSession }) {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         const rect = element.getBoundingClientRect();
-        const occluded = [
+        const isShown = (node: Element) =>
+          node.getClientRects().length > 0 &&
+          getComputedStyle(node).visibility !== "hidden";
+        // 模态弹窗与设置抽屉表示离开当前浏览上下文，隐藏原生视图并结束共用；
+        // 下拉菜单（「更多」「下载」）与列表仅瞬时遮挡视口，隐藏原生视图以免遮盖菜单但不撤权。
+        const modalOccluded = [
           ...document.querySelectorAll(
-            '[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"], [data-openfox-settings-drawer]',
+            '[role="dialog"], [role="alertdialog"], [data-openfox-settings-drawer]',
           ),
-        ].some(
-          (node) =>
-            node.getClientRects().length > 0 &&
-            getComputedStyle(node).visibility !== "hidden",
-        );
+        ].some(isShown);
+        const menuOccluded = [
+          ...document.querySelectorAll('[role="menu"], [role="listbox"]'),
+        ].some(isShown);
+        const hasBounds = rect.width >= 1 && rect.height >= 1;
         const visible =
-          !document.hidden && !occluded && rect.width >= 1 && rect.height >= 1;
+          !document.hidden && !modalOccluded && !menuOccluded && hasBounds;
+        // 窗口真正 hide/minimize 由主进程窗口事件撤权；此处允许瞬时菜单与外部应用覆盖保留共用
+        const occluded =
+          !visible &&
+          hasBounds &&
+          !modalOccluded &&
+          (menuOccluded || document.hidden);
         const next = {
           visible,
+          occluded,
           x: Math.round(rect.x),
           y: Math.round(rect.y),
           width: Math.round(rect.width),
           height: Math.round(rect.height),
         };
         const prev = lastLayout.current;
-        // 仅在可见性或像素边界真实变化时下发原生布局，避免流式输出触发无意义 IPC
+        // 仅在可见性、遮挡类型或像素边界真实变化时下发原生布局，避免流式输出触发无意义 IPC
         if (
           prev &&
           prev.visible === next.visible &&
+          prev.occluded === next.occluded &&
           (!next.visible ||
             (prev.x === next.x &&
               prev.y === next.y &&
@@ -250,6 +264,7 @@ export function BrowserPanel({ session }: { session: BrowserSession }) {
             lease: state.lease,
             action: "layout",
             visible,
+            ...(occluded ? { occluded: true } : {}),
             ...(visible
               ? {
                   bounds: {

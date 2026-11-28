@@ -505,3 +505,248 @@ test("dual sidebars: top-right workspace toggle, inline comments/proposals tabs 
     page.getByRole("button", { name: "展开侧边栏", exact: true }),
   ).toHaveCount(0);
 });
+
+test("W01: right workspace switches cleanly between 2-row (459px) and single 44px row (460px) from both sides", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  for (const theme of ["dark", "light"] as const) {
+    await mockArtifacts(page, theme);
+    await page.goto("/o/o1/chat/c1?artifact=md");
+    const panel = page.getByRole("complementary", { name: "会话产物" });
+    await expect(
+      panel.getByRole("heading", { name: "产物预览" }),
+    ).toBeVisible();
+    const handle = page.getByRole("separator", { name: "调整产物面板宽度" });
+    const dragToWidth = async (target: number) => {
+      const box = (await panel.boundingBox())!;
+      const handleBox = (await handle.boundingBox())!;
+      const delta = box.width - target;
+      const cx = handleBox.x + handleBox.width / 2;
+      const cy = handleBox.y + 40;
+      await page.mouse.move(cx, cy);
+      await page.mouse.down();
+      await page.mouse.move(cx + delta, cy, { steps: 6 });
+      await page.mouse.up();
+      await expect
+        .poll(async () => Math.round((await panel.boundingBox())!.width))
+        .toBe(target);
+      await expect(handle).toHaveAttribute("aria-valuenow", String(target));
+    };
+    const isSingleRow = async () => {
+      const panelBox = (await panel.boundingBox())!;
+      const previewBtn = panel.getByRole("button", {
+        name: "预览",
+        exact: true,
+      });
+      const btnBox = (await previewBtn.boundingBox())!;
+      return btnBox.y - panelBox.y < 44;
+    };
+
+    for (const [width, expectedSingle] of [
+      [461, true],
+      [460, true],
+      [459, false],
+      [280, false],
+      [460, true],
+    ] as const) {
+      await dragToWidth(width);
+      expect(await isSingleRow()).toBe(expectedSingle);
+      const overflowX = await page.evaluate(
+        () => document.documentElement.scrollWidth > window.innerWidth,
+      );
+      expect(overflowX).toBe(false);
+    }
+  }
+});
+
+test("W02 & W05: locating a long-document annotation from draft tray and saved comments scrolls into view and retains selection", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const longMarkdown = [
+    "# 季度验收报告",
+    ...Array.from(
+      { length: 80 },
+      (_, i) => `第 ${i + 1} 段：核对长文审阅、定位滚动与选区保持能力。`,
+    ),
+    "请修改**原文**位置。",
+  ].join("\n\n");
+  const start = Buffer.byteLength(
+    longMarkdown.slice(0, longMarkdown.indexOf("原文")),
+  );
+  const end = Buffer.byteLength(
+    longMarkdown.slice(0, longMarkdown.indexOf("原文") + 2),
+  );
+  const longArtifact = {
+    ...artifacts[1]!,
+    id: "md-long",
+    name: "报告.md",
+    content_id: "content-md-long",
+    head_artifact_id: "md-long",
+    size_bytes: Buffer.byteLength(longMarkdown),
+  };
+  await mockArtifacts(page, "dark");
+  await page.route("**/api/**", async (route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    if (pathname === `${org}/conversations/c1/artifacts`)
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ artifacts: [longArtifact] }),
+      });
+    if (pathname === `${org}/runs/r1/artifacts/md-long`)
+      return route.fulfill({
+        status: 200,
+        contentType: "text/markdown",
+        body: longMarkdown,
+      });
+    if (pathname === `${org}/conversations/c1/comments`)
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          threads: [
+            {
+              id: "thread-1",
+              version: 1,
+              status: "OPEN",
+              source: {
+                name: "报告.md",
+                file: {
+                  id: "fc-1",
+                  artifact_id: "md-long",
+                  sha256: longArtifact.sha256,
+                  comments: [
+                    {
+                      thread_id: "thread-1",
+                      body: "请核对末段",
+                      anchor: { kind: "text", start, end, quote: "原文" },
+                    },
+                  ],
+                },
+              },
+              comments: [
+                {
+                  id: "post-1",
+                  author_id: "u1",
+                  body: "请核对末段",
+                  created_at: ts,
+                },
+              ],
+            },
+          ],
+          next_cursor: "",
+        }),
+      });
+    return route.fallback();
+  });
+
+  await page.goto("/o/o1/chat/c1?artifact=md-long");
+  const panel = page.getByRole("complementary", { name: "会话产物" });
+  await expect(
+    panel.getByRole("heading", { name: "季度验收报告" }),
+  ).toBeVisible();
+
+  // 开启批注，滚至末段并选「原文」创建待发送草稿，再就地修改意见
+  await panel.getByRole("button", { name: "批注", exact: true }).click();
+  const target = panel.getByText("原文", { exact: true }).last();
+  await target.scrollIntoViewIfNeeded();
+  await target.evaluate((el) => {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection()!;
+    sel.removeAllRanges();
+    sel.addRange(range);
+  });
+  await target.dispatchEvent("mouseup");
+  await page
+    .getByRole("textbox", { name: "针对选区的修改意见" })
+    .fill("第一版");
+  await page.getByRole("button", { name: "添加到聊天", exact: true }).click();
+  await page.getByRole("button", { name: "编辑批注", exact: true }).click();
+  await page.getByRole("textbox", { name: "编辑批注" }).fill("修改后的意见");
+  await page.getByRole("button", { name: "保存", exact: true }).click();
+
+  const assertLocatedAndRetained = async () => {
+    await expect
+      .poll(async () =>
+        page.evaluate(() => {
+          const code = document.querySelector("pre > code");
+          const state = code?.getAttribute("data-highlight-state");
+          const sel = window.getSelection();
+          if (!sel || sel.rangeCount === 0)
+            return { state, text: "", visible: false };
+          const range = sel.getRangeAt(0);
+          const rect = range.getBoundingClientRect();
+          const scroller = code?.closest("div.overflow-auto");
+          const sRect = scroller?.getBoundingClientRect();
+          const visible = Boolean(
+            sRect &&
+            rect.height > 0 &&
+            rect.top >= sRect.top - 1 &&
+            rect.bottom <= sRect.bottom + 1,
+          );
+          return { state, text: sel.toString(), visible };
+        }),
+      )
+      .toEqual({ state: "ready", text: "原文", visible: true });
+    // 停留 500ms 后复检，确认不会被异步高亮或父级滚动恢复清空
+    await page.waitForTimeout(500);
+    const stable = await page.evaluate(() => {
+      const code = document.querySelector("pre > code");
+      const sel = window.getSelection();
+      const rect = sel?.rangeCount
+        ? sel.getRangeAt(0).getBoundingClientRect()
+        : null;
+      const sRect = code?.closest("div.overflow-auto")?.getBoundingClientRect();
+      return {
+        text: sel?.toString() ?? "",
+        visible: Boolean(
+          rect &&
+          sRect &&
+          rect.top >= sRect.top - 1 &&
+          rect.bottom <= sRect.bottom + 1,
+        ),
+      };
+    });
+    expect(stable).toEqual({ text: "原文", visible: true });
+  };
+
+  // 路径 A（W02 已关）：滚回文首并关闭面板后，从草稿托盘定位原文
+  await panel
+    .locator("div.overflow-auto")
+    .first()
+    .evaluate((el) => {
+      el.scrollTop = 0;
+    });
+  await page.evaluate(() => window.getSelection()?.removeAllRanges());
+  await panel
+    .getByRole("button", { name: "关闭产物面板", exact: true })
+    .click();
+  await expect(panel).toHaveCount(0);
+  await page.getByText("修改后的意见").click();
+  await page.getByRole("button", { name: "打开 报告.md", exact: true }).click();
+  await assertLocatedAndRetained();
+
+  // 路径 B（W02 已开）：面板保持打开、切回预览并滚回文首，再次从草稿托盘定位原文
+  await panel.getByRole("button", { name: "预览", exact: true }).click();
+  await panel
+    .locator("div.overflow-auto")
+    .first()
+    .evaluate((el) => {
+      el.scrollTop = 0;
+    });
+  await page.evaluate(() => window.getSelection()?.removeAllRanges());
+  await page.getByRole("button", { name: "打开 报告.md", exact: true }).click();
+  await assertLocatedAndRetained();
+
+  // W05：从已保存评论标签点击「查看来源」，打开原文并滚入视口保留选区
+  await page.getByRole("button", { name: "更多操作", exact: true }).click();
+  await page
+    .getByRole("menuitem", { name: "已保存的评论", exact: true })
+    .click();
+  await panel.locator("summary").filter({ hasText: "请核对末段" }).click();
+  await panel.getByRole("button", { name: "查看来源", exact: true }).click();
+  await assertLocatedAndRetained();
+});

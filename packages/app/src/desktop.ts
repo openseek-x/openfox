@@ -377,6 +377,8 @@ export interface DesktopBrowserCommand {
   tabId?: string;
   url?: string;
   visible?: boolean;
+  /** 原生视图因瞬时菜单或窗口被其他应用遮挡而暂时隐藏，保留当前标签上下文与 Agent 共用。 */
+  occluded?: boolean;
   bounds?: { x: number; y: number; width: number; height: number };
   downloadId?: string;
   runId?: string;

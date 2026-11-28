@@ -1,4 +1,5 @@
 import { RestoreProposal } from "../proposals/RestoreProposal";
+import { peekFileLocation } from "./fileLocation";
 import { previewCapabilities } from "./previewProtocol";
 import { useViewState, usePreviewScroll } from "./viewState";
 import { ArtifactReview } from "./ArtifactReview";
@@ -85,10 +86,15 @@ export function ArtifactPreview({
     .reduce((sum, item) => sum + item.comments.length, 0);
   const infoRef = useRef<HTMLButtonElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const hasPendingLocation = Boolean(
+    conversationId &&
+    peekFileLocation(conversationId, artifact.id, artifact.sha256),
+  );
   usePreviewScroll(
     scrollRef,
     Boolean(content.data),
     source ? "source" : "preview",
+    hasPendingLocation,
   );
   const large = artifact.size_bytes > ARTIFACT_LARGE_TEXT_BYTES;
   const canSwitch = hasText && !large && capabilities.sourceToggle;
@@ -344,6 +350,7 @@ export function ArtifactPreview({
               artifact={artifact}
               embedded
               sourceMode={source}
+              onSourceChange={setSource}
               annotate={!historical && annotate}
             />
           ) : kind === "office" ? (

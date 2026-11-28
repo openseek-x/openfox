@@ -37,3 +37,17 @@
 ## 配置、数据与回退
 
 无配置文件、接口契约、SQL 或持久化数据结构破坏性变更；工作区标签状态沿用既有本地存储键，新增 `comments` / `proposals` 路由参数向后无兼容负担；回退直接回滚本分支提交即可。
+
+## 联合验收复盘修复（`ccf19fca-e66f-4d62-a34a-3feeb695724c`）
+
+针对 Web 与 macOS 联合验收报告指出的三项不通过问题，在原 PR #36 分支（`feat/ope-23-sidebar-experience`）完成定点修复与复验：
+
+1. **Web W01（外宽 460px 工具栏断点偏差）**：`ArtifactPanel.tsx` 改用 `useLayoutEffect` 与含 1px 左边框的 border-box 外宽（`Math.round(asideEl.getBoundingClientRect().width) || asideEl.offsetWidth`）对齐分隔条 `aria-valuenow` 口径，确保从宽/窄双侧拖至 `460px` 在开发服务与生产构建预览、深浅主题下均为 `44px` 单行，`459px` 及 `280px` 稳定回落两行。
+2. **Web W02 / W05（长文批注返回原文停在顶部且选区被清空）**：
+   - `fileLocation.ts` 改为只读查看 `peekFileLocation` + 按请求 `id` 确认后消费 `consumeFileLocation`，消除开发模式 React StrictMode 挂载重放提前吞掉请求的问题；
+   - `useHighlight.tsx` 与 `CodeView.tsx` 暴露 `data-highlight-state="pending" | "ready" | "plain"`；`ArtifactReview.tsx` 修复 `annotate` / `sourceMode` 初始挂载误清状态，同步回写 `ArtifactPreview` 工具栏源码态，按 `Range` 实际几何位置计算滚动容器并将目标文本滚入可视区中央，并在异步语法高亮替换 DOM 节点完成后重选并复核滚动；
+   - `viewState.tsx` 与 `ArtifactPreview.tsx` 在存在待定位请求时跳过历史滚动位置恢复，防止父级 `usePreviewScroll` 将滚动条拉回文首。
+3. **macOS M01（打开「更多」菜单与系统外开返回后中断 Agent 活动共用）**：
+   - `desktop.ts` 与 `BrowserPanel.tsx` 将瞬时下拉菜单（`[role="menu"]` / `[role="listbox"]`）和外部应用遮挡（`document.hidden`）与模态框/设置抽屉区分，发送 `layout { visible: false, occluded: true }`；模态框、设置抽屉及视口坍缩仍发送不带 `occluded` 的隐藏布局触发撤权；
+   - `apps/desktop/browser/host.cjs` 收到带有效 `group.bounds` 的 `occluded: true` 瞬时遮挡时隐藏原生 `WebContentsView` 与 `InputShield`（防止遮挡菜单与点击穿透）但不调用 `takeOver()`，并在 `createAgentControl.visible()` 中放行瞬时遮挡态以保障同一活跃运行在菜单开启及系统外开返回期间可连续操作；窗口真正 `hide`/`minimize`、`suspend`、面板卸载 `hide`、页面崩溃及用户主动点击「接管」仍立即撤权。
+4. **复验结果**：`pnpm lint`（0 错）、全量 Vitest（245 文件 / 2,412 用例）、`@openfox/desktop` 单元（129/129）、真实 Electron 45 集成测试（`agent-control` / `host` / `annotations` 3/3）、Playwright E2E（`artifact-preview.spec.ts` 7/7 含新增 W01/W02/W05 用例）、`pnpm dev` 与 `rsbuild preview` 实机 1.7s 稳态复测、以及真实 Electron 45 预备+活动两轮实机复测均通过。真实后端持久化/真实 Agent 联调（缺可写测试账号）与物理键盘实按仍标注为环境受限项。

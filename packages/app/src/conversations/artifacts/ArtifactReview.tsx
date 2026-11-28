@@ -1,4 +1,8 @@
-import { takeFileLocation } from "./fileLocation";
+import {
+  consumeFileLocation,
+  peekFileLocation,
+  type PendingFileLocation,
+} from "./fileLocation";
 import {
   capturePreviewSelection,
   previewCapabilities,
@@ -30,6 +34,99 @@ import { SelectionComment, type CommentSelection } from "./SelectionComment";
 import { domTextAnchor, type SelectionRect } from "./selection";
 const button =
   "rounded-md border border-line-default px-2 py-1 text-body-sm hover:bg-surface-hover disabled:opacity-50";
+
+/** 在源码代码块（含异步语法高亮拆分后的多个文本节点）中重建精确 DOM 选区。 */
+function selectCodeRange(
+  code: HTMLElement,
+  text: string,
+  byteStart: number,
+  byteEnd: number,
+): Range | null {
+  const bytes = new TextEncoder().encode(text);
+  const toCharOffset = (n: number) =>
+    new TextDecoder("utf-8", { ignoreBOM: true }).decode(
+      bytes.slice(0, Math.max(0, Math.min(bytes.length, n))),
+    ).length;
+  let start = toCharOffset(byteStart);
+  let end = toCharOffset(byteEnd);
+  const rendered = code.textContent ?? "";
+  // 若高亮器将 CRLF 归一化为 LF，按渲染后的换行偏移折算
+  if (rendered !== text && !text.startsWith(rendered)) {
+    const normalized = text.replace(/\r\n/g, "\n");
+    if (rendered === normalized || normalized.startsWith(rendered)) {
+      start = text.slice(0, start).replace(/\r\n/g, "\n").length;
+      end = text.slice(0, end).replace(/\r\n/g, "\n").length;
+    }
+  }
+  if (end < start) return null;
+  const walker = document.createTreeWalker(code, NodeFilter.SHOW_TEXT);
+  const range = document.createRange();
+  let at = 0;
+  let node: Node | null;
+  let begun = false;
+  while ((node = walker.nextNode())) {
+    const next = at + (node.textContent?.length ?? 0);
+    if (!begun && start >= at && start < next) {
+      range.setStart(node, start - at);
+      begun = true;
+    }
+    if (begun && end <= next) {
+      range.setEnd(node, end - at);
+      return range;
+    }
+    at = next;
+  }
+  return null;
+}
+
+function findScrollContainer(el: Element | null): HTMLElement | null {
+  let current = el?.parentElement ?? null;
+  while (current) {
+    const overflowY = getComputedStyle(current).overflowY;
+    if (
+      (overflowY === "auto" || overflowY === "scroll") &&
+      current.scrollHeight > current.clientHeight
+    )
+      return current;
+    current = current.parentElement;
+  }
+  return null;
+}
+
+/** 按 Range 实际几何位置将目标文本滚入可视区域中央，避免滚动整块 <code> 失效。 */
+function scrollRangeIntoView(range: Range, code: HTMLElement) {
+  const rect =
+    range.getClientRects?.()[0] ?? range.getBoundingClientRect?.() ?? null;
+  if (rect && (rect.width > 0 || rect.height > 0)) {
+    const scroller = findScrollContainer(code);
+    if (scroller) {
+      const box = scroller.getBoundingClientRect();
+      const targetTop =
+        scroller.scrollTop +
+        (rect.top - box.top) -
+        Math.max(0, (box.height - rect.height) / 2);
+      const maxTop = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+      scroller.scrollTop = Math.max(0, Math.min(maxTop, targetTop));
+    }
+    const pre = code.parentElement;
+    if (pre && pre.scrollWidth > pre.clientWidth) {
+      const preBox = pre.getBoundingClientRect();
+      if (rect.left < preBox.left || rect.right > preBox.right) {
+        const targetLeft =
+          pre.scrollLeft +
+          (rect.left - preBox.left) -
+          Math.max(0, (preBox.width - rect.width) / 2);
+        const maxLeft = Math.max(0, pre.scrollWidth - pre.clientWidth);
+        pre.scrollLeft = Math.max(0, Math.min(maxLeft, targetLeft));
+      }
+    }
+    return;
+  }
+  (range.startContainer.parentElement ?? code)?.scrollIntoView?.({
+    block: "center",
+  });
+}
+
 export type NativeCommentSource = {
   spaceId: string;
   nodeId: string;
@@ -43,6 +140,7 @@ export function ArtifactReview({
   nativeSource,
   embedded = false,
   sourceMode = false,
+  onSourceChange,
   annotate = false,
 }: {
   orgId: string;
@@ -51,6 +149,7 @@ export function ArtifactReview({
   nativeSource?: NativeCommentSource;
   embedded?: boolean;
   sourceMode?: boolean;
+  onSourceChange?: (source: boolean) => void;
   annotate?: boolean;
 }) {
   const t = useT();
@@ -97,81 +196,157 @@ export function ArtifactReview({
   >(null);
   const [error, setError] = useState("");
   const [source, setSource] = useState(sourceMode);
-  const [located, setLocated] = useState<ArtifactReviewAnchor | null>(null);
+  const [located, setLocated] = useState<PendingFileLocation | null>(null);
+  const prevAnnotate = useRef(annotate);
   useEffect(() => {
-    if (!annotate) {
+    if (prevAnnotate.current && !annotate) {
       setSelection(null);
       setError("");
-      setLocated(null);
     }
+    prevAnnotate.current = annotate;
   }, [annotate]);
-  useEffect(() => setSource(sourceMode), [sourceMode]);
+  const prevSourceMode = useRef(sourceMode);
+  useEffect(() => {
+    if (prevSourceMode.current !== sourceMode) {
+      prevSourceMode.current = sourceMode;
+      setSource(sourceMode);
+    }
+  }, [sourceMode]);
   useEffect(() => {
     if (!hasContent) return;
     const locate = () => {
-      const a = takeFileLocation(conversationId, artifact.id, artifact.sha256);
-      if (!a) return;
-      if (a.kind === "text") setSource(true);
-      setLocated(a);
+      const req = peekFileLocation(
+        conversationId,
+        artifact.id,
+        artifact.sha256,
+      );
+      if (!req) return;
+      if (req.anchor.kind === "text") {
+        setSource(true);
+        onSourceChange?.(true);
+      }
+      setLocated((current) => (current?.id === req.id ? current : req));
     };
     locate();
     window.addEventListener("openfox:file-locate", locate);
     return () => window.removeEventListener("openfox:file-locate", locate);
-  }, [conversationId, artifact.id, artifact.sha256, hasContent]);
+  }, [
+    conversationId,
+    artifact.id,
+    artifact.sha256,
+    hasContent,
+    onSourceChange,
+  ]);
   const [page, setPage] = useViewState("csv.pageIndex", 0);
   const previewRef = useRef<HTMLDivElement>(null);
   const cellsRef = useRef<HTMLDivElement>(null);
-  usePreviewScroll(cellsRef, Boolean(data), "cells");
+  usePreviewScroll(
+    cellsRef,
+    Boolean(data),
+    "cells",
+    Boolean(peekFileLocation(conversationId, artifact.id, artifact.sha256)),
+  );
   const downloadUrl = artifact.run_id
     ? api.runs.artifactUrl(orgId, artifact.run_id, artifact.id)
     : "";
   useEffect(() => {
     if (!located || !data) return;
-    if (located.kind === "cell") {
-      const targetPage = Math.floor((located.row ?? 0) / 50);
+    const { id: requestId, anchor } = located;
+    const finish = (clearState = true) => {
+      consumeFileLocation(
+        conversationId,
+        artifact.id,
+        artifact.sha256,
+        requestId,
+      );
+      if (clearState)
+        setLocated((current) => (current?.id === requestId ? null : current));
+    };
+
+    if (anchor.kind === "cell") {
+      const targetPage = Math.floor((anchor.row ?? 0) / 50);
       if (targetPage !== page) {
         setPage(targetPage);
         return;
       }
-      cellsRef.current
-        ?.querySelector<HTMLButtonElement>(
-          `[data-cell="${located.row ?? 0}:${located.column ?? 0}"]`,
-        )
-        ?.focus();
-      setLocated(null);
-    } else if (located.kind === "text" && source && previewRef.current) {
-      const code = previewRef.current.querySelector("pre > code");
-      if (!code) return;
-      const bytes = new TextEncoder().encode(text);
-      const offset = (n: number) =>
-        new TextDecoder("utf-8", { ignoreBOM: true }).decode(bytes.slice(0, n))
-          .length;
-      const start = offset(located.start),
-        end = offset(located.end);
-      const walker = document.createTreeWalker(code, NodeFilter.SHOW_TEXT);
-      const range = document.createRange();
-      let at = 0,
-        node: Node | null,
-        begun = false;
-      while ((node = walker.nextNode())) {
-        const next = at + (node.textContent?.length ?? 0);
-        if (!begun && start >= at && start < next) {
-          range.setStart(node, start - at);
-          begun = true;
-        }
-        if (begun && end <= next) {
-          range.setEnd(node, end - at);
-          previewRef.current.focus({ preventScroll: true });
-          window.getSelection()?.removeAllRanges();
-          window.getSelection()?.addRange(range);
-          node.parentElement?.scrollIntoView?.({ block: "nearest" });
-          break;
-        }
-        at = next;
-      }
-      setLocated(null);
+      const cell = cellsRef.current?.querySelector<HTMLButtonElement>(
+        `[data-cell="${anchor.row ?? 0}:${anchor.column ?? 0}"]`,
+      );
+      cell?.scrollIntoView?.({ block: "center", inline: "nearest" });
+      cell?.focus({ preventScroll: true });
+      finish(true);
+      return;
     }
-  }, [located, text, source, page, setPage, data]);
+
+    if (anchor.kind !== "text") {
+      finish(false);
+      return;
+    }
+
+    if (!source || !previewRef.current) return;
+    const root = previewRef.current;
+    const code = root.querySelector<HTMLElement>("pre > code");
+    if (!code) {
+      finish(true);
+      return;
+    }
+
+    const apply = () => {
+      const range = selectCodeRange(code, text, anchor.start, anchor.end);
+      if (!range) return false;
+      root.focus({ preventScroll: true });
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+      scrollRangeIntoView(range, code);
+      return true;
+    };
+
+    // 立即选区并滚动一次；若代码高亮正在异步加载，待高亮节点替换完成后再重选与确认滚动位置
+    apply();
+    if (code.dataset.highlightState !== "pending") {
+      const frame = requestAnimationFrame(() => {
+        apply();
+        finish(true);
+      });
+      return () => cancelAnimationFrame(frame);
+    }
+
+    let done = false;
+    let frame = 0;
+    const settle = () => {
+      if (done || code.dataset.highlightState === "pending") return;
+      done = true;
+      observer.disconnect();
+      apply();
+      frame = requestAnimationFrame(() => {
+        apply();
+        finish(true);
+      });
+    };
+    const observer = new MutationObserver(settle);
+    observer.observe(code, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["data-highlight-state"],
+    });
+    settle();
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+    };
+  }, [
+    located,
+    text,
+    source,
+    page,
+    setPage,
+    data,
+    conversationId,
+    artifact.id,
+    artifact.sha256,
+  ]);
   const csv = useMemo(() => {
     if (artifactPreviewKind(artifact) !== "table" || !data) return null;
     try {
@@ -235,7 +410,7 @@ export function ArtifactReview({
           name={artifact.name}
           editable={annotate}
           onSelect={choose}
-          located={located}
+          located={located?.anchor ?? null}
           annotations={annotations}
           loadFallback={(signal) =>
             api.artifactReviews.officePreview(
@@ -254,7 +429,7 @@ export function ArtifactReview({
           pdf={artifact.mime_type === "application/pdf"}
           editable={annotate}
           annotations={annotations}
-          located={located}
+          located={located?.anchor ?? null}
           onSelect={choose}
         />
       ) : kind === "table" && !source && !large ? (
@@ -358,7 +533,7 @@ export function ArtifactReview({
               name={artifact.name}
               annotate={annotate}
               onSelect={choose}
-              located={located}
+              located={located?.anchor ?? null}
               onUnmapped={() => setSource(true)}
             />
           ) : (
@@ -470,7 +645,10 @@ export function ArtifactReview({
                   onClick={() => {
                     setSource(artifactPreviewKind(artifact) !== "html");
                     setPage(Math.floor((a.anchor.row ?? 0) / 50));
-                    setLocated({ ...a.anchor });
+                    setLocated({
+                      id: crypto.randomUUID(),
+                      anchor: { ...a.anchor },
+                    });
                   }}
                 >
                   {t("artifacts.review.locate")}

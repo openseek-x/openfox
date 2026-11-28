@@ -477,3 +477,107 @@ it("opens current page in system browser via open-external and reports failures"
     "无法在系统浏览器中打开当前页面",
   );
 });
+
+it("marks dropdown menus as transient occlusion to preserve active Agent control while modals revoke", async () => {
+  current.tabs[0]!.url = "https://example.com/review/panel-b?case=ope23#sample";
+  current.control = {
+    connected: true,
+    pending: false,
+    active: true,
+    epoch: 2,
+    runId: "run-1",
+    generation: 1,
+    clientMessageId: null,
+    origins: ["https://example.com"],
+    error: null,
+  };
+  const frames: FrameRequestCallback[] = [];
+  vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
+    frames.push(cb);
+    return frames.length;
+  });
+  vi.stubGlobal("cancelAnimationFrame", () => {});
+  const rectSpy = vi
+    .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+    .mockReturnValue({
+      x: 10,
+      y: 88,
+      width: 500,
+      height: 600,
+      top: 88,
+      left: 10,
+      right: 510,
+      bottom: 688,
+      toJSON: () => ({}),
+    } as DOMRect);
+  const clientRectsSpy = vi
+    .spyOn(HTMLElement.prototype, "getClientRects")
+    .mockImplementation(function (this: HTMLElement) {
+      return [{ width: 200, height: 100 } as DOMRect] as unknown as DOMRectList;
+    });
+  try {
+    render(panel());
+    const user = userEvent.setup();
+    await waitFor(() => expect(mount).toHaveBeenCalled());
+    const flush = () =>
+      act(() => {
+        const list = frames.splice(0, frames.length);
+        list.forEach((cb) => cb(0));
+      });
+    flush();
+    expect(invoke).toHaveBeenLastCalledWith({
+      lease: "lease-a",
+      action: "layout",
+      visible: true,
+      bounds: { x: 10, y: 88, width: 500, height: 600 },
+    });
+
+    // 打开「更多」菜单：发送 occluded: true 隐藏原生视图但不撤销共用
+    await user.click(screen.getByRole("button", { name: "浏览器更多操作" }));
+    flush();
+    expect(invoke).toHaveBeenLastCalledWith({
+      lease: "lease-a",
+      action: "layout",
+      visible: false,
+      occluded: true,
+    });
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Agent 正在共用浏览器",
+    );
+
+    // 从菜单选择系统外开：仍保留共用并恢复布局
+    await user.click(
+      screen.getByRole("menuitem", { name: "在系统浏览器中打开" }),
+    );
+    flush();
+    expect(invoke).toHaveBeenCalledWith({
+      lease: "lease-a",
+      action: "open-external",
+      tabId: "tab-a",
+    });
+    expect(invoke).toHaveBeenLastCalledWith({
+      lease: "lease-a",
+      action: "layout",
+      visible: true,
+      bounds: { x: 10, y: 88, width: 500, height: 600 },
+    });
+
+    // 打开模态框：不携带 occluded: true，允许宿主撤权
+    const dialog = document.createElement("div");
+    dialog.setAttribute("role", "dialog");
+    document.body.appendChild(dialog);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    flush();
+    expect(invoke).toHaveBeenLastCalledWith({
+      lease: "lease-a",
+      action: "layout",
+      visible: false,
+    });
+    dialog.remove();
+  } finally {
+    rectSpy.mockRestore();
+    clientRectsSpy.mockRestore();
+  }
+});

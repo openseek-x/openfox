@@ -561,6 +561,60 @@ describe("会话产物 · 预览规则", () => {
       within(reopened).getByRole("tab", { name: "报告.md" }),
     ).toHaveAttribute("aria-selected", "true");
   });
+
+  it("右侧工作区按含边框外宽判断 460px 断点：459px 双行、460px 与 461px 均为单行顶栏", async () => {
+    let observedCallback: ResizeObserverCallback | null = null;
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(callback: ResizeObserverCallback) {
+          observedCallback = callback;
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
+    open("/o/o1/chat/c1?artifact=a-md", { list: [MD] });
+    const aside = await panel();
+    await within(aside).findByRole("heading", { name: "周报标题" });
+
+    let outerWidth = 460;
+    vi.spyOn(aside, "getBoundingClientRect").mockImplementation(
+      () => ({ width: outerWidth }) as DOMRect,
+    );
+    // 模拟 1px 左边框导致 clientWidth 比外宽少 1px（460px 外宽对应 459px clientWidth）
+    vi.spyOn(aside, "clientWidth", "get").mockImplementation(
+      () => outerWidth - 1,
+    );
+
+    const triggerResize = (width: number) => {
+      outerWidth = width;
+      act(() => {
+        observedCallback?.([], {} as ResizeObserver);
+      });
+    };
+
+    const toolbarInHeader = () => {
+      const topBar = aside.firstElementChild?.nextElementSibling;
+      const modeGroup = within(aside).getByRole("group", { name: "查看方式" });
+      return Boolean(topBar?.contains(modeGroup));
+    };
+
+    triggerResize(459);
+    expect(toolbarInHeader()).toBe(false);
+
+    triggerResize(460);
+    expect(toolbarInHeader()).toBe(true);
+
+    triggerResize(461);
+    expect(toolbarInHeader()).toBe(true);
+
+    triggerResize(459);
+    expect(toolbarInHeader()).toBe(false);
+
+    triggerResize(460);
+    expect(toolbarInHeader()).toBe(true);
+  });
 });
 
 describe("会话产物 · 实时", () => {

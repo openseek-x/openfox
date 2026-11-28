@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-import { useHighlight } from "./useHighlight";
+import { useHighlightState } from "./useHighlight";
 
 // 只读代码查看器：左侧行号 + 右侧代码（语法高亮，懒加载；加载前或不支持的语言显示纯文本）。
 // 市场文件预览与技能详情共用。
@@ -14,7 +14,7 @@ export function CodeView({
   language: string | null;
 }) {
   const lineCount = useMemo(() => code.split("\n").length, [code]);
-  const highlighted = useHighlight(code, language);
+  const { nodes: highlighted, pending } = useHighlightState(code, language);
   return (
     <div className="flex font-mono text-body-sm leading-6">
       <pre
@@ -27,7 +27,13 @@ export function CodeView({
         data-language={language ?? undefined}
         className="min-w-0 flex-1 overflow-x-auto px-3 py-3"
       >
-        <code>{highlighted ?? code}</code>
+        <code
+          data-highlight-state={
+            pending ? "pending" : highlighted ? "ready" : "plain"
+          }
+        >
+          {highlighted ?? code}
+        </code>
       </pre>
     </div>
   );

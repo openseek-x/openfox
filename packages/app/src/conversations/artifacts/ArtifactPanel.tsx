@@ -14,6 +14,7 @@ import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   type CSSProperties,
@@ -93,15 +94,19 @@ function ArtifactPanelContent({
     },
     [containerRef],
   );
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!asideEl) return;
-    const sync = () => setPanelWidth(asideEl.clientWidth);
+    // 以含边框外宽（border-box）与分隔条 aria-valuenow 统一口径，避免 1px 左边框导致 460px 误判为 459px
+    const sync = () => {
+      const rectWidth = Math.round(asideEl.getBoundingClientRect().width);
+      setPanelWidth(rectWidth || asideEl.offsetWidth);
+    };
     sync();
     if (typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver(sync);
     observer.observe(asideEl);
     return () => observer.disconnect();
-  }, [asideEl]);
+  }, [asideEl, resize.width, expanded]);
   const wideHeader = expanded || panelWidth === 0 || panelWidth >= 460;
   const shortcut = isMacPlatform() ? "⌘⇧\\" : "Ctrl+Shift+\\";
   const queryClient = useQueryClient();

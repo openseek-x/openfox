@@ -293,3 +293,76 @@ it("supports inline editing of pending draft annotations and updates the draft s
     "修改后的批注内容",
   );
 });
+
+it("restores source selection after async highlight and survives StrictMode remount from draft tray", async () => {
+  const longText = [
+    "# 长文报告",
+    ...Array.from({ length: 40 }, (_, i) => `第 ${i + 1} 段正文内容。`),
+    "请修改**原文**位置。",
+  ].join("\n\n");
+  const start = new TextEncoder().encode(
+    longText.slice(0, longText.indexOf("原文")),
+  ).length;
+  const end = new TextEncoder().encode(
+    longText.slice(0, longText.indexOf("原文") + 2),
+  ).length;
+  const longFile: RunArtifact = {
+    ...file,
+    size_bytes: new TextEncoder().encode(longText).length,
+  };
+  const { addFileComment } = await import("../drafts");
+  renderSettings(
+    "/o/o1/chat/c1",
+    chatBase((call) => {
+      if (call.path === `${ORG}/conversations/c1`)
+        return json(200, summary("c1"));
+      if (call.path === `${ORG}/conversations/c1/messages`)
+        return json(200, { messages: [], next_cursor: 0 });
+      if (call.path === `${ORG}/conversations`)
+        return json(200, { conversations: [summary("c1")], next_cursor: null });
+      if (call.path === `${ORG}/conversations/c1/artifacts`)
+        return json(200, { artifacts: [longFile] });
+      if (call.path === `${ORG}/runs/r1/artifacts/a1`)
+        return new Response(longText);
+      return undefined;
+    }),
+    "OWNER",
+    true,
+  );
+  await screen.findByRole("textbox", { name: "输入消息" });
+  act(() => {
+    addFileComment(
+      "c1",
+      {
+        artifact_id: longFile.id,
+        name: longFile.name,
+        sha256: longFile.sha256,
+      },
+      {
+        thread_id: "t-long",
+        anchor: { kind: "text", start, end, quote: "原文" },
+        body: "修改后的意见",
+      },
+    );
+  });
+  const user = userEvent.setup();
+  // 面板初始关闭，在 StrictMode 挂载下从草稿托盘打开原文
+  await user.click(await screen.findByText("修改后的意见"));
+  await user.click(screen.getByRole("button", { name: "打开 报告.md" }));
+  await waitFor(() => {
+    const code = document.querySelector("pre > code");
+    expect(code?.getAttribute("data-highlight-state")).toBe("ready");
+    expect(window.getSelection()?.toString()).toBe("原文");
+  });
+  // 工具栏同步处于源码态，且清除选区后在面板已打开状态下再次点击定位仍可恢复选区
+  expect(screen.getByRole("button", { name: "源码" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  window.getSelection()?.removeAllRanges();
+  expect(window.getSelection()?.toString()).toBe("");
+  await user.click(screen.getByRole("button", { name: "打开 报告.md" }));
+  await waitFor(() => {
+    expect(window.getSelection()?.toString()).toBe("原文");
+  });
+});
