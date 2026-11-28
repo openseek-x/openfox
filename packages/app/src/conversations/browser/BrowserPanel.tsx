@@ -331,6 +331,10 @@ export function BrowserPanel({ session }: { session: BrowserSession }) {
       : annotationMode === "region"
         ? t("artifacts.browser.annotateHintRegion")
         : t("artifacts.browser.annotateHintElement");
+  const showBottomDock =
+    controlBannerVisible ||
+    Boolean(annotation?.enabled && !selection) ||
+    Boolean(binding && !selection);
   return (
     <div
       className="flex min-h-0 flex-1 flex-col"
@@ -338,7 +342,7 @@ export function BrowserPanel({ session }: { session: BrowserSession }) {
     >
       <form
         aria-label={t("artifacts.browser.navigation")}
-        className="@container/browser relative flex h-[52px] min-w-0 shrink-0 items-center gap-1.5 border-b border-line-default px-2"
+        className="@container/browser relative flex h-11 min-w-0 shrink-0 items-center gap-1.5 border-b border-line-subtle bg-surface-canvas px-2"
         onSubmit={(event) => {
           event.preventDefault();
           void command(
@@ -349,28 +353,24 @@ export function BrowserPanel({ session }: { session: BrowserSession }) {
           addressInput.current?.blur();
         }}
       >
-        <div className="flex shrink-0 items-center rounded-full border border-line-default bg-surface-muted p-0.5">
+        <div className="flex shrink-0 items-center gap-0.5">
           <IconButton
             label={t("artifacts.browser.back")}
-            icon={<Icon name="arrow-left" size={16} />}
+            icon={<Icon name="arrow-left" size={15} />}
             size="28"
-            className="rounded-full!"
+            variant="ghost"
             disabled={!active?.canBack}
             onClick={() => void command({ action: "back", tabId: active?.id })}
           />
           <IconButton
             label={t("artifacts.browser.forward")}
-            icon={<Icon name="arrow-right" size={16} />}
+            icon={<Icon name="arrow-right" size={15} />}
             size="28"
-            className="rounded-full!"
+            variant="ghost"
             disabled={!active?.canForward}
             onClick={() =>
               void command({ action: "forward", tabId: active?.id })
             }
-          />
-          <span
-            className="mx-1 h-3.5 w-px bg-line-default"
-            aria-hidden="true"
           />
           <IconButton
             label={t(
@@ -379,10 +379,10 @@ export function BrowserPanel({ session }: { session: BrowserSession }) {
                 : "artifacts.browser.reload",
             )}
             icon={
-              <Icon name={active?.loading ? "x" : "rotate-ccw"} size={16} />
+              <Icon name={active?.loading ? "x" : "rotate-ccw"} size={14} />
             }
             size="28"
-            className="rounded-full!"
+            variant="ghost"
             disabled={!active}
             onClick={() =>
               void command({
@@ -391,42 +391,6 @@ export function BrowserPanel({ session }: { session: BrowserSession }) {
               })
             }
           />
-        </div>
-        <div className="relative shrink-0">
-          <IconButton
-            label={t("artifacts.browser.annotate")}
-            title={t(
-              annotation?.enabled
-                ? "artifacts.browser.stopSelecting"
-                : "artifacts.browser.selectElement",
-            )}
-            icon={<Icon name="hifox-scan-eye" size={18} />}
-            size="32"
-            variant="round"
-            active={annotation?.enabled ?? false}
-            aria-pressed={annotation?.enabled ?? false}
-            className={
-              annotation?.enabled
-                ? "border-accent! bg-accent-soft! text-accent!"
-                : "bg-surface-muted"
-            }
-            disabled={!currentOrigin}
-            onClick={() =>
-              void command({
-                action: "annotate",
-                enabled: !annotation?.enabled,
-                mode: "element",
-              })
-            }
-          />
-          {pendingAnnotations > 0 && (
-            <span
-              aria-hidden="true"
-              className="pointer-events-none absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-medium leading-none text-fg-inverse"
-            >
-              {pendingAnnotations > 99 ? "99+" : pendingAnnotations}
-            </span>
-          )}
         </div>
         <div className="relative flex min-w-0 flex-1 items-center">
           <TextInput
@@ -454,15 +418,15 @@ export function BrowserPanel({ session }: { session: BrowserSession }) {
               }
             }}
             className={cn(
-              "h-[34px] min-w-0 flex-1 rounded-full! bg-surface-muted px-3 text-body-sm",
+              "h-8 min-w-0 flex-1 rounded-lg! border-line-subtle! bg-surface-card! px-2.5 text-body-sm shadow-card",
               !addressFocused && "[&_input]:text-center",
-              addressFocused && address && "pr-8",
+              (addressFocused ? Boolean(address) : hasRealUrl) && "pr-8",
             )}
             spellCheck={false}
             autoComplete="off"
             autoCapitalize="off"
           />
-          {addressFocused && address && (
+          {addressFocused && address ? (
             <button
               type="button"
               aria-label={t("artifacts.browser.clearAddress")}
@@ -472,11 +436,32 @@ export function BrowserPanel({ session }: { session: BrowserSession }) {
                 setAddress("");
                 addressInput.current?.focus();
               }}
-              className="absolute right-2 flex size-5 items-center justify-center rounded-full text-fg-muted hover:bg-surface-hover hover:text-fg-default"
+              className="absolute right-1.5 flex size-5 items-center justify-center rounded text-fg-muted hover:bg-surface-hover hover:text-fg-default"
             >
               <Icon name="x" size={12} />
             </button>
-          )}
+          ) : !addressFocused && hasRealUrl ? (
+            <button
+              type="button"
+              aria-label={t(
+                urlCopied
+                  ? "artifacts.browser.urlCopied"
+                  : "artifacts.browser.copyUrl",
+              )}
+              title={t(
+                urlCopied
+                  ? "artifacts.browser.urlCopied"
+                  : "artifacts.browser.copyUrl",
+              )}
+              onClick={() => void copyCurrentUrl()}
+              className={cn(
+                "absolute right-1.5 hidden size-6 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-surface-hover hover:text-fg-default @[360px]/browser:flex",
+                urlCopied && "text-accent!",
+              )}
+            >
+              <Icon name={urlCopied ? "check" : "copy"} size={13} />
+            </button>
+          ) : null}
         </div>
         <button
           type="submit"
@@ -486,46 +471,89 @@ export function BrowserPanel({ session }: { session: BrowserSession }) {
         >
           {t("artifacts.browser.go")}
         </button>
-        <div className="hidden shrink-0 items-center rounded-full border border-line-default bg-surface-muted p-0.5 @[400px]/browser:flex">
-          <IconButton
-            label={t(
-              urlCopied
-                ? "artifacts.browser.urlCopied"
-                : "artifacts.browser.copyUrl",
-            )}
-            title={t(
-              urlCopied
-                ? "artifacts.browser.urlCopied"
-                : "artifacts.browser.copyUrl",
-            )}
-            icon={<Icon name={urlCopied ? "check" : "copy"} size={15} />}
-            size="28"
-            className={cn("rounded-full", urlCopied && "text-accent!")}
-            disabled={!hasRealUrl}
-            onClick={() => void copyCurrentUrl()}
-          />
-          {!controlBannerVisible && (
+        <div className="flex shrink-0 items-center gap-0.5">
+          <div className="relative shrink-0">
             <IconButton
-              label={controlLabel}
-              title={controlLabel}
-              icon={<Icon name="bot" size={17} />}
+              label={t("artifacts.browser.annotate")}
+              title={t(
+                annotation?.enabled
+                  ? "artifacts.browser.stopSelecting"
+                  : "artifacts.browser.selectElement",
+              )}
+              icon={<Icon name="hifox-scan-eye" size={16} />}
               size="28"
-              className="rounded-full"
-              disabled={controlDisabled}
-              onClick={changeControl}
+              variant="ghost"
+              active={annotation?.enabled ?? false}
+              aria-pressed={annotation?.enabled ?? false}
+              className={cn(
+                "rounded-lg!",
+                annotation?.enabled && "bg-accent-soft! text-accent!",
+              )}
+              disabled={!currentOrigin}
+              onClick={() =>
+                void command({
+                  action: "annotate",
+                  enabled: !annotation?.enabled,
+                  mode: annotation?.enabled ? annotationMode : "element",
+                })
+              }
             />
+            {pendingAnnotations > 0 && (
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute -top-0.5 -right-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-medium leading-none text-fg-inverse"
+              >
+                {pendingAnnotations > 99 ? "99+" : pendingAnnotations}
+              </span>
+            )}
+          </div>
+          {!controlBannerVisible && (
+            <div className="hidden @[400px]/browser:flex">
+              <IconButton
+                label={controlLabel}
+                title={controlLabel}
+                icon={<Icon name="bot" size={16} />}
+                size="28"
+                variant="ghost"
+                disabled={controlDisabled}
+                onClick={changeControl}
+              />
+            </div>
           )}
+          <div className="hidden @[440px]/browser:flex">
+            <Menu
+              label={t("artifacts.browser.downloads")}
+              placement="bottom-end"
+              className="w-72 max-w-[calc(100vw-16px)]"
+              trigger={({ ref, open, toggle }) => (
+                <IconButton
+                  ref={ref}
+                  label={t("artifacts.browser.downloads")}
+                  icon={<Icon name="download" size={15} />}
+                  size="28"
+                  variant="ghost"
+                  active={open}
+                  aria-expanded={open}
+                  aria-haspopup="menu"
+                  onClick={toggle}
+                />
+              )}
+            >
+              <MenuLabel>{t("artifacts.browser.downloads")}</MenuLabel>
+              {downloads}
+            </Menu>
+          </div>
           <Menu
-            label={t("artifacts.browser.downloads")}
+            label={t("artifacts.browser.more")}
             placement="bottom-end"
-            className="w-72 max-w-[calc(100vw-16px)]"
+            className="w-64 max-w-[calc(100vw-16px)]"
             trigger={({ ref, open, toggle }) => (
               <IconButton
                 ref={ref}
-                label={t("artifacts.browser.downloads")}
-                icon={<Icon name="download" size={17} />}
+                label={t("artifacts.browser.more")}
+                icon={<Icon name="more" size={16} />}
                 size="28"
-                className="relative rounded-full"
+                variant="ghost"
                 active={open}
                 aria-expanded={open}
                 aria-haspopup="menu"
@@ -533,190 +561,74 @@ export function BrowserPanel({ session }: { session: BrowserSession }) {
               />
             )}
           >
+            <MenuItem
+              icon={<Icon name={urlCopied ? "check" : "copy"} size={16} />}
+              disabled={!hasRealUrl}
+              onSelect={() => void copyCurrentUrl()}
+            >
+              {t("artifacts.browser.copyUrl")}
+            </MenuItem>
+            <MenuItem
+              icon={<Icon name="external-link" size={16} />}
+              disabled={!currentOrigin}
+              onSelect={() => void openExternal()}
+            >
+              {t("artifacts.browser.openExternal")}
+            </MenuItem>
+            <MenuSeparator />
+            <MenuLabel>{controlStatus}</MenuLabel>
+            <MenuItem
+              icon={
+                <Icon
+                  name={controlBannerVisible ? "shield" : "bot"}
+                  size={16}
+                />
+              }
+              disabled={controlBannerVisible ? false : controlDisabled}
+              onSelect={changeControl}
+            >
+              {controlLabel}
+            </MenuItem>
+            <p className="px-2.5 pb-2 text-caption text-fg-muted">
+              {t("artifacts.browser.privateSession")}
+            </p>
+            <MenuSeparator />
             <MenuLabel>{t("artifacts.browser.downloads")}</MenuLabel>
             {downloads}
+            <MenuSeparator />
+            <MenuItem
+              icon={<Icon name="trash-2" size={16} />}
+              disabled={!state}
+              onSelect={() => {
+                if (window.confirm(t("artifacts.browser.clearConfirm")))
+                  void command({ action: "clear" });
+              }}
+            >
+              {t("artifacts.browser.clear")}
+            </MenuItem>
           </Menu>
         </div>
-        <Menu
-          label={t("artifacts.browser.more")}
-          placement="bottom-end"
-          className="w-64 max-w-[calc(100vw-16px)]"
-          trigger={({ ref, open, toggle }) => (
-            <IconButton
-              ref={ref}
-              label={t("artifacts.browser.more")}
-              icon={<Icon name="more" size={18} />}
-              size="32"
-              variant="round"
-              className="bg-surface-muted"
-              active={open}
-              aria-expanded={open}
-              aria-haspopup="menu"
-              onClick={toggle}
-            />
-          )}
-        >
-          <MenuItem
-            icon={<Icon name={urlCopied ? "check" : "copy"} size={16} />}
-            disabled={!hasRealUrl}
-            onSelect={() => void copyCurrentUrl()}
-          >
-            {t("artifacts.browser.copyUrl")}
-          </MenuItem>
-          <MenuItem
-            icon={<Icon name="external-link" size={16} />}
-            disabled={!currentOrigin}
-            onSelect={() => void openExternal()}
-          >
-            {t("artifacts.browser.openExternal")}
-          </MenuItem>
-          <MenuSeparator />
-          <MenuLabel>{controlStatus}</MenuLabel>
-          <MenuItem
-            icon={
-              <Icon name={controlBannerVisible ? "shield" : "bot"} size={16} />
-            }
-            disabled={controlBannerVisible ? false : controlDisabled}
-            onSelect={changeControl}
-          >
-            {controlLabel}
-          </MenuItem>
-          <p className="px-2.5 pb-2 text-caption text-fg-muted">
-            {t("artifacts.browser.privateSession")}
-          </p>
-          <MenuSeparator />
-          <MenuLabel>{t("artifacts.browser.downloads")}</MenuLabel>
-          {downloads}
-          <MenuSeparator />
-          <MenuItem
-            icon={<Icon name="trash-2" size={16} />}
-            disabled={!state}
-            onSelect={() => {
-              if (window.confirm(t("artifacts.browser.clearConfirm")))
-                void command({ action: "clear" });
-            }}
-          >
-            {t("artifacts.browser.clear")}
-          </MenuItem>
-        </Menu>
         {active?.loading && (
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 overflow-hidden bg-accent/15"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-[1.5px] overflow-hidden bg-accent/15"
           >
             <div className="h-full w-1/2 animate-pulse bg-accent" />
           </div>
         )}
       </form>
-      {controlBannerVisible ? (
-        <div
-          role="status"
-          className="flex shrink-0 items-center justify-between gap-2 border-b border-line-subtle bg-accent-soft/50 px-3 py-1.5 text-caption"
-        >
-          <span className="flex min-w-0 items-center gap-1.5 font-medium text-fg-default">
-            <Icon name="shield" size={14} className="shrink-0 text-accent" />
-            <span className="truncate">{controlStatus}</span>
-          </span>
-          <Button
-            size="28"
-            variant="outline"
-            className="h-6 shrink-0 px-2 text-caption"
-            onClick={changeControl}
-          >
-            {controlLabel}
-          </Button>
-        </div>
-      ) : (
+      {!controlBannerVisible && (
         <span role="status" className="sr-only">
           {controlStatus}
         </span>
       )}
-      {annotation?.enabled && !selection && (
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-line-subtle bg-surface-muted px-2.5 py-1.5 text-caption">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <div
-              role="group"
-              aria-label={t("artifacts.browser.annotationMode")}
-              className="inline-flex shrink-0 items-center gap-0.5 rounded-lg border border-line-subtle bg-surface-card p-0.5"
-            >
-              {(
-                [
-                  ["element", t("artifacts.browser.element")],
-                  ["text", t("artifacts.browser.text")],
-                  ["region", t("artifacts.browser.region")],
-                ] as const
-              ).map(([mode, label]) => (
-                <button
-                  key={mode}
-                  type="button"
-                  aria-pressed={annotationMode === mode}
-                  onClick={() =>
-                    void command({ action: "annotate", enabled: true, mode })
-                  }
-                  className={cn(
-                    "rounded-md px-2 py-0.5 text-caption transition-colors",
-                    annotationMode === mode
-                      ? "bg-accent-soft font-medium text-accent"
-                      : "text-fg-secondary hover:bg-surface-hover hover:text-fg-default",
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <span className="truncate text-fg-muted">{annotationHint}</span>
-          </div>
-          <Button
-            size="28"
-            variant="ghost"
-            className="h-6 shrink-0 px-2 text-caption"
-            onClick={() =>
-              void command({
-                action: "annotate",
-                enabled: false,
-                mode: annotationMode,
-              })
-            }
-          >
-            {t("artifacts.browser.exitAnnotate")}
-          </Button>
-        </div>
-      )}
       {externalError && (
         <p
           role="alert"
-          className="shrink-0 border-b border-line-default px-3 py-1.5 text-caption text-danger"
+          className="shrink-0 border-b border-line-subtle bg-danger-soft/40 px-3 py-1.5 text-caption text-danger"
         >
           {t("artifacts.browser.openExternalFailed")}
         </p>
-      )}
-      {binding && !selection && (
-        <div
-          className="flex shrink-0 items-center justify-between gap-2 border-b border-line-subtle bg-surface-muted px-3 py-1.5 text-caption"
-          role="status"
-        >
-          <span className="truncate text-fg-secondary">
-            {t("artifacts.resolution.rebindHint")}
-          </span>
-          <Button
-            size="28"
-            variant="ghost"
-            className="h-6 shrink-0 px-2 text-caption"
-            onClick={() => {
-              workspaceStore().write(
-                rebindKey(session.conversationId),
-                undefined,
-              );
-              void command({
-                action: "annotate",
-                enabled: false,
-                mode: annotationMode,
-              });
-            }}
-          >
-            {t("artifacts.resolution.cancelRebind")}
-          </Button>
-        </div>
       )}
       {annotation?.error && (
         <p role="alert" className="shrink-0 px-3 py-2 text-body-sm text-danger">
@@ -817,12 +729,12 @@ export function BrowserPanel({ session }: { session: BrowserSession }) {
           </div>
         ) : (
           (!active || active.url === "about:blank") && (
-            <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
-              <div className="flex size-11 items-center justify-center rounded-full border border-line-subtle bg-surface-muted text-fg-muted">
+            <div className="flex h-full flex-col items-center justify-center gap-4 bg-surface-canvas/30 p-8 text-center">
+              <div className="flex size-12 items-center justify-center rounded-2xl border border-line-subtle bg-surface-card text-fg-muted shadow-card">
                 <Icon name="globe" size={20} />
               </div>
               <div className="space-y-1">
-                <p className="text-body-sm font-medium text-fg-default">
+                <p className="text-body font-medium text-fg-default">
                   {t("artifacts.browser.empty")}
                 </p>
                 <p className="text-caption text-fg-muted">
@@ -844,6 +756,120 @@ export function BrowserPanel({ session }: { session: BrowserSession }) {
           )
         )}
       </div>
+      {showBottomDock && (
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-line-subtle bg-surface-canvas px-3 py-1.5 text-caption">
+          {annotation?.enabled && !selection && (
+            <div className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <div
+                  role="group"
+                  aria-label={t("artifacts.browser.annotationMode")}
+                  className="inline-flex shrink-0 items-center gap-0.5 rounded-lg border border-line-subtle bg-surface-muted p-0.5"
+                >
+                  {(
+                    [
+                      ["element", t("artifacts.browser.element")],
+                      ["text", t("artifacts.browser.text")],
+                      ["region", t("artifacts.browser.region")],
+                    ] as const
+                  ).map(([mode, label]) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      aria-pressed={annotationMode === mode}
+                      onClick={() =>
+                        void command({
+                          action: "annotate",
+                          enabled: true,
+                          mode,
+                        })
+                      }
+                      className={cn(
+                        "rounded-md px-2 py-0.5 text-caption transition-colors",
+                        annotationMode === mode
+                          ? "bg-surface-card font-medium text-accent shadow-card"
+                          : "text-fg-secondary hover:text-fg-default",
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <span className="truncate text-fg-muted">{annotationHint}</span>
+              </div>
+              <div className="flex shrink-0 items-center gap-1.5">
+                <kbd className="hidden rounded border border-line-subtle bg-surface-card px-1 py-px font-mono text-[10px] text-fg-muted sm:inline">
+                  Esc
+                </kbd>
+                <Button
+                  size="28"
+                  variant="ghost"
+                  className="h-6 px-2 text-caption"
+                  onClick={() =>
+                    void command({
+                      action: "annotate",
+                      enabled: false,
+                      mode: annotationMode,
+                    })
+                  }
+                >
+                  {t("artifacts.browser.exitAnnotate")}
+                </Button>
+              </div>
+            </div>
+          )}
+          {controlBannerVisible && (
+            <div
+              role="status"
+              className="flex min-w-0 items-center gap-2 rounded-lg border border-accent/25 bg-accent-soft/50 px-2.5 py-1"
+            >
+              <span
+                aria-hidden="true"
+                className="size-1.5 shrink-0 rounded-full bg-accent"
+              />
+              <span className="truncate font-medium text-fg-default">
+                {controlStatus}
+              </span>
+              <Button
+                size="28"
+                variant="outline"
+                className="h-6 shrink-0 px-2 text-caption"
+                onClick={changeControl}
+              >
+                {controlLabel}
+              </Button>
+            </div>
+          )}
+          {binding && !selection && (
+            <div
+              role="status"
+              className="flex min-w-0 flex-1 items-center justify-between gap-2"
+            >
+              <span className="truncate text-fg-secondary">
+                {t("artifacts.resolution.rebindHint")}
+              </span>
+              <Button
+                size="28"
+                variant="ghost"
+                className="h-6 shrink-0 px-2 text-caption"
+                onClick={() => {
+                  workspaceStore().write(
+                    rebindKey(session.conversationId),
+                    undefined,
+                  );
+                  void command({
+                    action: "annotate",
+                    enabled: false,
+                    mode: annotationMode,
+                  });
+                }}
+              >
+                {t("artifacts.resolution.cancelRebind")}
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

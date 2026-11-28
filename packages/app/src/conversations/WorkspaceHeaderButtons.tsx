@@ -32,47 +32,43 @@ export function WorkspaceHeaderButtons({
     fileDrafts.reduce((sum, item) => sum + item.comments.length, 0) +
     browserDrafts.reduce((sum, item) => sum + item.comments.length, 0);
   const shortcut = isMacPlatform() ? "⌘⇧\\" : "Ctrl+Shift+\\";
-  const toggleLabel = panel.open
-    ? t("artifacts.workspace.closeWorkspace")
-    : (workspaceLabel ?? t("artifacts.workspace.openWorkspace"));
+  const openLabel = workspaceLabel ?? t("artifacts.workspace.openWorkspace");
+  const showBrowser = browserAvailable && !browserSelected;
+  const showOpenWorkspace = !panel.open;
+  if (!showBrowser && !showOpenWorkspace) return null;
 
   return (
     <div className="flex shrink-0 items-center gap-0.5">
-      {browserAvailable && (
+      {showBrowser && (
         <IconButton
           label={t("artifacts.browser.label")}
           title={t("artifacts.browser.label")}
           icon={<Icon name="globe" size={16} />}
           size="28"
           variant="ghost"
-          active={browserSelected}
-          aria-pressed={browserSelected}
-          onClick={() => {
-            if (browserSelected) panel.closePanel();
-            else panel.select(BROWSER_PANEL);
-          }}
+          onClick={() => panel.select(BROWSER_PANEL)}
         />
       )}
-      <div className="relative">
-        <IconButton
-          label={toggleLabel}
-          title={`${toggleLabel} (${shortcut})`}
-          icon={<Icon name="panel-left" size={16} className="rotate-180" />}
-          size="28"
-          variant="ghost"
-          active={panel.open}
-          aria-pressed={panel.open}
-          onClick={() => panel.togglePanel()}
-        />
-        {pendingCount > 0 && (
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute -top-0.5 -right-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-medium leading-none text-fg-inverse"
-          >
-            {pendingCount > 99 ? "99+" : pendingCount}
-          </span>
-        )}
-      </div>
+      {showOpenWorkspace && (
+        <div className="relative">
+          <IconButton
+            label={openLabel}
+            title={`${openLabel} (${shortcut})`}
+            icon={<Icon name="panel-left" size={16} className="rotate-180" />}
+            size="28"
+            variant="ghost"
+            onClick={() => panel.togglePanel()}
+          />
+          {pendingCount > 0 && (
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute -top-0.5 -right-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-medium leading-none text-fg-inverse"
+            >
+              {pendingCount > 99 ? "99+" : pendingCount}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

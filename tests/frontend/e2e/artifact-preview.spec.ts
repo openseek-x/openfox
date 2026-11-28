@@ -322,9 +322,10 @@ test("artifact reader: dark HTML, light Markdown, narrow panel and source switch
   const initialHeader = (await header.boundingBox())!;
   expect(initialPanel.y).toBe(initialHeader.y);
   expect(initialHeader.x + initialHeader.width).toBe(initialPanel.x);
+  // 宽工作区采用单行 44px 统一顶栏，消除双层工具栏并严格与会话顶栏齐平
   expect(
     (await panel.locator("iframe").boundingBox())!.y - initialPanel.y,
-  ).toBe(96);
+  ).toBe(44);
   const handle = page.getByRole("separator", { name: "调整产物面板宽度" });
   const handleBox = (await handle.boundingBox())!;
   await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + 20);
@@ -393,7 +394,7 @@ test("artifact reader: dark HTML, light Markdown, narrow panel and source switch
   const box = await panel.boundingBox();
   expect(box!.width).toBeGreaterThan(280);
   expect(box!.x + box!.width).toBeLessThanOrEqual(950);
-  expect((await panel.locator("iframe").boundingBox())!.y - box!.y).toBe(96);
+  expect((await panel.locator("iframe").boundingBox())!.y - box!.y).toBe(44);
   await page.screenshot({ path: testInfo.outputPath("artifacts-narrow.png") });
 });
 

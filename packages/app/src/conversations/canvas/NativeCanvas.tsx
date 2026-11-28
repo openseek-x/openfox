@@ -1,9 +1,11 @@
 import { lazy, Suspense, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Editor } from "@tiptap/core";
 import type { DocNodeDetail } from "@openfox/api";
 import { useT } from "@openfox/i18n";
-import { Icon, IconButton, Popover } from "@openfox/ui";
+import { Icon, IconButton, Popover, cn } from "@openfox/ui";
 import { Link } from "react-router-dom";
+import { useWorkspaceToolbarTarget } from "../artifacts/PreviewNavigation";
 import { useDocNode } from "../../docs/queries";
 import { SaveStatus } from "../../docs/DocEditor";
 import { DocHistoryDialog } from "../../docs/DocHistoryDialog";
@@ -190,79 +192,100 @@ function Canvas({
       setAdding(false);
     }
   };
+  const toolbarTarget = useWorkspaceToolbarTarget();
+  const canvasToolbar = (
+    <>
+      <div className="relative shrink-0">
+        <IconButton
+          label={t("artifacts.review.annotate")}
+          icon={<Icon name="hifox-scan-eye" size={16} />}
+          size="28"
+          variant="ghost"
+          active={annotate}
+          aria-pressed={annotate}
+          disabled={!node.can_edit || !canAnnotate || adding}
+          className={cn(
+            "rounded-lg!",
+            annotate && "bg-accent-soft! text-accent!",
+          )}
+          onClick={() => {
+            clear();
+            setAnnotate((v) => !v);
+          }}
+        />
+        {pendingCount > 0 && (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute -top-0.5 -right-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-medium leading-none text-fg-inverse"
+          >
+            {pendingCount > 99 ? "99+" : pendingCount}
+          </span>
+        )}
+      </div>
+      {!toolbarTarget && (
+        <span className="min-w-0 flex-1 truncate text-body-sm">
+          {node.title}
+        </span>
+      )}
+      <span role="status" className="shrink-0 text-caption text-fg-muted">
+        {t(
+          doc.busy
+            ? "artifacts.canvas.saving"
+            : doc.error || doc.localError
+              ? "artifacts.canvas.saveFailed"
+              : doc.dirty
+                ? "artifacts.canvas.unsaved"
+                : "artifacts.canvas.saved",
+        )}
+      </span>
+      <IconButton
+        label={t("artifacts.canvas.save")}
+        icon={<Icon name="check" size={15} />}
+        size="28"
+        variant="ghost"
+        disabled={doc.busy || adding || !node.can_edit}
+        onClick={() => void doc.flush()}
+      />
+      <IconButton
+        label={t("docs.history.title")}
+        icon={<Icon name="history" size={15} />}
+        size="28"
+        variant="ghost"
+        disabled={adding || doc.busy}
+        onClick={() =>
+          void doc.flush().then((ok) => {
+            if (ok) {
+              clear();
+              setHistory(true);
+            }
+          })
+        }
+      />
+    </>
+  );
   return (
     <section
       aria-label={t("artifacts.canvas.label")}
       className="flex min-h-0 min-w-0 flex-1 flex-col"
     >
-      <div
-        aria-label={t("artifacts.preview.toolbar")}
-        className="flex h-[52px] shrink-0 items-center gap-2 border-b border-line-default px-3"
-      >
-        <div className="relative shrink-0">
-          <IconButton
-            label={t("artifacts.review.annotate")}
-            icon={<Icon name="hifox-scan-eye" size={18} />}
-            size="32"
-            variant="round"
-            active={annotate}
-            aria-pressed={annotate}
-            disabled={!node.can_edit || !canAnnotate || adding}
-            className={
-              annotate
-                ? "border-accent! bg-accent-soft! text-accent!"
-                : "bg-surface-muted"
-            }
-            onClick={() => {
-              clear();
-              setAnnotate((v) => !v);
-            }}
-          />
-          {pendingCount > 0 && (
-            <span
-              aria-hidden="true"
-              className="pointer-events-none absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-medium leading-none text-fg-inverse"
-            >
-              {pendingCount > 99 ? "99+" : pendingCount}
-            </span>
-          )}
+      {toolbarTarget ? (
+        createPortal(
+          <div
+            aria-label={t("artifacts.preview.toolbar")}
+            className="flex shrink-0 items-center gap-1"
+          >
+            {canvasToolbar}
+          </div>,
+          toolbarTarget,
+        )
+      ) : (
+        <div
+          aria-label={t("artifacts.preview.toolbar")}
+          className="flex h-10 shrink-0 items-center gap-1.5 border-b border-line-subtle bg-surface-canvas/70 px-2.5"
+        >
+          {canvasToolbar}
         </div>
-        <span className="min-w-0 flex-1 truncate text-body-sm">
-          {node.title}
-        </span>
-        <span role="status" className="text-caption text-fg-muted">
-          {t(
-            doc.busy
-              ? "artifacts.canvas.saving"
-              : doc.error || doc.localError
-                ? "artifacts.canvas.saveFailed"
-                : doc.dirty
-                  ? "artifacts.canvas.unsaved"
-                  : "artifacts.canvas.saved",
-          )}
-        </span>
-        <IconButton
-          label={t("artifacts.canvas.save")}
-          icon={<Icon name="check" size={16} />}
-          size="28"
-          disabled={doc.busy || adding || !node.can_edit}
-          onClick={() => void doc.flush()}
-        />
-        <IconButton
-          label={t("docs.history.title")}
-          icon={<Icon name="history" size={16} />}
-          size="28"
-          disabled={adding || doc.busy}
-          onClick={() =>
-            void doc.flush().then((ok) => {
-              if (ok) {
-                clear();
-                setHistory(true);
-              }
-            })
-          }
-        />
-      </div>
+      )}
       <div className="min-h-0 flex-1 overflow-auto px-6 py-5">
         <SaveStatus error={doc.error} onMerge={() => void doc.merge()} />
         {doc.localError && (

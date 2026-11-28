@@ -38,13 +38,13 @@ export function DraftAnnotations({
   return (
     <section
       aria-label={t("artifacts.review.chatComments")}
-      className="mb-2 rounded-xl border border-line-subtle bg-surface-muted px-3 py-2"
+      className="mb-2 overflow-hidden rounded-2xl border border-line-subtle bg-surface-card shadow-card"
     >
-      <div className="mb-1.5 flex items-center gap-1.5 text-caption font-medium text-fg-muted">
-        <Icon name="message-circle" size={13} />
+      <div className="flex items-center gap-1.5 border-b border-line-subtle bg-surface-canvas/70 px-3 py-1.5 text-caption font-medium text-fg-muted">
+        <span aria-hidden="true" className="size-1.5 rounded-full bg-accent" />
         {t("artifacts.review.pending", { count })}
       </div>
-      <div className="max-h-48 space-y-1.5 overflow-y-auto">
+      <div className="max-h-44 divide-y divide-line-subtle overflow-y-auto">
         {files.map((file) => (
           <FileDraft
             key={file.id}
@@ -58,7 +58,7 @@ export function DraftAnnotations({
           <div
             key={context.id}
             aria-label={t("artifacts.browser.annotations")}
-            className="space-y-1.5"
+            className="divide-y divide-line-subtle"
           >
             {context.comments.map((comment) => (
               <Reference
@@ -135,7 +135,7 @@ function FileDraft({
         name: file.name,
         count: file.comments.length,
       })}
-      className="space-y-1.5"
+      className="divide-y divide-line-subtle"
     >
       {file.comments.map((comment) => (
         <Reference
@@ -265,11 +265,11 @@ function Reference({
   };
 
   return (
-    <div className="flex items-start gap-1 rounded-lg border border-line-subtle bg-surface-card px-2 py-1.5">
+    <div className="flex items-start gap-1.5 px-3 py-2">
       {editing ? (
         <div className="min-w-0 flex-1 space-y-1.5">
-          <span className="block truncate text-caption text-fg-muted">
-            {name}
+          <span className="inline-flex max-w-full items-center rounded bg-surface-muted px-1.5 py-px text-[11px] text-fg-muted">
+            <span className="truncate">{name}</span>
           </span>
           <textarea
             aria-label={t("artifacts.review.editComment")}
@@ -294,7 +294,7 @@ function Reference({
                 saveEdit();
               }
             }}
-            className="w-full resize-y rounded-md border border-line-default bg-surface-muted px-2 py-1 text-body-sm outline-none focus:border-line-strong"
+            className="w-full resize-y rounded-lg border border-line-default bg-surface-muted/60 px-2.5 py-1.5 text-body-sm outline-none focus:border-line-strong"
           />
           {editError && (
             <p role="alert" className="text-caption text-danger">
@@ -327,21 +327,21 @@ function Reference({
             className="cursor-pointer list-none text-body-sm [&::-webkit-details-marker]:hidden"
             title={body}
           >
-            <span className="block truncate text-caption text-fg-muted">
-              {name}
+            <span className="mb-0.5 inline-flex max-w-full items-center rounded bg-surface-muted px-1.5 py-px text-[11px] text-fg-muted">
+              <span className="truncate">{name}</span>
             </span>
-            <span className="line-clamp-2 whitespace-pre-wrap break-words leading-5">
+            <span className="line-clamp-2 block whitespace-pre-wrap break-words leading-5 text-fg-default">
               {body}
             </span>
           </summary>
-          <blockquote className="mt-1 max-h-20 overflow-auto whitespace-pre-wrap break-words border-l-2 border-line-default pl-2 text-caption text-fg-muted">
+          <blockquote className="mt-1.5 max-h-20 overflow-auto whitespace-pre-wrap break-words rounded-r-md border-l-2 border-line-strong bg-surface-muted/50 py-1 pl-2 pr-1.5 text-caption text-fg-muted">
             {quote}
           </blockquote>
           {screenshot && <RegionThumbnail file={screenshot} />}
           {onOpen && (
             <button
               type="button"
-              className="mt-1 text-caption text-fg-secondary hover:text-fg-default"
+              className="mt-1.5 text-caption text-fg-secondary hover:text-fg-default"
               onClick={onOpen}
             >
               {openLabel}
@@ -355,6 +355,7 @@ function Reference({
           label={t("artifacts.review.editComment")}
           icon={<Icon name="pencil" size={13} />}
           size="28"
+          variant="ghost"
           disabled={disabled}
           onClick={startEdit}
         />
@@ -363,6 +364,7 @@ function Reference({
         label={t("artifacts.review.removeComment")}
         icon={<Icon name="x" size={13} />}
         size="28"
+        variant="ghost"
         disabled={disabled}
         onClick={onRemove}
       />

@@ -589,7 +589,7 @@ export function ConversationHeader({
         className="flex h-7 shrink-0 items-center gap-1 rounded-md px-1.5 text-body-sm text-fg-secondary hover:bg-control-hover"
       >
         <Icon name="hifox-settings-sliders" size={14} />
-        <span className="sr-only @lg:not-sr-only">
+        <span className="sr-only @2xl:not-sr-only">
           {t("chat.header.settings")}
         </span>
       </button>

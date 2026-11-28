@@ -26,6 +26,7 @@ import { Button, Icon, IconButton, Skeleton, cn } from "@openfox/ui";
 import { formatBytes } from "../steps/cards";
 import { ArtifactPreview } from "./ArtifactPreview";
 import { artifactExpired, artifactPreviewKind } from "./model";
+import { WorkspaceToolbarTarget } from "./PreviewNavigation";
 import {
   currentTabKey,
   isCurrentTab,
@@ -82,10 +83,27 @@ function ArtifactPanelContent({
     remaining: 360,
   });
   const containerRef = resize.containerRef;
+  const [asideEl, setAsideEl] = useState<HTMLElement | null>(null);
+  const [toolbarSlot, setToolbarSlot] = useState<HTMLDivElement | null>(null);
+  const [panelWidth, setPanelWidth] = useState(0);
   const panelRef = useCallback(
-    (node: HTMLElement | null) => containerRef(node?.parentElement ?? null),
+    (node: HTMLElement | null) => {
+      setAsideEl(node);
+      containerRef(node?.parentElement ?? null);
+    },
     [containerRef],
   );
+  useEffect(() => {
+    if (!asideEl) return;
+    const sync = () => setPanelWidth(asideEl.clientWidth);
+    sync();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(sync);
+    observer.observe(asideEl);
+    return () => observer.disconnect();
+  }, [asideEl]);
+  const wideHeader = expanded || panelWidth === 0 || panelWidth >= 460;
+  const shortcut = isMacPlatform() ? "⌘⇧\\" : "Ctrl+Shift+\\";
   const queryClient = useQueryClient();
   const api = useApi();
   const docs = panel.tabs.flatMap((id) => {
@@ -179,279 +197,303 @@ function ArtifactPanelContent({
   const pinned = !isCurrentTab(selected);
   const missing = isArtifactTab(selected) && !current;
 
+  const hasInlineToolbar =
+    wideHeader && (Boolean(current) || Boolean(selectedDoc));
+
   return (
-    <aside
-      ref={panelRef}
-      id={panelId}
-      aria-label={t("artifacts.panel.label")}
-      style={{ "--artifact-panel-width": `${resize.width}px` } as CSSProperties}
-      className={cn(
-        "absolute inset-0 z-20 flex min-h-0 min-w-0 flex-col bg-surface-card",
-        !expanded &&
-          "@[720px]:relative @[720px]:w-[var(--artifact-panel-width)] @[720px]:shrink-0 @[720px]:border-l @[720px]:border-line-default",
-      )}
-    >
-      <PanelResizeHandle
-        {...resize}
-        label={t("artifacts.panel.resize")}
-        controls={panelId}
-        side="right"
-        onCollapse={panel.closePanel}
-        onReset={resize.reset}
+    <WorkspaceToolbarTarget.Provider value={wideHeader ? toolbarSlot : null}>
+      <aside
+        ref={panelRef}
+        id={panelId}
+        aria-label={t("artifacts.panel.label")}
+        style={
+          { "--artifact-panel-width": `${resize.width}px` } as CSSProperties
+        }
         className={cn(
-          "absolute inset-y-0 -left-1 hidden w-2",
-          !expanded && "@[720px]:block",
+          "absolute inset-0 z-20 flex min-h-0 min-w-0 flex-col bg-surface-canvas",
+          !expanded &&
+            "@[720px]:relative @[720px]:w-[var(--artifact-panel-width)] @[720px]:shrink-0 @[720px]:border-l @[720px]:border-line-subtle",
         )}
-      />
-      <div className="@container/tabs flex h-11 shrink-0 items-center gap-1 border-b border-line-default px-2">
-        <div
-          role="tablist"
-          aria-label={t("artifacts.panel.tabs")}
-          onWheel={(event) => {
-            if (Math.abs(event.deltaY) > Math.abs(event.deltaX))
-              event.currentTarget.scrollLeft += event.deltaY;
-          }}
-          className="flex min-w-0 items-center gap-1 overflow-x-auto"
-        >
-          {panel.tabs.map((id) => {
-            const artifact =
-              lookup(id) ??
-              (id === selected
-                ? current
-                : queryClient.getQueryData<RunArtifact>(
-                    resolvedArtifactKey(orgId, conversationId, id),
-                  ));
-            const webTab = browser.state?.tabs.find(
-              (tab) => browserTabKey(tab.id) === id,
-            );
-            const title =
-              id === ARTIFACT_LIST
-                ? t("artifacts.panel.list", { count: visible.length })
-                : id === COMMENTS_PANEL
-                  ? t("artifacts.comments.tabTitle")
-                  : id === PROPOSALS_PANEL
-                    ? t("artifacts.proposals.tabTitle")
-                    : id === NEW_PANEL
-                      ? t("artifacts.workspace.newTab")
-                      : webTab
-                        ? webTab.title ||
-                          (webTab.url === "about:blank"
-                            ? t("artifacts.browser.newTab")
-                            : webTab.url)
-                        : documentTab(id)
-                          ? (docNames.get(id) ?? t("docs.untitled"))
-                          : isProposalTab(id)
-                            ? `${proposalNames.get(id) ?? t("artifacts.version.file")} · ${t("artifacts.proposals.review")}`
-                            : (artifact?.name ??
-                              (isArtifactTab(id)
-                                ? t("artifacts.version.file")
-                                : undefined));
-            if (!title) return null;
-            return (
-              <Tab
-                key={id}
-                id={id}
-                label={title}
-                badge={
-                  artifact
-                    ? isCurrentTab(id)
-                      ? t("artifacts.version.current")
-                      : `v${artifact.content_revision}`
-                    : undefined
-                }
-                description={
-                  artifact
-                    ? t(
-                        isCurrentTab(id)
-                          ? "artifacts.version.following"
-                          : "artifacts.version.fixed",
-                        { version: artifact.content_revision },
-                      )
-                    : undefined
-                }
-                selected={selected === id}
-                onSelect={() => {
-                  panel.select(id);
-                  if (webTab)
-                    void browser.command({ action: "focus", tabId: webTab.id });
-                }}
-                onClose={() => {
-                  if (webTab)
-                    void browser.command({ action: "close", tabId: webTab.id });
-                  else panel.closeTab(id);
-                }}
-                onReorder={panel.reorder}
-                icon={
-                  webTab
-                    ? "globe"
-                    : id === ARTIFACT_LIST
-                      ? "folder"
-                      : id === COMMENTS_PANEL
-                        ? "message-circle"
-                        : id === PROPOSALS_PANEL || isProposalTab(id)
-                          ? "layers"
-                          : id === NEW_PANEL
-                            ? "plus"
-                            : "file-text"
-                }
-                closeLabel={t("artifacts.panel.closeTab", {
-                  name: title,
-                })}
-              >
-                {title}
-              </Tab>
-            );
-          })}
-        </div>
-        <IconButton
-          label={t("artifacts.workspace.addTab")}
-          icon={<Icon name="plus" size={16} />}
-          size="28"
-          variant="ghost"
-          onClick={() => panel.select(NEW_PANEL)}
-        />
-        <div className="min-w-0 flex-1" />
-        <IconButton
-          label={t(
-            expanded ? "artifacts.panel.restore" : "artifacts.panel.expand",
+      >
+        <PanelResizeHandle
+          {...resize}
+          label={t("artifacts.panel.resize")}
+          controls={panelId}
+          side="right"
+          onCollapse={panel.closePanel}
+          onReset={resize.reset}
+          className={cn(
+            "absolute inset-y-0 -left-1 hidden w-2",
+            !expanded && "@[720px]:block",
           )}
-          icon={
-            <Icon name={expanded ? "minimize-2" : "maximize-2"} size={16} />
-          }
-          size="28"
-          variant="ghost"
-          active={expanded}
-          onClick={() => setExpanded((value) => !value)}
         />
-        <IconButton
-          label={t("artifacts.panel.close")}
-          icon={<Icon name="panel-left" size={16} className="rotate-180" />}
-          size="28"
-          variant="ghost"
-          onClick={panel.closePanel}
-        />
-      </div>
-      <div className="flex min-h-0 flex-1 flex-col">
-        {browserSelected ? (
-          <BrowserPanel session={browser} />
-        ) : selectedDoc ? (
-          <NativeCanvas
-            key={selected}
-            orgId={orgId}
-            conversationId={conversationId}
-            {...selectedDoc}
-          />
-        ) : isProposalTab(selected) ? (
-          <ProposalPreview
-            key={selected}
-            orgId={orgId}
-            conversationId={conversationId}
-            id={selected.slice(9)}
-          />
-        ) : selected === COMMENTS_PANEL ? (
-          <WorkspaceComments
-            orgId={orgId}
-            conversationId={conversationId}
-            disabled={reviewDisabled}
-            embedded
-          />
-        ) : selected === PROPOSALS_PANEL ? (
-          <WorkspaceProposals
-            orgId={orgId}
-            conversationId={conversationId}
-            onOpen={() => {}}
-            embedded
-          />
-        ) : selected === NEW_PANEL ? (
-          <WorkspaceLauncher
-            orgId={orgId}
-            conversationId={conversationId}
-            browserAvailable={browserAvailable}
-            visible={visible}
-            onOpenBrowser={openBrowser}
-            onSelect={panel.select}
-          />
-        ) : query.isError && !artifacts ? (
-          <div role="alert" className="flex flex-col items-start gap-2 p-4">
-            <p className="text-body text-danger">
-              {t("artifacts.list.loadFailed")}
-            </p>
-            <Button
-              variant="outline"
-              size="28"
-              onClick={() => void query.refetch()}
-            >
-              {t("common.retry")}
-            </Button>
-          </div>
-        ) : !artifacts ? (
-          <div aria-busy="true" className="flex flex-col gap-2 p-4">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-        ) : missing ? (
+        <div className="@container/tabs flex h-11 shrink-0 items-center gap-1 border-b border-line-subtle bg-surface-canvas px-2">
           <div
-            className="flex flex-col items-start gap-2 p-4"
-            role={resolved.isError ? "alert" : "status"}
+            role="tablist"
+            aria-label={t("artifacts.panel.tabs")}
+            onWheel={(event) => {
+              if (Math.abs(event.deltaY) > Math.abs(event.deltaX))
+                event.currentTarget.scrollLeft += event.deltaY;
+            }}
+            className="flex min-w-0 items-center gap-1 overflow-x-auto"
           >
-            <p className="text-body-sm text-fg-muted">
-              {t(
-                resolved.isError
-                  ? "artifacts.version.unavailable"
-                  : "artifacts.review.loading",
-              )}
-            </p>
-            {resolved.isError && (
+            {panel.tabs.map((id) => {
+              const artifact =
+                lookup(id) ??
+                (id === selected
+                  ? current
+                  : queryClient.getQueryData<RunArtifact>(
+                      resolvedArtifactKey(orgId, conversationId, id),
+                    ));
+              const webTab = browser.state?.tabs.find(
+                (tab) => browserTabKey(tab.id) === id,
+              );
+              const title =
+                id === ARTIFACT_LIST
+                  ? t("artifacts.panel.list", { count: visible.length })
+                  : id === COMMENTS_PANEL
+                    ? t("artifacts.comments.tabTitle")
+                    : id === PROPOSALS_PANEL
+                      ? t("artifacts.proposals.tabTitle")
+                      : id === NEW_PANEL
+                        ? t("artifacts.workspace.newTab")
+                        : webTab
+                          ? webTab.title ||
+                            (webTab.url === "about:blank"
+                              ? t("artifacts.browser.newTab")
+                              : webTab.url)
+                          : documentTab(id)
+                            ? (docNames.get(id) ?? t("docs.untitled"))
+                            : isProposalTab(id)
+                              ? `${proposalNames.get(id) ?? t("artifacts.version.file")} · ${t("artifacts.proposals.review")}`
+                              : (artifact?.name ??
+                                (isArtifactTab(id)
+                                  ? t("artifacts.version.file")
+                                  : undefined));
+              if (!title) return null;
+              return (
+                <Tab
+                  key={id}
+                  id={id}
+                  label={title}
+                  badge={
+                    artifact
+                      ? isCurrentTab(id)
+                        ? t("artifacts.version.current")
+                        : `v${artifact.content_revision}`
+                      : undefined
+                  }
+                  description={
+                    artifact
+                      ? t(
+                          isCurrentTab(id)
+                            ? "artifacts.version.following"
+                            : "artifacts.version.fixed",
+                          { version: artifact.content_revision },
+                        )
+                      : undefined
+                  }
+                  selected={selected === id}
+                  onSelect={() => {
+                    panel.select(id);
+                    if (webTab)
+                      void browser.command({
+                        action: "focus",
+                        tabId: webTab.id,
+                      });
+                  }}
+                  onClose={() => {
+                    if (webTab)
+                      void browser.command({
+                        action: "close",
+                        tabId: webTab.id,
+                      });
+                    else panel.closeTab(id);
+                  }}
+                  onReorder={panel.reorder}
+                  icon={
+                    webTab
+                      ? "globe"
+                      : id === ARTIFACT_LIST
+                        ? "folder"
+                        : id === COMMENTS_PANEL
+                          ? "message-circle"
+                          : id === PROPOSALS_PANEL || isProposalTab(id)
+                            ? "layers"
+                            : id === NEW_PANEL
+                              ? "plus"
+                              : "file-text"
+                  }
+                  closeLabel={t("artifacts.panel.closeTab", {
+                    name: title,
+                  })}
+                >
+                  {title}
+                </Tab>
+              );
+            })}
+          </div>
+          <IconButton
+            label={t("artifacts.workspace.addTab")}
+            icon={<Icon name="plus" size={15} />}
+            size="28"
+            variant="ghost"
+            onClick={() => panel.select(NEW_PANEL)}
+          />
+          <div className="min-w-0 flex-1" />
+          <div
+            ref={setToolbarSlot}
+            className="flex shrink-0 items-center gap-1 empty:hidden"
+          />
+          {hasInlineToolbar && (
+            <span
+              aria-hidden="true"
+              className="mx-0.5 h-3.5 w-px shrink-0 bg-line-default"
+            />
+          )}
+          <IconButton
+            label={t(
+              expanded ? "artifacts.panel.restore" : "artifacts.panel.expand",
+            )}
+            icon={
+              <Icon name={expanded ? "minimize-2" : "maximize-2"} size={15} />
+            }
+            size="28"
+            variant="ghost"
+            active={expanded}
+            onClick={() => setExpanded((value) => !value)}
+          />
+          <IconButton
+            label={t("artifacts.panel.close")}
+            title={`${t("artifacts.panel.close")} (${shortcut})`}
+            icon={<Icon name="panel-left" size={15} className="rotate-180" />}
+            size="28"
+            variant="ghost"
+            onClick={panel.closePanel}
+          />
+        </div>
+        <div className="flex min-h-0 flex-1 flex-col bg-surface-card">
+          {browserSelected ? (
+            <BrowserPanel session={browser} />
+          ) : selectedDoc ? (
+            <NativeCanvas
+              key={selected}
+              orgId={orgId}
+              conversationId={conversationId}
+              {...selectedDoc}
+            />
+          ) : isProposalTab(selected) ? (
+            <ProposalPreview
+              key={selected}
+              orgId={orgId}
+              conversationId={conversationId}
+              id={selected.slice(9)}
+            />
+          ) : selected === COMMENTS_PANEL ? (
+            <WorkspaceComments
+              orgId={orgId}
+              conversationId={conversationId}
+              disabled={reviewDisabled}
+              embedded
+            />
+          ) : selected === PROPOSALS_PANEL ? (
+            <WorkspaceProposals
+              orgId={orgId}
+              conversationId={conversationId}
+              onOpen={() => {}}
+              embedded
+            />
+          ) : selected === NEW_PANEL ? (
+            <WorkspaceLauncher
+              orgId={orgId}
+              conversationId={conversationId}
+              browserAvailable={browserAvailable}
+              visible={visible}
+              onOpenBrowser={openBrowser}
+              onSelect={panel.select}
+            />
+          ) : query.isError && !artifacts ? (
+            <div role="alert" className="flex flex-col items-start gap-2 p-4">
+              <p className="text-body text-danger">
+                {t("artifacts.list.loadFailed")}
+              </p>
               <Button
-                size="28"
                 variant="outline"
-                onClick={() => void resolved.refetch()}
+                size="28"
+                onClick={() => void query.refetch()}
               >
                 {t("common.retry")}
               </Button>
-            )}
-          </div>
-        ) : current ? (
-          <PreviewStateKey.Provider
-            key={`${selected}:${current.id}`}
-            value={`${conversationId}:${selected}:${current.id}:${current.sha256}`}
-          >
-            <ArtifactPreview
-              key={current.id}
-              orgId={orgId}
-              conversationId={conversationId}
-              artifact={current}
-              versionMode={pinned ? "fixed" : "current"}
-              onOpenVersion={() =>
-                panel.select(
-                  pinned ? currentTabKey(current.content_id) : current.id,
-                )
-              }
+            </div>
+          ) : !artifacts ? (
+            <div aria-busy="true" className="flex flex-col gap-2 p-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ) : missing ? (
+            <div
+              className="flex flex-col items-start gap-2 p-4"
+              role={resolved.isError ? "alert" : "status"}
+            >
+              <p className="text-body-sm text-fg-muted">
+                {t(
+                  resolved.isError
+                    ? "artifacts.version.unavailable"
+                    : "artifacts.review.loading",
+                )}
+              </p>
+              {resolved.isError && (
+                <Button
+                  size="28"
+                  variant="outline"
+                  onClick={() => void resolved.refetch()}
+                >
+                  {t("common.retry")}
+                </Button>
+              )}
+            </div>
+          ) : current ? (
+            <PreviewStateKey.Provider
+              key={`${selected}:${current.id}`}
+              value={`${conversationId}:${selected}:${current.id}:${current.sha256}`}
+            >
+              <ArtifactPreview
+                key={current.id}
+                orgId={orgId}
+                conversationId={conversationId}
+                artifact={current}
+                versionMode={pinned ? "fixed" : "current"}
+                onOpenVersion={() =>
+                  panel.select(
+                    pinned ? currentTabKey(current.content_id) : current.id,
+                  )
+                }
+              />
+            </PreviewStateKey.Provider>
+          ) : (
+            <ArtifactList
+              artifacts={visible}
+              onOpen={(id) => {
+                const file = byId.get(id);
+                if (file) panel.select(currentTabKey(file.content_id));
+              }}
             />
-          </PreviewStateKey.Provider>
-        ) : (
-          <ArtifactList
-            artifacts={visible}
-            onOpen={(id) => {
-              const file = byId.get(id);
-              if (file) panel.select(currentTabKey(file.content_id));
-            }}
-          />
-        )}
-        {selected === ARTIFACT_LIST &&
-          !current &&
-          artifacts &&
-          artifacts.length >= MAX_LISTED && (
-            <p className="shrink-0 px-4 pb-3 text-caption text-fg-muted">
-              {t("artifacts.list.more", { count: MAX_LISTED })}
-            </p>
           )}
-      </div>
-    </aside>
+          {selected === ARTIFACT_LIST &&
+            !current &&
+            artifacts &&
+            artifacts.length >= MAX_LISTED && (
+              <p className="shrink-0 px-4 pb-3 text-caption text-fg-muted">
+                {t("artifacts.list.more", { count: MAX_LISTED })}
+              </p>
+            )}
+        </div>
+      </aside>
+    </WorkspaceToolbarTarget.Provider>
   );
 }
 
-/** 工作区新标签启动页：文档检索、快捷入口（网页/产物/评论/提案）与最近产物直达。 */
+/** 工作区新标签启动页：居中搜索、均衡快捷磁贴与最近产物卡片列表。 */
 function WorkspaceLauncher({
   orgId,
   conversationId,
@@ -468,87 +510,129 @@ function WorkspaceLauncher({
   onSelect: (id: string) => void;
 }) {
   const t = useT();
+  const { formatRelative } = useI18n();
   const recent = [...visible]
     .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
     .slice(0, 5);
   const shortcut = isMacPlatform() ? "⌘⇧\\" : "Ctrl+Shift+\\";
+  const tileClass =
+    "group flex flex-col items-start gap-2.5 rounded-xl border border-line-subtle bg-surface-card p-3 text-left shadow-card transition-colors hover:border-line-strong hover:bg-surface-hover/50";
   return (
-    <div className="@container/launcher flex min-h-0 flex-1 flex-col overflow-y-auto p-5">
-      <div className="mx-auto flex w-full max-w-sm flex-col gap-4 py-4">
+    <div className="@container/launcher flex min-h-0 flex-1 flex-col overflow-y-auto bg-surface-canvas/40 px-5 py-8">
+      <div className="mx-auto flex w-full max-w-md flex-col gap-5">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-body font-medium text-fg-default">
-            {t("artifacts.workspace.choose")}
-          </p>
-          <span className="shrink-0 rounded border border-line-subtle bg-surface-muted px-1.5 py-0.5 font-mono text-[11px] text-fg-muted">
+          <div className="flex items-center gap-2">
+            <span className="flex size-7 items-center justify-center rounded-lg bg-surface-muted text-fg-secondary">
+              <Icon name="layers" size={15} />
+            </span>
+            <p className="text-body font-semibold text-fg-default">
+              {t("artifacts.workspace.choose")}
+            </p>
+          </div>
+          <kbd className="shrink-0 rounded-md border border-line-subtle bg-surface-card px-1.5 py-0.5 font-mono text-[11px] text-fg-muted">
             {shortcut}
-          </span>
+          </kbd>
         </div>
         <DocumentPicker
           orgId={orgId}
           conversationId={conversationId}
           onOpen={onSelect}
         />
-        <div className="grid grid-cols-1 gap-2 @[360px]/launcher:grid-cols-2">
-          {browserAvailable && (
-            <Button
-              variant="outline"
-              className="justify-start"
-              onClick={onOpenBrowser}
-            >
-              <Icon name="globe" size={16} />
-              {t("artifacts.workspace.openBrowser")}
-            </Button>
+        <div
+          className={cn(
+            "grid gap-2.5",
+            browserAvailable
+              ? "grid-cols-1 @[340px]/launcher:grid-cols-2"
+              : "grid-cols-1 @[360px]/launcher:grid-cols-3",
           )}
-          <Button
-            variant="outline"
-            className="justify-start"
+        >
+          {browserAvailable && (
+            <button type="button" className={tileClass} onClick={onOpenBrowser}>
+              <span className="flex size-8 items-center justify-center rounded-lg bg-surface-muted text-fg-secondary transition-colors group-hover:bg-accent-soft group-hover:text-accent">
+                <Icon name="globe" size={16} />
+              </span>
+              <span className="text-body-sm font-medium text-fg-default">
+                {t("artifacts.workspace.openBrowser")}
+              </span>
+            </button>
+          )}
+          <button
+            type="button"
+            className={tileClass}
             onClick={() => onSelect(ARTIFACT_LIST)}
           >
-            <Icon name="folder" size={16} />
-            {t("artifacts.workspace.openArtifacts", {
-              count: visible.length,
-            })}
-          </Button>
-          <Button
-            variant="outline"
-            className="justify-start"
+            <span className="flex size-8 items-center justify-center rounded-lg bg-surface-muted text-fg-secondary transition-colors group-hover:bg-accent-soft group-hover:text-accent">
+              <Icon name="folder" size={16} />
+            </span>
+            <span className="text-body-sm font-medium text-fg-default">
+              {t("artifacts.workspace.openArtifacts", {
+                count: visible.length,
+              })}
+            </span>
+          </button>
+          <button
+            type="button"
+            className={tileClass}
             onClick={() => onSelect(COMMENTS_PANEL)}
           >
-            <Icon name="message-circle" size={16} />
-            {t("artifacts.workspace.openComments")}
-          </Button>
-          <Button
-            variant="outline"
-            className="justify-start"
+            <span className="flex size-8 items-center justify-center rounded-lg bg-surface-muted text-fg-secondary transition-colors group-hover:bg-accent-soft group-hover:text-accent">
+              <Icon name="message-circle" size={16} />
+            </span>
+            <span className="text-body-sm font-medium text-fg-default">
+              {t("artifacts.workspace.openComments")}
+            </span>
+          </button>
+          <button
+            type="button"
+            className={tileClass}
             onClick={() => onSelect(PROPOSALS_PANEL)}
           >
-            <Icon name="layers" size={16} />
-            {t("artifacts.workspace.openProposals")}
-          </Button>
+            <span className="flex size-8 items-center justify-center rounded-lg bg-surface-muted text-fg-secondary transition-colors group-hover:bg-accent-soft group-hover:text-accent">
+              <Icon name="layers" size={16} />
+            </span>
+            <span className="text-body-sm font-medium text-fg-default">
+              {t("artifacts.workspace.openProposals")}
+            </span>
+          </button>
         </div>
         {recent.length > 0 && (
-          <div className="space-y-1.5 border-t border-line-subtle pt-3">
-            <p className="text-caption font-medium text-fg-muted">
+          <div className="space-y-2">
+            <p className="px-0.5 text-caption font-medium text-fg-muted">
               {t("artifacts.workspace.recentArtifacts")}
             </p>
-            <ul className="space-y-0.5">
+            <ul className="overflow-hidden rounded-xl border border-line-subtle bg-surface-card shadow-card divide-y divide-line-subtle">
               {recent.map((item) => (
                 <li key={item.id}>
                   <button
                     type="button"
+                    aria-label={item.name}
                     onClick={() => onSelect(currentTabKey(item.content_id))}
-                    className="flex w-full min-w-0 items-center gap-2 rounded-lg px-2 py-1.5 text-left text-body-sm text-fg-secondary hover:bg-surface-hover hover:text-fg-default"
+                    className="group flex w-full min-w-0 items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-surface-hover/60"
                   >
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-surface-muted text-fg-muted group-hover:text-fg-default">
+                      <Icon
+                        name={
+                          artifactPreviewKind(item) === "image"
+                            ? "image"
+                            : "file-text"
+                        }
+                        size={14}
+                      />
+                    </span>
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate text-body-sm font-medium text-fg-default">
+                        {item.name}
+                      </span>
+                      <span className="truncate text-caption text-fg-muted">
+                        {formatBytes(item.size_bytes)} ·{" "}
+                        {formatRelative(item.created_at)}
+                      </span>
+                    </span>
                     <Icon
-                      name={
-                        artifactPreviewKind(item) === "image"
-                          ? "image"
-                          : "file-text"
-                      }
+                      name="chevron-right"
                       size={14}
-                      className="shrink-0 text-fg-muted"
+                      className="shrink-0 text-fg-subtle opacity-0 transition-opacity group-hover:opacity-100"
                     />
-                    <span className="min-w-0 flex-1 truncate">{item.name}</span>
                   </button>
                 </li>
               ))}
@@ -633,10 +717,10 @@ function Tab({
         }
       }}
       className={cn(
-        "flex h-8 min-w-[100px] max-w-[min(184px,calc(100cqw-100px))] shrink-0 items-center rounded-lg border text-body-sm transition-colors",
+        "group flex h-[30px] min-w-[96px] max-w-[min(184px,calc(100cqw-100px))] shrink-0 items-center rounded-lg border text-body-sm transition-colors",
         selected
-          ? "border-line-default bg-surface-active text-fg-default"
-          : "border-transparent text-fg-secondary hover:bg-surface-hover",
+          ? "border-line-subtle bg-surface-card text-fg-default shadow-card"
+          : "border-transparent text-fg-muted hover:bg-surface-hover/70 hover:text-fg-default",
         dragOver && "border-l-2 border-l-accent",
       )}
     >
@@ -648,12 +732,22 @@ function Tab({
         aria-description={description}
         title={description ? `${label} · ${description}` : label}
         onClick={onSelect}
-        className="flex h-full min-w-0 flex-1 items-center gap-2 px-2.5"
+        className="flex h-full min-w-0 flex-1 items-center gap-1.5 px-2"
       >
-        <Icon name={icon} size={14} className="shrink-0" />
+        <Icon
+          name={icon}
+          size={13}
+          className={cn(
+            "shrink-0",
+            selected ? "text-fg-secondary" : "text-fg-muted",
+          )}
+        />
         <span className="truncate">{children}</span>
         {badge && (
-          <span aria-hidden className="shrink-0 text-[10px] text-fg-muted">
+          <span
+            aria-hidden
+            className="shrink-0 rounded bg-surface-muted px-1 font-mono text-[10px] leading-4 text-fg-muted"
+          >
             {badge}
           </span>
         )}
@@ -664,7 +758,12 @@ function Tab({
           aria-label={closeLabel}
           title={closeLabel}
           onClick={onClose}
-          className="mr-1 flex size-5 shrink-0 items-center justify-center rounded text-fg-muted hover:bg-surface-muted hover:text-fg-default"
+          className={cn(
+            "mr-1 flex size-5 shrink-0 items-center justify-center rounded text-fg-muted transition-opacity hover:bg-surface-muted hover:text-fg-default",
+            selected
+              ? "opacity-75 hover:opacity-100"
+              : "opacity-45 group-hover:opacity-100 focus-visible:opacity-100",
+          )}
         >
           <Icon name="x" size={12} />
         </button>
