@@ -44,7 +44,7 @@ export function NewChatPopover({
   const t = useT();
   const navigate = useNavigate();
   const directory = useDirectory(orgId, open);
-  const contacts = useContacts(orgId);
+  const contacts = useContacts(orgId, open);
   const me = useMe();
   const people =
     contacts.data?.groups

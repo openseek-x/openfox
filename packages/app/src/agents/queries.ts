@@ -254,11 +254,12 @@ export function useCrew(
   });
 }
 
-export function useContacts(orgId: string) {
+export function useContacts(orgId: string, enabled = true) {
   const api = useApi();
   return useQuery({
     queryKey: keys.contacts(orgId),
     queryFn: () => api.contacts.list(orgId),
+    enabled,
   });
 }
 
